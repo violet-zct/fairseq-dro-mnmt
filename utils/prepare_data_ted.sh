@@ -74,14 +74,4 @@ for lang in ${langs//,/ }; do
   --srcdict ${opt_bin}/dict.src.txt \
   --tgtdict ${opt_bin}/dict.en.txt \
   --destdir ${opt_bin} --workers 20
-
-  python preprocess.py \
-  --source-lang en --target-lang ${lang} \
-  --trainpref ${opt_data}/${lang}_en/spm.train \
-  --validpref ${opt_data}/${lang}_en/spm.valid \
-  --testpref ${opt_data}/${lang}_en/spm.test \
-  --thresholdsrc 0 --thresholdtgt 0 \
-  --srcdict ${opt_bin}/dict.en.txt \
-  --tgtdict ${opt_bin}/dict.src.txt \
-  --destdir ${opt_bin} --workers 20
 done
