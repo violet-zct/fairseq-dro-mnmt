@@ -26,9 +26,10 @@ for lang in ${langs//,/ }; do
 
   mkdir ${opt_data}/${lang}_en
   for f in ${root}/${lang}_en/*${lang}; do
+    temp=$(basename $f)
     python ${SPM_ENCODE} \
       --model ${root}/${lang}_en/spm.${lang}.model \
-      --inputs ${f} --outputs ${opt_data}/${lang}_en/spm.${f}
+      --inputs ${f} --outputs ${opt_data}/${lang}_en/spm.${temp}
   done
 
   cat ${root}/${lang}_en/train.en >> ${opt_data}/combine.en
@@ -41,10 +42,11 @@ python ${SPM_TRAIN} \
   --character_coverage=1.0
 
 for lang in ${langs//,/ }; do
+  temp=$(basename $f)
   for f in ${root}/${lang}_en/*en; do
     python ${SPM_ENCODE} \
       --model ${opt_data}/spm.en.${EN_BPE_SIZE}.model \
-      --inputs ${f} --outputs ${opt_data}/${lang}_en/spm.${f}
+      --inputs ${f} --outputs ${opt_data}/${lang}_en/spm.${temp}
   done
 done
 
@@ -53,8 +55,30 @@ for lang in ${langs//,/ }; do
   cat ${opt_data}/${lang}_en/spm.train.en >> ${opt_data}/combine.train.en
 done
 
-python fairseq_cli/generate.py \
+python fairseq_cli/preprocess.py \
   --source-lang src --target-lang en \
   --trainpref ${opt_data}/combine.train \
   --thresholdsrc 0 --thresholdtgt 0 \
   --destdir ${opt_bin} --workers 20
+
+for lang in ${langs//,/ }; do
+  python fairseq_cli/preprocess.py \
+  --source-lang ${lang} --target-lang en \
+  --trainpref ${opt_data}/${lang}_en/spm.train \
+  --validpref ${opt_data}/${lang}_en/spm.valid \
+  --testpref ${opt_data}/${lang}_en/spm.test \
+  --thresholdsrc 0 --thresholdtgt 0 \
+  --srdict ${opt_bin}/dict.src.txt \
+  --tgtdict ${opt_bin}/dict.en.txt \
+  --destdir ${opt_bin} --workers 20
+
+  python fairseq_cli/preprocess.py \
+  --source-lang en --target-lang ${lang} \
+  --trainpref ${opt_data}/${lang}_en/spm.train \
+  --validpref ${opt_data}/${lang}_en/spm.valid \
+  --testpref ${opt_data}/${lang}_en/spm.test \
+  --thresholdsrc 0 --thresholdtgt 0 \
+  --srdict ${opt_bin}/dict.en.txt \
+  --tgtdict ${opt_bin}/dict.src.txt \
+  --destdir ${opt_bin} --workers 20
+done
