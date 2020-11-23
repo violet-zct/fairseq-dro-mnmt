@@ -10,6 +10,8 @@ opt_root="/checkpoint/chuntinz/data/mnmt_data/ted/ted8_diverse"
 
 opt_data=${opt_root}/data
 opt_bin=${opt_root}/data-bin
+
+rm -rf ${opt_data}
 mkdir -p ${opt_data}
 
 SPM_TRAIN=scripts/spm_train.py
@@ -36,14 +38,14 @@ for lang in ${langs//,/ }; do
 done
 
 python ${SPM_TRAIN} \
-  --input=${root}/${lang}_en/train.en \
+  --input=${opt_data}/combine.en \
   --model_prefix=${opt_data}/spm.en.${EN_BPE_SIZE}\
   --vocab_size=${EN_BPE_SIZE} \
   --character_coverage=1.0
 
 for lang in ${langs//,/ }; do
-  temp=$(basename $f)
   for f in ${root}/${lang}_en/*en; do
+    temp=$(basename $f)
     python ${SPM_ENCODE} \
       --model ${opt_data}/spm.en.${EN_BPE_SIZE}.model \
       --inputs ${f} --outputs ${opt_data}/${lang}_en/spm.${temp}
@@ -55,30 +57,30 @@ for lang in ${langs//,/ }; do
   cat ${opt_data}/${lang}_en/spm.train.en >> ${opt_data}/combine.train.en
 done
 
-python fairseq_cli/preprocess.py \
+python preprocess.py \
   --source-lang src --target-lang en \
   --trainpref ${opt_data}/combine.train \
   --thresholdsrc 0 --thresholdtgt 0 \
   --destdir ${opt_bin} --workers 20
 
 for lang in ${langs//,/ }; do
-  python fairseq_cli/preprocess.py \
+  python preprocess.py \
   --source-lang ${lang} --target-lang en \
   --trainpref ${opt_data}/${lang}_en/spm.train \
   --validpref ${opt_data}/${lang}_en/spm.valid \
   --testpref ${opt_data}/${lang}_en/spm.test \
   --thresholdsrc 0 --thresholdtgt 0 \
-  --srdict ${opt_bin}/dict.src.txt \
+  --srcdict ${opt_bin}/dict.src.txt \
   --tgtdict ${opt_bin}/dict.en.txt \
   --destdir ${opt_bin} --workers 20
 
-  python fairseq_cli/preprocess.py \
+  python preprocess.py \
   --source-lang en --target-lang ${lang} \
   --trainpref ${opt_data}/${lang}_en/spm.train \
   --validpref ${opt_data}/${lang}_en/spm.valid \
   --testpref ${opt_data}/${lang}_en/spm.test \
   --thresholdsrc 0 --thresholdtgt 0 \
-  --srdict ${opt_bin}/dict.en.txt \
+  --srcdict ${opt_bin}/dict.en.txt \
   --tgtdict ${opt_bin}/dict.src.txt \
   --destdir ${opt_bin} --workers 20
 done
