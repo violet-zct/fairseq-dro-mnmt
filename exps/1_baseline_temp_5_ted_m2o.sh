@@ -44,7 +44,7 @@ python train.py ${DATA}\
 	  --distributed-world-size 1 \
 	  --share-decoder-input-output-embed --share-decoders --share-encoders \
 	  --dropout 0.3 --attention-dropout 0.1 --activation-dropout 0.1 --weight-decay 0.0 \
-	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'inverse_sqrt_decay' \
+	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'inverse_sqrt' \
 	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 3e-5 --min-lr -1 \
 	  --criterion 'label_smoothed_cross_entropy' --label-smoothing 0.1 \
 	  --max-tokens 8192 \
@@ -60,7 +60,7 @@ wait
 
 for lang in ${langs//,/ }; do
   if [ $lang = "XXzh_tw" ] || [ $lang = "XXzh" ] || [ $lang = "jpn" ]; then
-    python fairseq_cli/generate.py \
+    python fairseq_cli/generate.py ${DATA} \
             --task translation_multi_simple_epoch  \
             --gen-subset test \
             --path ${SAVE}/checkpoint_best.pt \
@@ -71,7 +71,7 @@ for lang in ${langs//,/ }; do
             --encoder-langtok "src" \
             --beam 5  | tee ${SAVE}/test_${lang}_en.log
   else
-        python fairseq_cli/generate.py \
+        python fairseq_cli/generate.py ${DATA} \
             --task translation_multi_simple_epoch  \
             --gen-subset test \
             --path ${SAVE}/checkpoint_best.pt \
