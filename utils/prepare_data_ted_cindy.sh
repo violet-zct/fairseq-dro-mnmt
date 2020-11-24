@@ -2,10 +2,15 @@
 
 # following Cindy, spm separately and combine
 
-langs=""
 root="/checkpoint/chuntinz/data/mnmt_data/ted/raw"
+
+langs="ara,aze,bel,ben,bos,bul,ces,cmn,dan,deu,ell,epo,est,eus,fas,fin,fra,glg,heb,hin,hrv,hun,hye,ind,ita,jpn,kat,kaz,kor,kur,lit,mar,mkd,mon,msa,mya,nld,nob,pol,por,ron,rus,slk,slv,spa,sqi,srp,swe,tam,tha,tur,ukr,urd,vie,XXfr_ca,XXpt_pt,XXzh,XXzh_tw"
 opt_root="/checkpoint/chuntinz/data/mnmt_data/ted/ted_all"
+
+langs="aze,bel,glg,slk,tur,rus,por,ces"
 opt_root="/checkpoint/chuntinz/data/mnmt_data/ted/ted8_related"
+
+langs="bos,mar,hin,mkd,ell,bul,fra,kor"
 opt_root="/checkpoint/chuntinz/data/mnmt_data/ted/ted8_diverse"
 
 opt_data=${opt_root}/data
