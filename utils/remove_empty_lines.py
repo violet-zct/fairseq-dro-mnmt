@@ -34,7 +34,13 @@ for dirname in os.listdir(rawdir):
     if not dirname.endswith("en"):
         continue
 
-    lang, xx = dirname.split("_")
+    fields = dirname.split("_")
+    if len(fields) == 2:
+        lang, xx = fields
+    else:
+        lang = "_".join(fields[:2])
+        xx = fields[-1]
+    assert xx == "en"
     inputdirname = os.path.join(rawdir, dirname)
     train_data = read_data(inputdirname, lang, "train")
     valid_data = read_data(inputdirname, lang, "valid")
