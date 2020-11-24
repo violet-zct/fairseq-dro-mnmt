@@ -35,9 +35,10 @@ for dirname in os.listdir(rawdir):
         continue
 
     lang, xx = dirname.split("_")
-    train_data = read_data(dirname, lang, "train")
-    valid_data = read_data(dirname, lang, "valid")
-    test_data = read_data(dirname, lang, "test")
+    inputdirname = os.path.join(rawdir, dirname)
+    train_data = read_data(inputdirname, lang, "train")
+    valid_data = read_data(inputdirname, lang, "valid")
+    test_data =  read_data(inputdirname, lang, "test")
 
     optdirname = os.path.join(temp, "{}_en".format(lang))
     if not os.path.exists(optdirname):
