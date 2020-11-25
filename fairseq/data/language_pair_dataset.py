@@ -133,6 +133,16 @@ def collate(
             batch['alignments'] = alignments
             batch['align_weights'] = align_weights
 
+    if samples[0].get("constraints", None) is not None:
+        # Collate the packed constraints across the samples, padding to
+        # the length of the longest sample.
+        lens = [sample.get("constraints").size(0) for sample in samples]
+        max_len = max(lens)
+        constraints = torch.zeros((len(samples), max(lens))).long()
+        for i, sample in enumerate(samples):
+            constraints[i, 0:lens[i]] = samples[i].get("constraints")
+        batch["constraints"] = constraints
+
     return batch
 
 
@@ -161,6 +171,8 @@ class LanguagePairDataset(FairseqDataset):
             target if it's absent (default: False).
         align_dataset (torch.utils.data.Dataset, optional): dataset
             containing alignments.
+        constraints (Tensor, optional): 2d tensor with a concatenated, zero-
+            delimited list of constraints for each sentence.
         append_bos (bool, optional): if set, appends bos to the beginning of
             source/target sentence.
         num_buckets (int, optional): if set to a value greater than 0, then
@@ -180,6 +192,7 @@ class LanguagePairDataset(FairseqDataset):
         shuffle=True, input_feeding=True,
         remove_eos_from_source=False, append_eos_to_target=False,
         align_dataset=None,
+        constraints=None,
         append_bos=False, eos=None,
         num_buckets=0,
         src_lang_id=None,
@@ -195,6 +208,7 @@ class LanguagePairDataset(FairseqDataset):
         self.tgt = tgt
         self.src_sizes = np.array(src_sizes)
         self.tgt_sizes = np.array(tgt_sizes) if tgt_sizes is not None else None
+        self.sizes = np.vstack((self.src_sizes, self.tgt_sizes)).T if self.tgt_sizes is not None else self.src_sizes
         self.src_dict = src_dict
         self.tgt_dict = tgt_dict
         self.left_pad_source = left_pad_source
@@ -206,6 +220,7 @@ class LanguagePairDataset(FairseqDataset):
         self.align_dataset = align_dataset
         if self.align_dataset is not None:
             assert self.tgt_sizes is not None, "Both source and target needed when alignments are provided"
+        self.constraints = constraints
         self.append_bos = append_bos
         self.eos = (eos if eos is not None else src_dict.eos())
         self.src_lang_id = src_lang_id
@@ -279,6 +294,8 @@ class LanguagePairDataset(FairseqDataset):
         }
         if self.align_dataset is not None:
             example['alignment'] = self.align_dataset[index]
+        if self.constraints is not None:
+            example["constraints"] = self.constraints[index]
         return example
 
     def __len__(self):
@@ -356,9 +373,9 @@ class LanguagePairDataset(FairseqDataset):
         """Return an ordered list of indices. Batches will be constructed based
         on this order."""
         if self.shuffle:
-            indices = np.random.permutation(len(self))
+            indices = np.random.permutation(len(self)).astype(np.int64)
         else:
-            indices = np.arange(len(self))
+            indices = np.arange(len(self), dtype=np.int64)
         if self.buckets is None:
             # sort by target length, then source length
             if self.tgt_sizes is not None:
@@ -400,21 +417,9 @@ class LanguagePairDataset(FairseqDataset):
             np.array: filtered sample array
             list: list of removed indices
         """
-        if max_sizes is None:
-            return indices, []
-        if type(max_sizes) in (int, float):
-            max_src_size, max_tgt_size = max_sizes, max_sizes
-        else:
-            max_src_size, max_tgt_size = max_sizes
-        if self.tgt_sizes is None:
-            ignored = indices[self.src_sizes[indices] > max_src_size]
-        else:
-            ignored = indices[(self.src_sizes[indices] > max_src_size) |
-                              (self.tgt_sizes[indices] > max_tgt_size)]
-        if len(ignored) > 0:
-            if self.tgt_sizes is None:
-                indices = indices[self.src_sizes[indices] <= max_src_size]
-            else:
-                indices = indices[(self.src_sizes[indices] <= max_src_size) &
-                                  (self.tgt_sizes[indices] <= max_tgt_size)]
-        return indices, ignored.tolist()
+        return data_utils.filter_paired_dataset_indices_by_size(
+            self.src_sizes,
+            self.tgt_sizes,
+            indices,
+            max_sizes,
+        )

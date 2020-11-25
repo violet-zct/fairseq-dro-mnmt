@@ -9,7 +9,7 @@ import os
 import sys
 
 from fairseq.data import FileAudioDataset, Dictionary, AddTargetDataset
-from . import FairseqTask, register_task
+from . import LegacyFairseqTask, register_task
 
 
 class LabelEncoder(object):
@@ -23,7 +23,7 @@ class LabelEncoder(object):
 
 
 @register_task("audio_pretraining")
-class AudioPretrainingTask(FairseqTask):
+class AudioPretrainingTask(LegacyFairseqTask):
     """
 
     """
@@ -135,3 +135,13 @@ class AudioPretrainingTask(FairseqTask):
     def max_positions(self):
         """Maximum input length supported by the encoder."""
         return (sys.maxsize, sys.maxsize)
+
+    def filter_indices_by_size(
+            self,
+            indices,
+            dataset,
+            max_positions=None,
+            ignore_invalid_inputs=False,
+    ):
+        # we do not need to filter by size in this task as dataloaders take care of this
+        return indices

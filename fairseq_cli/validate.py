@@ -7,6 +7,7 @@
 
 from itertools import chain
 import logging
+import os
 import sys
 
 import torch
@@ -18,7 +19,7 @@ from fairseq.logging import metrics, progress_bar
 logging.basicConfig(
     format='%(asctime)s | %(levelname)s | %(name)s | %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.INFO,
+    level=os.environ.get('LOGLEVEL', 'INFO').upper(),
     stream=sys.stdout,
 )
 logger = logging.getLogger('fairseq_cli.validate')
@@ -87,6 +88,7 @@ def main(args, override_args=None):
             num_shards=args.distributed_world_size,
             shard_id=args.distributed_rank,
             num_workers=args.num_workers,
+            data_buffer_size=args.data_buffer_size,
         ).next_epoch_itr(shuffle=False)
         progress = progress_bar.progress_bar(
             itr,

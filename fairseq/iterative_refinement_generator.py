@@ -105,7 +105,9 @@ class IterativeRefinementGenerator(object):
 
 
     @torch.no_grad()
-    def generate(self, models, sample, prefix_tokens=None):
+    def generate(self, models, sample, prefix_tokens=None, constraints=None):
+        if constraints is not None:
+            raise NotImplementedError("Constrained decoding with the IterativeRefinementGenerator is not supported")
 
         # TODO: iterative refinement generator does not support ensemble for now.
         if not self.retain_dropout:
@@ -266,7 +268,7 @@ class IterativeRefinementGenerator(object):
                 if decoder_out.history is not None
                 else None,
             )
-            encoder_out = model.encoder.reorder_encoder_out(encoder_out, not_terminated.nonzero().squeeze())
+            encoder_out = model.encoder.reorder_encoder_out(encoder_out, not_terminated.nonzero(as_tuple=False).squeeze())
             sent_idxs = sent_idxs[not_terminated]
             prev_output_tokens = prev_decoder_out.output_tokens.clone()
 

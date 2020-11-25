@@ -16,13 +16,13 @@ from fairseq.data import (
     NestedDictionaryDataset,
     NumelDataset,
     NumSamplesDataset,
-    PadDataset,
+    RightPadDataset,
     PrependTokenDataset,
     SortDataset,
     TokenBlockDataset,
 )
+from fairseq.tasks import register_task, LegacyFairseqTask
 from fairseq.data.shorten_dataset import maybe_shorten_dataset
-from fairseq.tasks import FairseqTask, register_task
 from fairseq.data.encoders.utils import get_whole_word_mask
 from fairseq import utils
 
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 @register_task('masked_lm')
-class MaskedLMTask(FairseqTask):
+class MaskedLMTask(LegacyFairseqTask):
     """Task for training masked language models (e.g., BERT, RoBERTa)."""
 
     @staticmethod
@@ -150,17 +150,15 @@ class MaskedLMTask(FairseqTask):
                 {
                     'id': IdDataset(),
                     'net_input': {
-                        'src_tokens': PadDataset(
+                        'src_tokens': RightPadDataset(
                             src_dataset,
                             pad_idx=self.source_dictionary.pad(),
-                            left_pad=False,
                         ),
                         'src_lengths': NumelDataset(src_dataset, reduce=False),
                     },
-                    'target': PadDataset(
+                    'target': RightPadDataset(
                         tgt_dataset,
                         pad_idx=self.source_dictionary.pad(),
-                        left_pad=False,
                     ),
                     'nsentences': NumSamplesDataset(),
                     'ntokens': NumelDataset(src_dataset, reduce=True),
@@ -174,7 +172,7 @@ class MaskedLMTask(FairseqTask):
         )
 
     def build_dataset_for_inference(self, src_tokens, src_lengths, sort=True):
-        src_dataset = PadDataset(
+        src_dataset = RightPadDataset(
             TokenBlockDataset(
                 src_tokens,
                 src_lengths,
@@ -184,7 +182,6 @@ class MaskedLMTask(FairseqTask):
                 break_mode='eos',
             ),
             pad_idx=self.source_dictionary.pad(),
-            left_pad=False,
         )
         src_dataset = PrependTokenDataset(src_dataset, self.source_dictionary.bos())
         src_dataset = NestedDictionaryDataset(

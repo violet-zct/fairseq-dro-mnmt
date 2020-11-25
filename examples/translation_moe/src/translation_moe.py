@@ -162,7 +162,7 @@ class TranslationMoETask(TranslationTask):
             return lprob_yz
 
         # compute responsibilities without dropout
-        with utils.eval(model):  # disable dropout
+        with utils.model_eval(model):  # disable dropout
             with torch.no_grad():  # disable autograd
                 lprob_yz = get_lprob_yz()  # B x K
                 prob_z_xy = torch.nn.functional.softmax(lprob_yz, dim=1)
@@ -201,13 +201,14 @@ class TranslationMoETask(TranslationTask):
             loss, sample_size, logging_output = self._get_loss(sample, model, criterion)
         return loss, sample_size, logging_output
 
-    def inference_step(self, generator, models, sample, prefix_tokens=None, expert=None):
+    def inference_step(self, generator, models, sample, prefix_tokens=None, expert=None, constraints=None):
         expert = expert or self.args.gen_expert
         with torch.no_grad():
             return generator.generate(
                 models,
                 sample,
                 prefix_tokens=prefix_tokens,
+                constraints=constraints,
                 bos_token=self.expert_index(expert),
             )
 

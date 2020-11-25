@@ -25,15 +25,22 @@ Given a directory containing wav files to be used for pretraining (we recommend 
 
 ### Prepare training data manifest:
 
+First, install the `soundfile` library:
+```shell script
+pip install soundfile
+```
+
+Next, run:
+
+```shell script
+$ python examples/wav2vec/wav2vec_manifest.py /path/to/waves --dest /manifest/path --ext $ext --valid-percent $valid
+```
+
 $ext should be set to flac, wav, or whatever format your dataset happens to use that soundfile can read.
 
 $valid should be set to some reasonable percentage (like 0.01) of training data to use for validation.
 To use a pre-defined validation set (like dev-other from librispeech), set to it 0 and then overwrite valid.tsv with a
 separately pre-processed manifest file.
-
-```shell script
-$ python examples/wav2vec/wav2vec_manifest.py /path/to/waves --dest /manifest/path --ext $ext --valid-percent $valid
-```
 
 ### Train a wav2vec 2.0 base model:
 
@@ -43,7 +50,7 @@ Note that this was tested with pytorch 1.4.0 and the input is expected to be sin
 
 ```shell script
 $ python train.py --distributed-world-size 64 --distributed-port $PORT /manifest/path \
---save-dir /model/path fp16 --num-workers 6 --task audio_pretraining --criterion wav2vec --arch wav2vec2 \
+--save-dir /model/path --fp16 --num-workers 6 --task audio_pretraining --criterion wav2vec --arch wav2vec2 \
 --log-keys '["prob_perplexity","code_perplexity","temp"]' --quantize-targets --extractor-mode default \
 --conv-feature-layers '[(512, 10, 5)] + [(512, 3, 2)] * 4 + [(512,2,2)] * 2' --final-dim 256 --latent-vars 320 \
 --latent-groups 2 --latent-temp '(2,0.5,0.999995)' --infonce --optimizer adam \
@@ -108,6 +115,11 @@ Note: you can simulate 24 GPUs by using k GPUs and setting --update-freq 24/k
 
 Decoding with a language model during training requires wav2letter [python bindings](https://github.com/facebookresearch/wav2letter/wiki/Building-Python-bindings).
 Alternatively, simply omit the --wer-args flag.
+
+For hyper-parameters to fine-tune other Librispeech splits (10 minutes, 1 hour, etc) please refer to the table in Appendix B in the wav2vec 2.0 paper.
+The main changes to make are adjusting --max-update, and then adjusting --warmup-steps, --hold-steps, and --decay steps so that they use 0.1/0.4/0.5 of max-update respectively. You then need to adjust --mask-prob and --mask-channel-prob. This should be set to the mask-length * x where x is the number in the table and mask-length is what you use for --mask-length (10 in this example. Use --mask-channel-length value for --mask-channel-prob).
+
+For example, for 10 hours, we see in the paper that timestep mask prob should be 0.065, so we set --mask-prob to 10* 0.065 = 0.65. channel mask prob is 0.004, so we set it to 64 * 0.004 = 0.256. then we set --max-updates to 20000 and change --warmup-steps to 20000 * 0.1 = 2000, --hold-steps to 8000 and --decay-steps to 10000.
 
 ### Evaluating a CTC model:
 

@@ -8,10 +8,10 @@ import json
 import itertools
 import logging
 import os
-
+from fairseq import options
 import numpy as np
 
-from fairseq import metrics, options, utils
+from fairseq import metrics, utils
 from fairseq.data import (
     AppendTokenDataset,
     ConcatDataset,
@@ -24,7 +24,7 @@ from fairseq.data import (
     TruncateDataset,
 )
 
-from fairseq.tasks import FairseqTask, register_task
+from fairseq.tasks import register_task, LegacyFairseqTask
 
 EVAL_BLEU_ORDER = 4
 
@@ -133,7 +133,7 @@ def load_langpair_dataset(
 
 
 @register_task('translation')
-class TranslationTask(FairseqTask):
+class TranslationTask(LegacyFairseqTask):
     """
     Translate from one (source) language to another (target) language.
 
@@ -218,8 +218,8 @@ class TranslationTask(FairseqTask):
         Args:
             args (argparse.Namespace): parsed command-line arguments
         """
-        args.left_pad_source = options.eval_bool(args.left_pad_source)
-        args.left_pad_target = options.eval_bool(args.left_pad_target)
+        args.left_pad_source = utils.eval_bool(args.left_pad_source)
+        args.left_pad_target = utils.eval_bool(args.left_pad_target)
 
         paths = utils.split_paths(args.data)
         assert len(paths) > 0
@@ -270,8 +270,10 @@ class TranslationTask(FairseqTask):
             shuffle=(split != 'test'),
         )
 
-    def build_dataset_for_inference(self, src_tokens, src_lengths):
-        return LanguagePairDataset(src_tokens, src_lengths, self.source_dictionary)
+    def build_dataset_for_inference(self, src_tokens, src_lengths, constraints=None):
+        return LanguagePairDataset(src_tokens, src_lengths, self.source_dictionary,
+                                   tgt_dict=self.target_dictionary,
+                                   constraints=constraints)
 
     def build_model(self, args):
         model = super().build_model(args)
@@ -377,7 +379,7 @@ class TranslationTask(FairseqTask):
                 s = self.tokenizer.decode(s)
             return s
 
-        gen_out = self.inference_step(generator, [model], sample, None)
+        gen_out = self.inference_step(generator, [model], sample, prefix_tokens=None)
         hyps, refs = [], []
         for i in range(len(gen_out)):
             hyps.append(decode(gen_out[i][0]['tokens']))

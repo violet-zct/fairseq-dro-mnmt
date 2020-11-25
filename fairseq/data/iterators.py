@@ -53,8 +53,6 @@ class CountingIterator(object):
         else:
             self.total = total
 
-        self.early_stop = self.total
-
     def __len__(self):
         return self.total
 
@@ -65,8 +63,6 @@ class CountingIterator(object):
                     'Mismatch between actual and expected iterable length. '
                     'Please report this to the fairseq developers.'
                 )
-            elif self.n >= self.early_stop:
-                return  # early stop based on take()
             self.n += 1
             yield x
 
@@ -86,11 +82,20 @@ class CountingIterator(object):
         """
         Truncates the iterator to n elements at most.
         """
-        self.early_stop = min(self.early_stop, n)
+        self.total = min(self.total, n)
 
         # Propagate this change to the underlying iterator
+        # Only take after what we have already consumed (i.e. after restarting
+        # from checkpoint mid epoch, we have to subtract self.n which is the
+        # starting point)
+        #
+        # This to maintain the invariant self.total = self.n + len(iterable),
+        # before calling __next__ or __iter__
+        propagated_take = max(n - self.n, 0)
         if hasattr(self.iterable, "take"):
-            self.iterable.take(n)
+            self.iterable.take(propagated_take)
+        else:
+            self.iterable = itertools.islice(self.iterable, propagated_take)
 
 
 class EpochBatchIterating(object):
@@ -470,9 +475,7 @@ class BackgroundConsumer(Thread):
 
     def run(self):
         try:
-            self._source_iter = iter(self._source)
-            for _ in range(len(self._source)):
-                item = next(self._source_iter)
+            for item in self._source:
                 self._queue.put(item)
 
                 # Stop if we reached the maximum length
@@ -485,24 +488,23 @@ class BackgroundConsumer(Thread):
         except Exception as e:
             self._queue.put(e)
 
-        del self._source_iter
-
 
 class BufferedIterator(object):
     def __init__(self, size, iterable):
         self._queue = queue.Queue(size)
         self._iterable = iterable
-        self.max_len = None
         self._consumer = None
 
         self.start_time = time.time()
         self.warning_time = None
 
+        self.total = len(iterable)
+
     def _create_consumer(self):
         self._consumer = BackgroundConsumer(
             self._queue,
             self._iterable,
-            self.max_len
+            self.total,
         )
         self._consumer.daemon = True
         self._consumer.start()
@@ -511,10 +513,16 @@ class BufferedIterator(object):
         return self
 
     def __len__(self):
-        return len(self._iterable)
+        return self.total
 
     def take(self, n):
-        self.max_len = n
+        self.total = min(self.total, n)
+
+        # Propagate this change to the underlying iterator
+        if hasattr(self._iterable, "take"):
+            self._iterable.take(n)
+        else:
+            self._iterable = itertools.islice(self._iterable, n)
 
     def __next__(self):
         # Create consumer if not created yet

@@ -49,7 +49,7 @@ def _main(args, output_file):
     logging.basicConfig(
         format='%(asctime)s | %(levelname)s | %(name)s | %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
-        level=logging.INFO,
+        level=os.environ.get('LOGLEVEL', 'INFO').upper(),
         stream=output_file,
     )
     logger = logging.getLogger('fairseq_cli.generate')
@@ -113,6 +113,7 @@ def _main(args, output_file):
         num_shards=args.num_shards,
         shard_id=args.shard_id,
         num_workers=args.num_workers,
+        data_buffer_size=args.data_buffer_size,
     ).next_epoch_itr(shuffle=False)
     progress = progress_bar.progress_bar(
         itr,
@@ -150,8 +151,12 @@ def _main(args, output_file):
         if args.prefix_size > 0:
             prefix_tokens = sample['target'][:, :args.prefix_size]
 
+        constraints = None
+        if "constraints" in sample:
+            constraints = sample["constraints"]
+
         gen_timer.start()
-        hypos = task.inference_step(generator, models, sample, prefix_tokens)
+        hypos = task.inference_step(generator, models, sample, prefix_tokens=prefix_tokens, constraints=constraints)
         num_generated_tokens = sum(len(h[0]['tokens']) for h in hypos)
         gen_timer.stop(num_generated_tokens)
 

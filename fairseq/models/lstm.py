@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from fairseq import options, utils
+from fairseq import utils
 from fairseq.models import (
     FairseqEncoder,
     FairseqIncrementalDecoder,
@@ -168,12 +168,12 @@ class LSTMModel(FairseqEncoderDecoderModel):
             num_layers=args.decoder_layers,
             dropout_in=args.decoder_dropout_in,
             dropout_out=args.decoder_dropout_out,
-            attention=options.eval_bool(args.decoder_attention),
+            attention=utils.eval_bool(args.decoder_attention),
             encoder_output_units=encoder.output_units,
             pretrained_embed=pretrained_decoder_embed,
             share_input_output_embed=args.share_decoder_input_output_embed,
             adaptive_softmax_cutoff=(
-                options.eval_str_list(args.adaptive_softmax_cutoff, type=int)
+                utils.eval_str_list(args.adaptive_softmax_cutoff, type=int)
                 if args.criterion == 'adaptive_loss' else None
             ),
             max_target_positions=max_target_positions,
@@ -268,7 +268,7 @@ class LSTMEncoder(FairseqEncoder):
 
         # pack embedded source tokens into a PackedSequence
         packed_x = nn.utils.rnn.pack_padded_sequence(
-            x, src_lengths.data, enforce_sorted=enforce_sorted
+            x, src_lengths.cpu(), enforce_sorted=enforce_sorted
         )
 
         # apply LSTM

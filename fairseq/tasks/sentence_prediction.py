@@ -25,15 +25,15 @@ from fairseq.data import (
     SortDataset,
     StripTokenDataset,
 )
+from fairseq.tasks import register_task, LegacyFairseqTask
 from fairseq.data.shorten_dataset import maybe_shorten_dataset
-from fairseq.tasks import FairseqTask, register_task
 
 
 logger = logging.getLogger(__name__)
 
 
 @register_task('sentence_prediction')
-class SentencePredictionTask(FairseqTask):
+class SentencePredictionTask(LegacyFairseqTask):
     """
     Sentence (or sentence pair) prediction (classification or regression) task.
 
@@ -192,16 +192,20 @@ class SentencePredictionTask(FairseqTask):
         else:
             label_path = "{0}.label".format(get_path('label', split))
             if os.path.exists(label_path):
+
                 def parse_regression_target(i, line):
                     values = line.split()
                     assert len(values) == self.args.num_classes, \
                         f'expected num_classes={self.args.num_classes} regression target values on line {i}, found: "{line}"'
                     return [float(x) for x in values]
-                dataset.update(
-                    target=RawLabelDataset([
-                        parse_regression_target(i, line.strip()) for i, line in enumerate(open(label_path).readlines())
-                    ])
-                )
+
+                with open(label_path) as h:
+                    dataset.update(
+                        target=RawLabelDataset([
+                            parse_regression_target(i, line.strip())
+                            for i, line in enumerate(h.readlines())
+                        ])
+                    )
 
         nested_dataset = NestedDictionaryDataset(
             dataset,
