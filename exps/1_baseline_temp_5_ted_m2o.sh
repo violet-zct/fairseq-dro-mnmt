@@ -34,7 +34,7 @@ cp $0 ${SAVE}/run.sh
 
 python train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
-	  --arch ${model} \
+	  --arch ${model} --valid-subset cap.valid \
 	  --sampling-method "temperature" --sampling-temperature 5 \
 	  --encoder-langtok "src" \
 	  --max-update 300000 --layernorm-embedding \
@@ -60,6 +60,7 @@ wait
 
 for lang in ${langs//,/ }; do
   if [ $lang = "XXzh_tw" ] || [ $lang = "XXzh" ] || [ $lang = "jpn" ]; then
+    # todo: segmentation
     python fairseq_cli/generate.py ${DATA} \
             --task translation_multi_simple_epoch  \
             --gen-subset test \

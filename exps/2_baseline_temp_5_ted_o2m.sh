@@ -34,7 +34,7 @@ cp $0 ${SAVE}/run.sh
 
 python train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
-	  --arch ${model} \
+	  --arch ${model} --valid-subset cap.valid \
 	  --sampling-method "temperature" --sampling-temperature 5 \
 	  --encoder-langtok "tgt" \
 	  --max-update 300000 --layernorm-embedding \

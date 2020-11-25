@@ -23,7 +23,7 @@ DATA=/checkpoint/chuntinz/data/mnmt_data/ted/ted8_diverse/data-bin
 
 langs="bos,mar,hin,mkd,ell,bul,fra,kor"
 lang_pairs="en-bos,en-mar,en-hin,en-mkd,en-ell,en-bul,en-fra,en-kor"
-model=transformer
+model=transformer_iwslt_de_en
 exp_name=6_baseline_temp_5_ted8_diverse_o2m
 
 SAVE=${SAVE_ROOT}/${exp_name}
@@ -34,10 +34,10 @@ cp $0 ${SAVE}/run.sh
 
 python train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
-	  --arch ${model} \
+	  --arch ${model} --valid-subset cap.valid \
 	  --sampling-method "temperature" --sampling-temperature 5 \
 	  --encoder-langtok "tgt" \
-	  --max-update 300000 --layernorm-embedding \
+	  --max-update 200000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
 	  --no-epoch-checkpoints \
