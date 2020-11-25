@@ -98,15 +98,6 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
         langs, dicts, training = MultilingualDatasetManager.prepare(
             cls.load_dictionary, args, **kwargs
         )
-        dict0 = None
-        for _, lang_dict in dicts.items():
-            if dict0 is None:
-                dict0 = lang_dict
-            else:
-                assert (
-                    dict0 == lang_dict
-                ), "Diffrent dictionary are specified for different languages; "
-                "TranslationMultiSimpleEpochTask only supports one shared dictionary across all languages"
         return cls(args, langs, dicts, training)
 
     def has_sharded_data(self, split):
