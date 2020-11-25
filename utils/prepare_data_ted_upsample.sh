@@ -88,7 +88,7 @@ for lang in ${langs//,/ }; do
   --validpref ${opt_data}/${lang}_en/spm.valid \
   --testpref ${opt_data}/${lang}_en/spm.test \
   --thresholdsrc 0 --thresholdtgt 0 \
-  --srcdict ${opt_bin}/dict.src.txt \
+  --srcdict ${opt_bin}/dict.xx.txt \
   --tgtdict ${opt_bin}/dict.en.txt \
   --destdir ${opt_bin} --workers 20
 done
@@ -99,7 +99,7 @@ for lang in ${langs//,/ }; do
   --validpref ${opt_data}/${lang}_en/spm.cap.valid \
   --optvalidpref cap.valid \
   --thresholdsrc 0 --thresholdtgt 0 \
-  --srcdict ${opt_bin}/dict.src.txt \
+  --srcdict ${opt_bin}/dict.xx.txt \
   --tgtdict ${opt_bin}/dict.en.txt \
   --destdir ${opt_bin} --workers 20
 done
