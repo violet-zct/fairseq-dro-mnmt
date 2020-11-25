@@ -240,8 +240,9 @@ def main(args):
         if args.trainpref:
             make_dataset(vocab, args.trainpref, "train", lang, num_workers=args.workers)
         if args.validpref:
+            prefix = args.optvalidpref if args.optvalidpref is not None else "valid"
             for k, validpref in enumerate(args.validpref.split(",")):
-                outprefix = "valid{}".format(k) if k > 0 else "valid"
+                outprefix = "{}{}".format(prefix, k) if k > 0 else prefix
                 make_dataset(vocab, validpref, outprefix, lang, num_workers=args.workers)
         if args.testpref:
             for k, testpref in enumerate(args.testpref.split(",")):
