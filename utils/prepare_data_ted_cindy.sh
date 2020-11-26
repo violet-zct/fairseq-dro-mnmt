@@ -15,7 +15,7 @@ opt_root="/checkpoint/chuntinz/data/mnmt_data/ted/ted8_diverse_sep"
 
 if [ ! -d ${opt_root} ]; then
   mkdir ${opt_root}
-fi 
+fi
 opt_data=${opt_root}/data
 opt_bin=${opt_root}/data-bin
 
