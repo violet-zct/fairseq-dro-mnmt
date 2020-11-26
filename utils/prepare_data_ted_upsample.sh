@@ -9,14 +9,17 @@ if [ $option = "1" ]; then
   langs="ara,aze,bel,ben,bos,bul,ces,cmn,dan,deu,ell,epo,est,eus,fas,fin,fra,glg,heb,hin,hrv,hun,hye,ind,ita,jpn,kat,kaz,kor,kur,lit,mar,mkd,mon,msa,mya,nld,nob,pol,por,ron,rus,slk,slv,spa,sqi,srp,swe,tam,tha,tur,ukr,urd,vie,XXfr_ca,XXpt_pt,XXzh,XXzh_tw"
   target="ted_all"
   BPE_SIZE=50000
+  lang_file="/checkpoint/chuntinz/data/mnmt_data/ted/lang_lists/all.langs.list"
 elif [ $option = "2" ]; then
   langs="aze,bel,glg,slk,tur,rus,por,ces"
   target="ted8_related"
   BPE_SIZE=30000
+  lang_file="/checkpoint/chuntinz/data/mnmt_data/ted/lang_lists/8re.langs.list"
 else
   langs="bos,mar,hin,mkd,ell,bul,fra,kor"
   target="ted8_diverse"
   BPE_SIZE=30000
+  lang_file="/checkpoint/chuntinz/data/mnmt_data/ted/lang_lists/8di.langs.list"
 fi
 
 opt_root="/checkpoint/chuntinz/data/mnmt_data/ted/${target}"
@@ -103,3 +106,5 @@ for lang in ${langs//,/ }; do
   --tgtdict ${opt_bin}/dict.en.txt \
   --destdir ${opt_bin} --workers 20
 done
+
+cp ${lang_file} ${opt_bin}/langs.list
