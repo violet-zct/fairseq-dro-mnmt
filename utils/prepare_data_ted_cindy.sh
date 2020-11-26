@@ -4,14 +4,14 @@
 
 root="/checkpoint/chuntinz/data/mnmt_data/ted/raw"
 
-langs="ara,aze,bel,ben,bos,bul,ces,cmn,dan,deu,ell,epo,est,eus,fas,fin,fra,glg,heb,hin,hrv,hun,hye,ind,ita,jpn,kat,kaz,kor,kur,lit,mar,mkd,mon,msa,mya,nld,nob,pol,por,ron,rus,slk,slv,spa,sqi,srp,swe,tam,tha,tur,ukr,urd,vie,XXfr_ca,XXpt_pt,XXzh,XXzh_tw"
-opt_root="/checkpoint/chuntinz/data/mnmt_data/ted/ted_all"
+#langs="ara,aze,bel,ben,bos,bul,ces,cmn,dan,deu,ell,epo,est,eus,fas,fin,fra,glg,heb,hin,hrv,hun,hye,ind,ita,jpn,kat,kaz,kor,kur,lit,mar,mkd,mon,msa,mya,nld,nob,pol,por,ron,rus,slk,slv,spa,sqi,srp,swe,tam,tha,tur,ukr,urd,vie,XXfr_ca,XXpt_pt,XXzh,XXzh_tw"
+#opt_root="/checkpoint/chuntinz/data/mnmt_data/ted/ted_all"
 
 langs="aze,bel,glg,slk,tur,rus,por,ces"
-opt_root="/checkpoint/chuntinz/data/mnmt_data/ted/ted8_related"
+opt_root="/checkpoint/chuntinz/data/mnmt_data/ted/ted8_related_sep"
 
 langs="bos,mar,hin,mkd,ell,bul,fra,kor"
-opt_root="/checkpoint/chuntinz/data/mnmt_data/ted/ted8_diverse"
+opt_root="/checkpoint/chuntinz/data/mnmt_data/ted/ted8_diverse_sep"
 
 opt_data=${opt_root}/data
 opt_bin=${opt_root}/data-bin
@@ -23,7 +23,7 @@ mkdir -p ${opt_data}
 SPM_TRAIN=scripts/spm_train.py
 SPM_ENCODE=scripts/spm_encode.py
 BPE_SIZE=8000
-EN_BPE_SIZE=30000
+EN_BPE_SIZE=8000
 
 for lang in ${langs//,/ }; do
   python ${SPM_TRAIN} \
