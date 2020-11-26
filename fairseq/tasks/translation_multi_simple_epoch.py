@@ -80,7 +80,7 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
         else:
             self.lang_pairs = ['{}-{}'.format(args.source_lang, args.target_lang)]
 
-        self.pseudo_source_lang, self.pseudo_target_lang = args.lang_pairs[0].split("-")
+        self.pseudo_source_lang, self.pseudo_target_lang = self.lang_pairs[0].split("-")
         # eval_lang_pairs for multilingual translation is usually all of the
         # eval_lang_pairs for multilingual translation is usually all of the
         # lang_pairs. However for other multitask settings or when we want to
