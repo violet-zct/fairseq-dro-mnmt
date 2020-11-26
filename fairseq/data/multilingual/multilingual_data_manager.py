@@ -48,7 +48,8 @@ def _lang_id(dic: Dictionary, lang: str):
     """Return language ID index."""
     idx = dic.index(lang)
     assert idx != dic.unk_index, "cannot find language ID for lang {}".format(lang)
-    return idx
+    # minus unk index
+    return idx - 1
 
 
 def load_sampling_weights(from_file):
@@ -65,7 +66,12 @@ class MultilingualDatasetManager(object):
         self.lang_pairs = lang_pairs
         self.langs = langs
         self.dicts = dicts
-        self.lang_dict = self.create_lang_dictionary(self.langs)
+        self.src_langs = sorted(list(set([langpair.split("-")[0] for langpair in lang_pairs])))
+        self.tgt_langs = sorted(list(set([langpair.split("-")[1] for langpair in lang_pairs])))
+
+        self.src_lang_dict = self.create_lang_dictionary(self.src_langs)
+        self.tgt_lang_dict = self.create_lang_dictionary(self.tgt_langs)
+
         self.sampling_method = sampling_method
         self.sampling_scheduler = None
         self._has_sharded_data = False
@@ -745,7 +751,8 @@ class MultilingualDatasetManager(object):
         src_dataset_transform_func = self.src_dataset_tranform_func
         tgt_dataset_transform_func = self.tgt_dataset_tranform_func
         enable_lang_ids = self.args.enable_lang_ids
-        lang_dictionary = self.lang_dict
+        src_lang_dictionary = self.src_lang_dict
+        tgt_lang_dictionary = self.tgt_lang_dict
         src_langtok_spec, tgt_langtok_spec = extra_kwargs["langtok_spec"]
 
         src_langtok = self.get_encoder_langtok(src, tgt, src_langtok_spec)
@@ -777,11 +784,11 @@ class MultilingualDatasetManager(object):
             tgt_dataset_transform_func=lambda dataset: tgt_dataset_transform_func(
                 src, tgt, dataset, tgt_langtok_spec
             ),
-            src_lang_id=_lang_id(lang_dictionary, src)
-            if enable_lang_ids and lang_dictionary is not None
+            src_lang_id=_lang_id(src_lang_dictionary, src)
+            if enable_lang_ids and src_lang_dictionary is not None
             else None,
-            tgt_lang_id=_lang_id(lang_dictionary, tgt)
-            if enable_lang_ids and lang_dictionary is not None
+            tgt_lang_id=_lang_id(tgt_lang_dictionary, tgt)
+            if enable_lang_ids and tgt_lang_dictionary is not None
             else None,
             langpairs_sharing_datasets=langpairs_sharing_datasets,
         )

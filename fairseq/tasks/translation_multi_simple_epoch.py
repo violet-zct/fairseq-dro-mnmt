@@ -79,6 +79,9 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
             self.lang_pairs = args.lang_pairs
         else:
             self.lang_pairs = ['{}-{}'.format(args.source_lang, args.target_lang)]
+
+        self.pseudo_source_lang, self.pseudo_target_lang = args.lang_pairs[0].split("-")
+        # eval_lang_pairs for multilingual translation is usually all of the
         # eval_lang_pairs for multilingual translation is usually all of the
         # lang_pairs. However for other multitask settings or when we want to
         # optimize for certain languages we want to use a different subset. Thus
@@ -216,11 +219,11 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
 
     @property
     def source_dictionary(self):
-        return next(iter(self.dicts.values()))
+        return self.dicts[self.pseudo_source_lang]
 
     @property
     def target_dictionary(self):
-        return next(iter(self.dicts.values()))
+        return self.dicts[self.pseudo_target_lang]
 
     def create_batch_sampler_func(
         self, max_positions, ignore_invalid_inputs,

@@ -18,7 +18,7 @@
 
 source activate mnmt
 
-SAVE_ROOT=/private/home/chuntinz/work/fairseq-gdro/saved_models
+SAVE_ROOT=/private/home/chuntinz/work/fairseq-dro-mnmt/saved_models
 DATA=/checkpoint/chuntinz/data/mnmt_data/ted/ted_all/data-bin
 
 langs="ara,aze,bel,ben,bos,bul,ces,cmn,dan,deu,ell,epo,est,eus,fas,fin,fra,glg,heb,hin,hrv,hun,hye,ind,ita,jpn,kat,kaz,kor,kur,lit,mar,mkd,mon,msa,mya,nld,nob,pol,por,ron,rus,slk,slv,spa,sqi,srp,swe,tam,tha,tur,ukr,urd,vie,XXfr_ca,XXpt_pt,XXzh,XXzh_tw"
@@ -77,7 +77,7 @@ for lang in ${langs//,/ }; do
             --batch-size 300 \
             --lenpen 1.0 \
             --remove-bpe sentencepiece \
-	          --sacrebleu \
+	          --scoring sacrebleu \
             --lang-pairs ${lang_pairs} \
             --encoder-langtok "tgt" \
             --source-lang en --target-lang ${lang} \
