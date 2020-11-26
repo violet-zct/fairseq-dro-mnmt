@@ -37,7 +37,7 @@ python train.py ${DATA}\
 	  --arch ${model} --valid-subset cap.valid \
 	  --sampling-method "temperature" --sampling-temperature 5 \
 	  --encoder-langtok "tgt" \
-	  --max-update 200000 --layernorm-embedding \
+	  --max-update 150000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
 	  --no-epoch-checkpoints \
