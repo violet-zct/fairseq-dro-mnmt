@@ -1,0 +1,39 @@
+import os
+import sys
+
+dirname = sys.argv[1]
+
+lang_list_dir = "/private/home/chuntinz/work/data/mnmt_data/ted/lang_lists"
+
+if "ted" in dirname and "related" in dirname:
+    lang_file = os.path.join(lang_list_dir, "8re.langs.list")
+elif "ted" in dirname and "diverse" in dirname:
+    lang_file = os.path.join(lang_list_dir, "8di.langs.list")
+elif "ted" in dirname and "all":
+    lang_file = os.path.join(lang_list_dir, "all.langs.list")
+else:
+    raise ValueError
+
+langs = []
+for lang in open(lang_file).readlines():
+    lang = lang.strip()
+    if lang == "en":
+        continue
+    else:
+        langs.append(lang)
+
+results = ["-1"] * len(langs)
+for model in os.listdir(dirname):
+    if model.startswith("test"):
+        lang = model.strip().split("_")[1]
+        idx = langs.index(lang)
+
+        bleu = open(os.path.join(dirname, model)).readlines()[-1].strip()
+        print(lang)
+        print(bleu + "\n")
+
+        bleu = bleu.split(":")[-1].split("(")[0].split("=")[-1].split()[0]
+        results[idx] = bleu
+
+print(" ".join(langs) + "\n")
+print(" ".join(results))
