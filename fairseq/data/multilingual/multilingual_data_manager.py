@@ -421,9 +421,7 @@ class MultilingualDatasetManager(object):
             if tgt_lang is None:
                 return None
             langtok = self.get_lang_tok(tgt_lang, self.args, spec)
-        return self.get_langtok_index(
-            langtok, self.dicts[src_lang if src_lang else tgt_lang]
-        )
+        return self.get_langtok_index(langtok, self.dicts[src_lang])
 
     def get_decoder_langtok(self, tgt_lang, spec=None):
         if spec is None:

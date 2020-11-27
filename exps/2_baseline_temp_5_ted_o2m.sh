@@ -44,7 +44,7 @@ python train.py ${DATA}\
 	  --share-decoder-input-output-embed \
 	  --dropout 0.3 --attention-dropout 0.1 --activation-dropout 0.1 --weight-decay 0.0 \
 	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'inverse_sqrt' \
-	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 3e-5 --min-lr -1 \
+	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 5e-4 --min-lr -1 \
 	  --criterion 'label_smoothed_cross_entropy' --label-smoothing 0.1 \
 	  --max-tokens 8192 \
 	  --update-freq 1 \
@@ -65,7 +65,7 @@ for lang in ${langs//,/ }; do
             --path ${SAVE}/checkpoint_best.pt \
             --batch-size 300 \
             --lenpen 1.0 \
-            --lang-pairs ${lang_pairs} \
+            --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
             --source-lang en --target-lang ${lang} \
             --encoder-langtok "tgt" \
             --beam 5  | tee ${SAVE}/test_${lang}_en.log
@@ -78,7 +78,7 @@ for lang in ${langs//,/ }; do
             --lenpen 1.0 \
             --remove-bpe sentencepiece \
 	          --scoring sacrebleu \
-            --lang-pairs ${lang_pairs} \
+            --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
             --encoder-langtok "tgt" \
             --source-lang en --target-lang ${lang} \
             --beam 5  | tee ${SAVE}/test_${lang}_en.log

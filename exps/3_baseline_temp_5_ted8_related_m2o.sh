@@ -14,17 +14,19 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0
+#SBATCH --array=0-2
 
 source activate mnmt
 
+data_names=(ted8_related_30k ted8_related ted8_related_sep)
+split=${data_names[$SLURM_ARRAY_TASK_ID]}
 SAVE_ROOT=/private/home/chuntinz/work/fairseq-dro-mnmt/saved_models
-DATA=/checkpoint/chuntinz/data/mnmt_data/ted/ted8_related/data-bin
+DATA=/checkpoint/chuntinz/data/mnmt_data/ted/${split}/data-bin
 
 langs="aze,bel,glg,slk,tur,rus,por,ces"
 lang_pairs="aze-en,bel-en,glg-en,slk-en,tur-en,rus-en,por-en,ces-en"
 model=transformer_iwslt_de_en
-exp_name=3_baseline_temp_5_ted8_related_m2o
+exp_name=3_baseline_temp_5_${split}_m2o
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
@@ -42,9 +44,9 @@ python train.py ${DATA}\
     --lang-dict ${DATA}/langs.list \
 	  --no-epoch-checkpoints \
 	  --share-decoder-input-output-embed \
-	  --dropout 0.3 --attention-dropout 0.1 --activation-dropout 0.1 --weight-decay 0.0 \
+	  --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 0.0 \
 	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'inverse_sqrt' \
-	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 3e-5 --min-lr -1 \
+	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --min-lr -1 \
 	  --criterion 'label_smoothed_cross_entropy' --label-smoothing 0.1 \
 	  --max-tokens 8192 \
 	  --update-freq 1 \
@@ -66,7 +68,7 @@ for lang in ${langs//,/ }; do
       --lenpen 1.0 \
       --remove-bpe sentencepiece \
 	    --scoring sacrebleu \
-      --lang-pairs ${lang_pairs} \
+      --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
       --encoder-langtok "src" \
       --source-lang ${lang} --target-lang en \
       --beam 5  | tee ${SAVE}/test_${lang}_en.log
