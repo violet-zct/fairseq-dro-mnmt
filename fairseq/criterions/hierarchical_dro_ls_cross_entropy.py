@@ -227,7 +227,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 self.update_steps += 1
             net_output = model(**sample['net_input'])
             loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=reduce)
-            sample_size = sample['target'].size(0) if self.sentence_avg else sample['ntokens']
+            sample_size = sample['ntokens']
             logging_output = {
                 'loss': loss.data,
                 'nll_loss': nll_loss.data,
