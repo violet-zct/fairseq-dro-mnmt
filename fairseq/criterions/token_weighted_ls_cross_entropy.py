@@ -96,7 +96,6 @@ class TokenWeightedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         self.steps += (1 if self.training else 0)
         if self.training and self.steps > self.start_ft_steps:
-            logger.info(loss.size())
             mask = (sample['target'] != self.padding_idx).float().view(-1, 1)
             token_losses = loss * mask
             loss = self.weights[target] * token_losses
