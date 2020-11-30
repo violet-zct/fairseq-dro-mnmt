@@ -39,7 +39,7 @@ def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=T
 @register_criterion('plain_dro_label_smoothed_cross_entropy')
 class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, group_level, dro_alpha, baselines,
-                 update_dro_freq):
+                 update_dro_freq, start_ft_steps):
         super().__init__(task)
         self.distributed_world_size = self.task.args.distributed_world_size
         self.eps = label_smoothing
@@ -53,6 +53,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.print_steps = 100
 
         self.update_steps = 0
+        self.start_ft_steps = start_ft_steps
         self.EMA_alpha = 0.05
 
         self.logging = True
@@ -78,6 +79,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--dro-alpha', default=1., type=float, help='alpha value for the DRO loss.')
         parser.add_argument('--baselines', default=None, type=str, help='baseline loss values.')
         parser.add_argument('--update-dro-freq', default=1, type=int)
+        parser.add_argument('--start-ft-steps', default=0, type=int)
         # fmt: on
 
     def initialize(self):
@@ -176,6 +178,21 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         2) the sample size, which is used as the denominator for the gradient
         3) logging outputs to display while training
         """
+        if hasattr(self, "start_ft_steps") and self.update_steps < self.start_ft_steps:
+            if self.training:
+                self.update_steps += 1
+            net_output = model(**sample['net_input'])
+            loss, nll_loss = self.compute_loss(model, net_output, sample, reduce=reduce)
+            sample_size = sample['target'].size(0) if self.sentence_avg else sample['ntokens']
+            logging_output = {
+                'loss': loss.data,
+                'nll_loss': nll_loss.data,
+                'ntokens': sample['ntokens'],
+                'nsentences': sample['target'].size(0),
+                'sample_size': sample_size,
+            }
+            return loss, sample_size, logging_output
+
         nll_loss, group_losses, group_counts = self.compute_loss(model, sample)
         nsentences = sample['target'].size(0)
 

@@ -42,7 +42,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, outer_group_level,
                  dro_outer_alpha, dro_inner_beta,
                  baselines,
-                 update_dro_freq):
+                 update_dro_freq, start_ft_steps):
         super().__init__(task)
         self.distributed_world_size = self.task.args.distributed_world_size
         self.eps = label_smoothing
@@ -57,6 +57,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.print_steps = 100
 
         self.update_steps = 0
+        self.start_ft_steps = start_ft_steps
         self.EMA_alpha = 0.05
 
         if self.group_level == "source_lang":
@@ -80,6 +81,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--dro-inner-beta', default=1., type=float)
         parser.add_argument('--baselines', default=None, type=str, help='baseline loss values.')
         parser.add_argument('--update-dro-freq', default=1, type=int)
+        parser.add_argument('--start-ft-steps', default=0, type=int)
         # fmt: on
 
     def initialize(self):
@@ -202,6 +204,15 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         return nll_loss.sum(), outer_group_losses, outer_group_counts, inner_group_losses, inner_group_counts
 
+    def simple_loss(self, model, net_output, sample, reduce=True):
+        lprobs = model.get_normalized_probs(net_output, log_probs=True)
+        lprobs = lprobs.view(-1, lprobs.size(-1))
+        target = model.get_targets(sample, net_output).view(-1, 1)
+        loss, nll_loss = label_smoothed_nll_loss(
+            lprobs, target, self.eps, ignore_index=self.padding_idx, reduce=reduce,
+        )
+        return loss, nll_loss
+
     def forward(self, model, sample, reduce=True):
         """Compute the loss for the given sample.
 
@@ -210,6 +221,21 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         2) the sample size, which is used as the denominator for the gradient
         3) logging outputs to display while training
         """
+
+        if hasattr(self, "start_ft_steps") and self.update_steps < self.start_ft_steps:
+            if self.training:
+                self.update_steps += 1
+            net_output = model(**sample['net_input'])
+            loss, nll_loss = self.compute_loss(model, net_output, sample, reduce=reduce)
+            sample_size = sample['target'].size(0) if self.sentence_avg else sample['ntokens']
+            logging_output = {
+                'loss': loss.data,
+                'nll_loss': nll_loss.data,
+                'ntokens': sample['ntokens'],
+                'nsentences': sample['target'].size(0),
+                'sample_size': sample_size,
+            }
+            return loss, sample_size, logging_output
 
         if self.update_steps % self.update_freq == 1:
             self.update_mw_token()
