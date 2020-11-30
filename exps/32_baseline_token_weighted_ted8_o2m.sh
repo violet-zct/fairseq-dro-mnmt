@@ -23,7 +23,7 @@ split=${data_names[$SLURM_ARRAY_TASK_ID]}
 SAVE_ROOT=/private/home/chuntinz/work/fairseq-dro-mnmt/saved_models
 DATA=/checkpoint/chuntinz/data/mnmt_data/ted/${split}/data-bin
 
-if [ ${split} = "ted8_related " ]; then
+if [ ${split} = "ted8_related" ]; then
   langs="aze,bel,glg,slk,tur,rus,por,ces"
   lang_pairs="en-aze,en-bel,en-glg,en-slk,en-tur,en-rus,en-por,en-ces"
 else
