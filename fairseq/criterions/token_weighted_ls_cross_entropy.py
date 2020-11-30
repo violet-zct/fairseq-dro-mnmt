@@ -100,7 +100,7 @@ class TokenWeightedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             mask = (sample['target'] != self.padding_idx).float().view(-1, 1)
             token_losses = loss * mask
             loss = self.weights[target] * token_losses
-            
+
         return loss.sum(), nll_loss.sum()
 
     @staticmethod
