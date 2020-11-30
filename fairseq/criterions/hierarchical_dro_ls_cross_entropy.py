@@ -210,6 +210,11 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         2) the sample size, which is used as the denominator for the gradient
         3) logging outputs to display while training
         """
+        
+        if self.update_steps % self.update_freq == 1:
+            self.update_mw_token()
+            self.reset_history()
+
         nll_loss, outer_group_losses, outer_group_counts, inner_group_losses, inner_group_counts = \
             self.compute_loss(model, sample)
         nsentences = sample['target'].size(0)
@@ -250,10 +255,6 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             self.update_mw()
             loss = (outer_group_losses * self.outer_h_fun).sum()
             sample_size = 1
-
-            if self.update_steps % self.update_freq == 0:
-                self.update_mw_token()
-                self.reset_history()
 
         logging_output = {
             'loss': loss.data,
