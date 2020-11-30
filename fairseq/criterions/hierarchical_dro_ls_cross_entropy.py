@@ -247,10 +247,11 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             reduce_outer_group_losses = reduce_outer_group_losses / outer_group_denom
             outer_group_losses = outer_group_losses * self.distributed_world_size / outer_group_denom / outer_denom
 
-            self.outer_sum_losses.mul_(1 - self.EMA_alpha).add_(reduce_outer_group_losses, alpha=self.EMA_alpha)
-            self.outer_count_cat.mul_(1 - self.EMA_alpha).add_(outer_group_counts, alpha=self.EMA_alpha)
-            self.inner_sum_losses.mul_(1 - self.EMA_alpha).add_(reduce_inner_group_losses, alpha=self.EMA_alpha)
-            self.inner_count_cat.mul_(1 - self.EMA_alpha).add_(inner_group_counts, alpha=self.EMA_alpha)
+            valid_outer_index, valid_inner_index = reduce_outer_group_losses.ne(0), reduce_inner_group_losses.ne(0)
+            self.outer_sum_losses[valid_outer_index] = self.outer_sum_losses[valid_outer_index].mul(1 - self.EMA_alpha).add(reduce_outer_group_losses[valid_outer_index], alpha=self.EMA_alpha)
+            self.outer_count_cat[valid_outer_index] = self.outer_count_cat[valid_outer_index].mul(1 - self.EMA_alpha).add(outer_group_counts[valid_outer_index], alpha=self.EMA_alpha)
+            self.inner_sum_losses[valid_inner_index] = self.inner_sum_losses[valid_inner_index].mul(1 - self.EMA_alpha).add(reduce_inner_group_losses[valid_inner_index], alpha=self.EMA_alpha)
+            self.inner_count_cat[valid_inner_index] = self.inner_count_cat[valid_inner_index].mul(1 - self.EMA_alpha).add(inner_group_counts[valid_inner_index], alpha=self.EMA_alpha)
 
             self.update_mw()
             loss = (outer_group_losses * self.outer_h_fun).sum()

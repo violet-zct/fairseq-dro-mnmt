@@ -204,8 +204,11 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             reduce_group_losses = reduce_group_losses / group_denom
             group_losses = group_losses * self.distributed_world_size / group_denom / denom
 
-            self.sum_losses.mul_(1 - self.EMA_alpha).add_(reduce_group_losses, alpha=self.EMA_alpha)
-            self.count_cat.mul_(1 - self.EMA_alpha).add_(group_counts, alpha=self.EMA_alpha)
+            valid_index = reduce_group_losses.ne(0)
+            valid_losses = self.sum_losses[valid_index]
+            valid_counts = self.count_cat[valid_index]
+            self.sum_losses[valid_index] = valid_losses.mul(1 - self.EMA_alpha).add(reduce_group_losses[valid_index], alpha=self.EMA_alpha)
+            self.count_cat[valid_index] = valid_counts.mul(1 - self.EMA_alpha).add(group_counts[valid_index], alpha=self.EMA_alpha)
 
             if self.update_steps % self.update_freq == 0:
                 self.update_mw()
