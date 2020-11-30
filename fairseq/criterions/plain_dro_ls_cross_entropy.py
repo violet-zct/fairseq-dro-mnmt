@@ -170,6 +170,15 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         return nll_loss.sum(), group_losses, group_counts
 
+    def simple_loss(self, model, net_output, sample, reduce=True):
+        lprobs = model.get_normalized_probs(net_output, log_probs=True)
+        lprobs = lprobs.view(-1, lprobs.size(-1))
+        target = model.get_targets(sample, net_output).view(-1, 1)
+        loss, nll_loss = label_smoothed_nll_loss(
+            lprobs, target, self.eps, ignore_index=self.padding_idx, reduce=reduce,
+        )
+        return loss, nll_loss
+    
     def forward(self, model, sample, reduce=True):
         """Compute the loss for the given sample.
 
@@ -182,7 +191,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             if self.training:
                 self.update_steps += 1
             net_output = model(**sample['net_input'])
-            loss, nll_loss = self.compute_loss(model, net_output, sample, reduce=reduce)
+            loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=reduce)
             sample_size = sample['target'].size(0) if self.sentence_avg else sample['ntokens']
             logging_output = {
                 'loss': loss.data,
