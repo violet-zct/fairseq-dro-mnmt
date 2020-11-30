@@ -37,7 +37,7 @@ for model in os.listdir(dirname):
         print(bleu)
 
         bleu = bleu.split(":")[-1].split("(")[0].split("=")[-1].split()[0]
-        results[idx] = bleu
+        results[idx] = bleu.rstrip(",")
 
 print(" ".join(langs) + "\n")
 print(" ".join(results))
