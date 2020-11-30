@@ -39,7 +39,7 @@ python train.py ${DATA}\
 	  --arch ${model} --valid-subset cap.valid \
 	  --encoder-langtok "tgt" --enable-lang-ids \
 	  --criterion 'plain_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-	  --dro-alpha 0.2 --update-dro-freq 1 --group-level "target_lang"\
+	  --dro-alpha 0.3 --update-dro-freq 1 --group-level "target_lang"\
 	  --max-update 150000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \

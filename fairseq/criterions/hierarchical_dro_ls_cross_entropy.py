@@ -210,7 +210,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         2) the sample size, which is used as the denominator for the gradient
         3) logging outputs to display while training
         """
-        
+
         if self.update_steps % self.update_freq == 1:
             self.update_mw_token()
             self.reset_history()

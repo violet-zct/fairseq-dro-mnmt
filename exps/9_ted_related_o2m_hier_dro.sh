@@ -38,9 +38,9 @@ python train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset cap.valid \
 	  --encoder-langtok "tgt" --enable-lang-ids \
-	  --criterion 'plain_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-	  --dro-outer-alpha 0.2 --dro-inner-beta 0.1 \
-	  --update-dro-freq 10 --outer-group-level "target_lang"\
+	  --criterion 'hier_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
+	  --dro-outer-alpha 0.3 --dro-inner-beta 0.2 \
+	  --update-dro-freq 300 --outer-group-level "target_lang"\
 	  --max-update 150000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
