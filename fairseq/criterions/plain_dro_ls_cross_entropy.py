@@ -280,7 +280,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 g_nll = sum(log.get('fg_gnll{}'.format(ii), 0) for log in logging_outputs)
                 g_tokens = sum(log.get('fg_gcount{}'.format(ii), 0) for log in logging_outputs)
                 division_g_ntokens = g_tokens if g_tokens > 0 else 1
-                metrics.log_scalar('fg_gacc{}'.format(ii), -g_nll / division_g_ntokens, g_tokens, round=1)
+                metrics.log_scalar('fg_gnll{}'.format(ii), g_nll / division_g_ntokens, g_tokens, round=1)
 
     @staticmethod
     def logging_outputs_can_be_summed() -> bool:

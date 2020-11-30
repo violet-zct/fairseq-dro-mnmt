@@ -29,8 +29,8 @@ def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=T
     return loss, nll_loss
 
 
-@register_criterion('label_smoothed_cross_entropy')
-class LabelSmoothedCrossEntropyCriterion(FairseqCriterion):
+@register_criterion('token_weighted_label_smoothed_cross_entropy')
+class TokenWeightedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
     def __init__(self, task, sentence_avg, label_smoothing):
         super().__init__(task)
