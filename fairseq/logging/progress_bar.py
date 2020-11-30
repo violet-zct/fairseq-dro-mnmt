@@ -20,7 +20,7 @@ from typing import Optional
 import torch
 
 from .meters import AverageMeter, StopwatchMeter, TimeMeter
-
+import numpy
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +92,12 @@ def format_stat(stat):
     if isinstance(stat, Number):
         stat = '{:g}'.format(stat)
     elif isinstance(stat, AverageMeter):
-        stat = '{:.3f}'.format(stat.avg)
+        stat = stat.avg
+        if isinstance(stat, numpy.ndarray):
+            stat = stat.tolist()
+            stat = '[' + ' '.join(['{:.3f}'.format(i) for i in stat]) + ']'
+        else:
+            stat = '{:.3f}'.format(stat.avg)
     elif isinstance(stat, TimeMeter):
         stat = '{:g}'.format(round(stat.avg))
     elif isinstance(stat, StopwatchMeter):

@@ -117,6 +117,14 @@ def collate(
         tgt_lang_id = tgt_lang_id.index_select(0, sort_order)
         batch['tgt_lang_id'] = tgt_lang_id
 
+    if samples[0].get('target_token_count', None) is not None:
+        target_token_count = merge(
+            'target_token_count', left_pad=left_pad_target,
+            pad_to_length=pad_to_length['target'] if pad_to_length is not None else None,
+        )
+        target_token_count = target_token_count.index_select(0, sort_order)
+        batch['target_token_count'] = target_token_count
+
     if samples[0].get('alignment', None) is not None:
         bsz, tgt_sz = batch['target'].shape
         src_sz = batch['net_input']['src_tokens'].shape[1]
@@ -206,6 +214,7 @@ class LanguagePairDataset(FairseqDataset):
         num_buckets=0,
         src_lang_id=None,
         tgt_lang_id=None,
+        pass_token_counts=False,
     ):
         if tgt_dict is not None:
             assert src_dict.pad() == tgt_dict.pad()
@@ -234,6 +243,8 @@ class LanguagePairDataset(FairseqDataset):
         self.eos = (eos if eos is not None else src_dict.eos())
         self.src_lang_id = src_lang_id
         self.tgt_lang_id = tgt_lang_id
+
+        self.pass_token_counts = pass_token_counts
         if num_buckets > 0:
             from fairseq.data import BucketPadLengthDataset
             self.src = BucketPadLengthDataset(
@@ -301,6 +312,9 @@ class LanguagePairDataset(FairseqDataset):
             'source': src_item,
             'target': tgt_item,
         }
+
+        if self.pass_token_counts:
+            example["target_token_count"] = torch.LongTensor([self.tgt_dict[token] for token in tgt_item])
 
         if self.src_lang_id is not None:
             example['src_lang_id'] = self.src_lang_id

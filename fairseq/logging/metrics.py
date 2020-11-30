@@ -126,6 +126,9 @@ def log_scalar(
         priority (int): smaller values are logged earlier in the output
         round (Optional[int]): number of digits to round to when displaying
     """
+    if torch.is_tensor(value):
+       value = value.float()
+
     for agg in get_active_aggregators():
         if key not in agg:
             agg.add_meter(key, AverageMeter(round=round), priority)
@@ -144,6 +147,19 @@ def log_derived(key: str, fn: Callable[[MetersDict], float], priority: int = 20)
     for agg in get_active_aggregators():
         if key not in agg:
             agg.add_meter(key, MetersDict._DerivedMeter(fn), priority)
+
+
+def log_derived_with_key(key: str, fn: Callable[[MetersDict], float], meter_key: str, priority: int = 20):
+    """Log a scalar value derived from other meters.
+    Args:
+        key (str): name of the field to log
+        fn (Callable[[MetersDict], float]): function that takes a single
+            argument *meters* and returns the derived value
+        priority (int): smaller values are logged earlier in the output
+    """
+    for agg in get_active_aggregators():
+        if key not in agg:
+            agg.add_meter(key, MetersDict._DerivedMeterWithKey(fn, meter_key), priority)
 
 
 def log_speed(

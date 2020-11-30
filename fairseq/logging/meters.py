@@ -242,7 +242,7 @@ class MetersDict(OrderedDict):
             (pri, key, self[key].__class__.__name__, self[key].state_dict())
             for pri, _, key in self.priorities
             # can't serialize DerivedMeter instances
-            if not isinstance(self[key], MetersDict._DerivedMeter)
+            if not isinstance(self[key], MetersDict._DerivedMeter) and not isinstance(self[key], MetersDict._DerivedMeterWithKey)
         ]
 
     def load_state_dict(self, state_dict):
@@ -258,6 +258,8 @@ class MetersDict(OrderedDict):
         meter = self[key]
         if isinstance(meter, MetersDict._DerivedMeter):
             return meter.fn(self)
+        elif isinstance(meter, MetersDict._DerivedMeterWithKey):
+            return meter.fn(self[meter.key].avg)
         else:
             return meter.smoothed_value
 
@@ -272,7 +274,7 @@ class MetersDict(OrderedDict):
     def reset(self):
         """Reset Meter instances."""
         for meter in self.values():
-            if isinstance(meter, MetersDict._DerivedMeter):
+            if isinstance(meter, MetersDict._DerivedMeter) or isinstance(meter, MetersDict._DerivedMeterWithKey):
                 continue
             meter.reset()
 
@@ -281,6 +283,16 @@ class MetersDict(OrderedDict):
 
         def __init__(self, fn):
             self.fn = fn
+
+        def reset(self):
+            pass
+
+    class _DerivedMeterWithKey(Meter):
+        """A Meter whose values are derived from other Meters."""
+
+        def __init__(self, fn, key):
+            self.fn = fn
+            self.key = key
 
         def reset(self):
             pass
