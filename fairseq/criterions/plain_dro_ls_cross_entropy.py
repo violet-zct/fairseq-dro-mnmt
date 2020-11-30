@@ -102,7 +102,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         cutoff_count = torch.sum(torch.cumsum(sorted_frac, 0) < self.alpha)
         if cutoff_count == len(sorted_frac):
             cutoff_count = len(sorted_frac) - 1
-        self.h_fun.fill(0.1)
+        self.h_fun.fill_(0.1)
         self.h_fun[sort_id[:cutoff_count]] = 1.0 / self.alpha
         leftover_mass = 1.0 - sorted_frac[:cutoff_count].sum().div(self.alpha)
         tiebreak_fraction = leftover_mass / sorted_frac[cutoff_count]  # check!

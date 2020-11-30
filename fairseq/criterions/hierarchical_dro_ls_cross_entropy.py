@@ -44,6 +44,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                  baselines,
                  update_dro_freq):
         super().__init__(task)
+        self.distributed_world_size = self.task.args.distributed_world_size
         self.eps = label_smoothing
         self.group_level = outer_group_level
         self.alpha = dro_outer_alpha
@@ -118,7 +119,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.outer_h_fun[sort_id[cutoff_count]] = tiebreak_fraction
 
         self.temp_idx += 1
-        if self.logging and self.temp_idx % self.print_steps == 0:
+        if self.temp_idx % self.print_steps == 0:
             logger.info("EMA past losses: {}".format(past_losses[0:self.n_groups]))
             # logger.info("Baseline losses: {}".format(baselined_losses[0:self.n_train_groups]))
             logger.info("EMA group fractions: {}".format(past_frac[0:self.n_groups]))
@@ -134,15 +135,14 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         sorted_losses, sort_id = torch.sort(baselined_losses, dim=-1, descending=True)
 
         sorted_frac = past_frac[torch.arange(self.n_groups), sort_id.transpose(0, 1)].transpose(0, 1)
-        cutoff_count = torch.sum(torch.cumsum(sorted_frac, 1) < self.beta)
+        cutoff_count = torch.sum(torch.cumsum(sorted_frac, 1) < self.beta, dim=1)
         cutoff_count[cutoff_count == sorted_frac.size(1)] = sorted_frac.size(1) - 1
 
         inner_h_fun = self.inner_h_fun.new_full((self.n_groups, self.inner_groups), 0.1)
-        inner_h_fun.fill_(0.1)
         leftover_masses = inner_h_fun.new_zeros(self.n_groups)
         for idx, cutoff in enumerate(cutoff_count):
-            inner_h_fun[idx, sort_id[idx, :cutoff_count]] = 1.0 / self.beta
-            leftover_masses[idx] = 1.0 - sorted_frac[idx, :cutoff_count].sum().div(self.beta)
+            inner_h_fun[idx, sort_id[idx, :cutoff_count[idx]]] = 1.0 / self.beta
+            leftover_masses[idx] = 1.0 - sorted_frac[idx, :cutoff_count[idx]].sum().div(self.beta)
 
         tiebreak_fraction = leftover_masses / sorted_frac.gather(1, cutoff_count.unsqueeze(1))  # check!
         inner_h_fun.scatter_(1, cutoff_count.unsqueeze(1), tiebreak_fraction)
@@ -168,7 +168,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             index = sample["tgt_lang_id"]
         else:
             index = None
-        return index, sample['target'].view(-1)
+        return index, sample['target']
 
     def compute_loss(self, model, sample):
         net_output = model(**sample['net_input'])
