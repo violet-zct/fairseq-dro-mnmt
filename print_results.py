@@ -25,12 +25,16 @@ for lang in open(lang_file).readlines():
 results = ["-1"] * len(langs)
 for model in os.listdir(dirname):
     if model.startswith("test"):
-        lang = model.strip().split("_")[1]
+        field = model.strip().split("_")
+        if len(field) == 3:
+            lang = field[1]
+        else:
+            lang = "_".join(field[1:3])
         idx = langs.index(lang)
 
         bleu = open(os.path.join(dirname, model)).readlines()[-1].strip()
         print(lang)
-        print(bleu + "\n")
+        print(bleu)
 
         bleu = bleu.split(":")[-1].split("(")[0].split("=")[-1].split()[0]
         results[idx] = bleu
