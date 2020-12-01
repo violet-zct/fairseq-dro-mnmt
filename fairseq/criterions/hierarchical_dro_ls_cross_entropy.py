@@ -58,7 +58,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         self.update_steps = 0
         self.start_ft_steps = start_ft_steps
-        self.EMA_alpha = 0.05
+        self.EMA_alpha = 0.1
 
         if self.group_level == "source_lang":
             self.n_groups = len(task.data_manager.src_langs)
@@ -222,7 +222,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         3) logging outputs to display while training
         """
 
-        if hasattr(self, "start_ft_steps") and self.update_steps < self.start_ft_steps:
+        if self.update_steps < 10000:
             if self.training:
                 self.update_steps += 1
             net_output = model(**sample['net_input'])
@@ -237,7 +237,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             }
             return loss, sample_size, logging_output
 
-        if self.update_steps % self.update_freq == 1:
+        if self.update_steps > self.start_ft_steps and self.update_steps % self.update_freq == 1:
             self.update_mw_token()
             self.reset_history()
 
@@ -275,11 +275,12 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
             valid_outer_index, valid_inner_index = reduce_outer_group_losses.ne(0), reduce_inner_group_losses.ne(0)
             self.outer_sum_losses[valid_outer_index] = self.outer_sum_losses[valid_outer_index].mul(1 - self.EMA_alpha).add(reduce_outer_group_losses[valid_outer_index], alpha=self.EMA_alpha)
-            self.outer_count_cat[valid_outer_index] = self.outer_count_cat[valid_outer_index].mul(1 - self.EMA_alpha).add(outer_group_counts[valid_outer_index], alpha=self.EMA_alpha)
+            self.outer_count_cat[valid_outer_index] = self.outer_count_cat[valid_outer_index].mul(1 - 0.01).add(outer_group_counts[valid_outer_index], alpha=0.01)
             self.inner_sum_losses[valid_inner_index] = self.inner_sum_losses[valid_inner_index].mul(1 - self.EMA_alpha).add(reduce_inner_group_losses[valid_inner_index], alpha=self.EMA_alpha)
-            self.inner_count_cat[valid_inner_index] = self.inner_count_cat[valid_inner_index].mul(1 - self.EMA_alpha).add(inner_group_counts[valid_inner_index], alpha=self.EMA_alpha)
+            self.inner_count_cat[valid_inner_index] = self.inner_count_cat[valid_inner_index].mul(1 - 0.01).add(inner_group_counts[valid_inner_index], alpha=0.01)
 
-            self.update_mw()
+            if self.update_steps > self.start_ft_steps:
+                self.update_mw()
             loss = (outer_group_losses * self.outer_h_fun).sum()
             sample_size = 1
 

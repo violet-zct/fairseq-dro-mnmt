@@ -3,8 +3,8 @@
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
-#SBATCH --comment="TACL 12.2"
-#SBATCH --job-name=mt.ted8related.o2m
+#SBATCH --comment="TACL 12.14"
+#SBATCH --job-name=9.ema
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -26,7 +26,7 @@ DATA=/checkpoint/chuntinz/data/mnmt_data/ted/ted8_related/data-bin
 langs="aze,bel,glg,slk,tur,rus,por,ces"
 lang_pairs="en-aze,en-bel,en-glg,en-slk,en-tur,en-rus,en-por,en-ces"
 model=transformer_iwslt_de_en
-exp_name=9_hier_dro_ted8_related_o2m
+exp_name=9_ema_warmup_50k_hier_dro_ted8_related_o2m
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
@@ -34,13 +34,14 @@ mkdir -p ${SAVE}
 
 cp $0 ${SAVE}/run.sh
 
-python train.py ${DATA}\
+python train.py ${DATA} \
+    --start-ft-steps 50000 \
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset cap.valid \
 	  --encoder-langtok "tgt" --enable-lang-ids \
 	  --criterion 'hier_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-	  --dro-outer-alpha 0.3 --dro-inner-beta 0.2 \
-	  --update-dro-freq 300 --outer-group-level "target_lang"\
+	  --dro-outer-alpha 0.5 --dro-inner-beta 0.2 \
+	  --update-dro-freq 500 --outer-group-level "target_lang"\
 	  --max-update 150000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \

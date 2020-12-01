@@ -60,16 +60,16 @@ date
 wait
 
 for lang in ${langs//,/ }; do
-  python fairseq_cli/generate.py ${DATA} \
-      --task translation_multi_simple_epoch  \
-      --gen-subset test \
-      --path ${SAVE}/checkpoint_best.pt \
-      --batch-size 300 \
-      --lenpen 1.0 \
-      --remove-bpe sentencepiece \
-	    --scoring sacrebleu \
-      --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
-      --encoder-langtok "src" \
-      --source-lang ${lang} --target-lang en \
-      --beam 5  | tee ${SAVE}/test_${lang}_en.log
+      python fairseq_cli/generate.py ${DATA} \
+          --task translation_multi_simple_epoch  \
+          --gen-subset test \
+          --path ${SAVE}/checkpoint_best.pt \
+          --batch-size 300 \
+          --lenpen 1.0 \
+          --remove-bpe sentencepiece \
+	        --scoring sacrebleu \
+          --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
+          --encoder-langtok "src" \
+          --source-lang ${lang} --target-lang en \
+          --beam 5  | tee ${SAVE}/test_${lang}_en.log
 done
