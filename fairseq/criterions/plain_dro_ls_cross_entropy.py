@@ -39,7 +39,7 @@ def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=T
 @register_criterion('plain_dro_label_smoothed_cross_entropy')
 class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, group_level, dro_alpha, baselines,
-                 update_dro_freq, start_ft_steps):
+                 update_dro_freq, start_ft_steps, ema,):
         super().__init__(task)
         self.distributed_world_size = self.task.args.distributed_world_size
         self.eps = label_smoothing
@@ -54,7 +54,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         self.update_steps = 0
         self.start_ft_steps = start_ft_steps
-        self.EMA_alpha = 0.1
+        self.EMA_alpha = ema
 
         self.logging = True
         if group_level == "source_lang":
@@ -80,6 +80,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--baselines', default=None, type=str, help='baseline loss values.')
         parser.add_argument('--update-dro-freq', default=1, type=int)
         parser.add_argument('--start-ft-steps', default=0, type=int)
+        parser.add_argument('--ema', default=0.1, type=float)
         # fmt: on
 
     def initialize(self):

@@ -42,7 +42,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, outer_group_level,
                  dro_outer_alpha, dro_inner_beta,
                  baselines,
-                 update_dro_freq, start_ft_steps):
+                 update_dro_freq, start_ft_steps, ema,):
         super().__init__(task)
         self.distributed_world_size = self.task.args.distributed_world_size
         self.eps = label_smoothing
@@ -58,7 +58,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         self.update_steps = 0
         self.start_ft_steps = start_ft_steps
-        self.EMA_alpha = 0.1
+        self.EMA_alpha = ema
 
         if self.group_level == "source_lang":
             self.n_groups = len(task.data_manager.src_langs)
@@ -82,6 +82,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--baselines', default=None, type=str, help='baseline loss values.')
         parser.add_argument('--update-dro-freq', default=1, type=int)
         parser.add_argument('--start-ft-steps', default=0, type=int)
+        parser.add_argument('--ema', default=0.1, type=float)
         # fmt: on
 
     def initialize(self):
