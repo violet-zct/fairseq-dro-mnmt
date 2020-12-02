@@ -134,7 +134,7 @@ class HierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(FairseqCriteri
         baselined_losses = self.inner_sum_losses
         count_cat = self.inner_count_cat
 
-        past_frac = count_cat / count_cat.sum(1)  # p_train_t
+        past_frac = count_cat / count_cat.sum()  # p_train_t
         #
         sorted_losses, sort_id = torch.sort(baselined_losses, descending=True)
         sorted_frac = past_frac[sort_id]
