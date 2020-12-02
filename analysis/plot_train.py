@@ -84,13 +84,10 @@ plt.style.use('seaborn-deep')
 colormap = plt.cm.gist_ncar
 
 
-def plot_ax_ema(ax, y, title, scatter=False):
+def plot_ax_ema(ax, y, title):
     plt.gca().set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, len(langs)))))
     for lang in langs:
-        if scatter:
-            ax.plot(np.arange(len(y[lang])), y[lang], 'o', markersize=1)
-        else:
-            ax.plot(np.arange(len(y[lang])), y[lang])
+        ax.plot(np.arange(len(y[lang])), y[lang])
     ax.legend(legends, loc='best', fontsize=10)
     ax.set(title=title, xlabel="steps", ylabel=title)
 
@@ -127,11 +124,17 @@ row = 4
 fig, ax = plt.subplots(len(langs) // row, row)
 fig.set_size_inches(30, 10)
 colors = plt.cm.jet(np.linspace(0, 1, len(langs)))
+max_value = []
+for lang in langs:
+    max_value.extend(lang_ema_weights[lang])
+max_value = max(max_value) + 0.2
+
 for idx, lang in enumerate(langs):
     i, j = idx // row, idx % row
     print(len(lang_ema_weights[lang]))
     ax[i][j].plot(np.arange(len(lang_ema_weights[lang])), lang_ema_weights[lang], 'o', markersize=1, color=colors[idx])
     # print(legends[idx])
     # ax[i][j].legend(legends[idx], loc='best', fontsize=10)
+    ax[i][j].set_ylim([0, max_value])
     ax[i][j].set(title=legends[idx], xlabel="steps", ylabel="ema_weights")
 fig.savefig(os.path.join(opt_dir, "ema_weights.pdf"), bbox_inches='tight')

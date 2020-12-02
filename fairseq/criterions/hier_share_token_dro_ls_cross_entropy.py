@@ -217,7 +217,7 @@ class HierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(FairseqCriteri
         3) logging outputs to display while training
         """
 
-        if self.update_steps < 10000:
+        if self.update_steps < self.start_ft_steps:
             if self.training:
                 self.update_steps += 1
             net_output = model(**sample['net_input'])
@@ -232,7 +232,7 @@ class HierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(FairseqCriteri
             }
             return loss, sample_size, logging_output
 
-        if self.update_steps > self.start_ft_steps and self.update_steps % self.update_freq == 1:
+        if self.update_steps % self.update_freq == 1:
             self.update_mw_token()
             self.reset_history()
 
@@ -274,8 +274,7 @@ class HierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(FairseqCriteri
             self.inner_sum_losses[valid_inner_index] = self.inner_sum_losses[valid_inner_index].mul(1 - self.EMA_alpha).add(reduce_inner_group_losses[valid_inner_index], alpha=self.EMA_alpha)
             self.inner_count_cat[valid_inner_index] = self.inner_count_cat[valid_inner_index].mul(1 - 0.01).add(inner_group_counts[valid_inner_index], alpha=0.01)
 
-            if self.update_steps > self.start_ft_steps:
-                self.update_mw()
+            self.update_mw()
             loss = (outer_group_losses * self.outer_h_fun).sum()
             sample_size = 1
 
