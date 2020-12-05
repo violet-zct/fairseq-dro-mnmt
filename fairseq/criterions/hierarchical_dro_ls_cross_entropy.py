@@ -67,7 +67,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         else:
             raise ValueError
         self.inner_groups = len(task.target_dictionary)
-
+        self.tgt_dict = task.target_dictionary
         self.initialize()
 
     @staticmethod
@@ -130,6 +130,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
     def update_mw_token(self):
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
+        logger.info("Update token weight table!")
         baselined_losses = self.inner_sum_losses.view(self.n_groups, self.inner_groups)
         count_cat = self.inner_count_cat.view(self.n_groups, self.inner_groups)
 
@@ -140,6 +141,11 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         sorted_frac = past_frac[torch.arange(self.n_groups), sort_id.transpose(0, 1)].transpose(0, 1)
         cutoff_count = torch.sum(torch.cumsum(sorted_frac, 1) < self.beta, dim=1)
         cutoff_count[cutoff_count == sorted_frac.size(1)] = sorted_frac.size(1) - 1
+
+        for idx, count in enumerate(cutoff_count):
+            tokens = self.tgt_dict.string(sort_id[idx, :20])
+            logger.info("Lang = {}, Cutoff = {}, Tokens with top-k losses = {}".format(idx, cutoff_count[idx], tokens))
+            logger.info("Top-k freq = {}".format(sorted_frac[idx, :20]))
 
         inner_h_fun = self.inner_h_fun.new_full((self.n_groups, self.inner_groups), 0.1)
         leftover_masses = inner_h_fun.new_zeros(self.n_groups)
