@@ -152,6 +152,7 @@ class HierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(FairseqCriteri
             self.log_path.write("T-x\t" + self.tgt_dict.string(sort_id) + "\n")
             self.log_path.write("F-x\t" + " ".join(["{:.3f}".format(ff) for ff in sorted_frac]) + "\n")
             self.log_path.write("\n")
+            self.log_path.flush()
 
         tokens = self.tgt_dict.string(sort_id[:20])
         logger.info("Cutoff = {}, Tokens with top-k losses = {}".format(cutoff_count, tokens))

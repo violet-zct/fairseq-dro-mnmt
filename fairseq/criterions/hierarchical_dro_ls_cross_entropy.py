@@ -147,12 +147,15 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         cutoff_count = torch.sum(torch.cumsum(sorted_frac, 1) < self.beta, dim=1)
         cutoff_count[cutoff_count == sorted_frac.size(1)] = sorted_frac.size(1) - 1
 
-        for idx, count in enumerate(cutoff_count):
-            if getattr(self, 'log_path', None) is not None and self.args.distributed_rank == 0:
+        if getattr(self, 'log_path', None) is not None and self.args.distributed_rank == 0:
+            for idx, count in enumerate(cutoff_count):
                 self.log_path.write("T-{}\t".format(idx) + self.tgt_dict.string(sort_id[idx]) + "\n")
-                self.log_path.write("F-{}\t".format(idx) + " ".join(["{:.3f}".format(ff) for ff in sorted_frac[idx]]) + "\n")
-                self.log_path.write("\n")
+                self.log_path.write(
+                    "F-{}\t".format(idx) + " ".join(["{:.3f}".format(ff) for ff in sorted_frac[idx]]) + "\n")
+                self.log_path.flush()
+            self.log_path.write("\n")
 
+        for idx, count in enumerate(cutoff_count):
             tokens = self.tgt_dict.string(sort_id[idx, :20])
             logger.info("Lang = {}, Cutoff = {}, Tokens with top-k losses = {}".format(idx, cutoff_count[idx], tokens))
             logger.info("Top-k freq = {}".format(sorted_frac[idx, :20]))
