@@ -189,7 +189,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         3) logging outputs to display while training
         """
         # pure warmup
-        if self.update_steps < 10000:
+        if self.update_steps < self.start_ft_steps:
             if self.training:
                 self.update_steps += 1
             net_output = model(**sample['net_input'])
@@ -238,7 +238,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             self.sum_losses[valid_index] = valid_losses.mul(1 - self.EMA_alpha).add(reduce_group_losses[valid_index], alpha=self.EMA_alpha)
             self.count_cat[valid_index] = valid_counts.mul(1 - 0.01).add(group_counts[valid_index], alpha=0.01)
 
-            if self.update_steps > self.start_ft_steps and self.update_steps % self.update_freq == 0:
+            if self.update_steps % self.update_freq == 0:
                 self.update_mw()
 
             loss = (group_losses * self.h_fun).sum()
