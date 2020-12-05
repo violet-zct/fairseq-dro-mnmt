@@ -42,8 +42,10 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, outer_group_level,
                  dro_outer_alpha, dro_inner_beta,
                  baselines,
-                 update_dro_freq, start_ft_steps, ema,):
+                 update_dro_freq, start_ft_steps, ema, log_path):
         super().__init__(task)
+
+        self.args = self.task.args
         self.distributed_world_size = self.task.args.distributed_world_size
         self.eps = label_smoothing
         self.group_level = outer_group_level
@@ -68,6 +70,8 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             raise ValueError
         self.inner_groups = len(task.target_dictionary)
         self.tgt_dict = task.target_dictionary
+        self.log_path = open(log_path, "w", encoding="utf-8") if log_path is not None else None
+
         self.initialize()
 
     @staticmethod
@@ -83,6 +87,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--update-dro-freq', default=1, type=int)
         parser.add_argument('--start-ft-steps', default=0, type=int)
         parser.add_argument('--ema', default=0.1, type=float)
+        parser.add_argument('--log-path', default=None, type=str)
         # fmt: on
 
     def initialize(self):
@@ -143,6 +148,11 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         cutoff_count[cutoff_count == sorted_frac.size(1)] = sorted_frac.size(1) - 1
 
         for idx, count in enumerate(cutoff_count):
+            if getattr(self, 'log_path', None) is not None and self.args.distributed_rank == 0:
+                self.log_path.write("T-{}\t".format(idx) + self.tgt_dict.string(sort_id[idx]) + "\n")
+                self.log_path.write("F-{}\t".format(idx) + " ".join(["{:.3f}".format(ff) for ff in sorted_frac[idx]]) + "\n")
+                self.log_path.write("\n")
+
             tokens = self.tgt_dict.string(sort_id[idx, :20])
             logger.info("Lang = {}, Cutoff = {}, Tokens with top-k losses = {}".format(idx, cutoff_count[idx], tokens))
             logger.info("Top-k freq = {}".format(sorted_frac[idx, :20]))
