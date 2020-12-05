@@ -151,7 +151,9 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             for idx, count in enumerate(cutoff_count):
                 self.log_path.write("T-{}\t".format(idx) + self.tgt_dict.string(sort_id[idx]) + "\n")
                 self.log_path.write(
-                    "F-{}\t".format(idx) + " ".join(["{:.3f}".format(ff) for ff in sorted_frac[idx]]) + "\n")
+                    "L-{}\t".format(idx) + " ".join(["{:.10f}".format(ff) for ff in sorted_losses[idx]]) + "\n")
+                self.log_path.write(
+                    "F-{}\t".format(idx) + " ".join(["{:.10f}".format(ff) for ff in sorted_frac[idx]]) + "\n")
                 self.log_path.flush()
             self.log_path.write("\n")
 

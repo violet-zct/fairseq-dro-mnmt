@@ -150,7 +150,8 @@ class HierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(FairseqCriteri
 
         if getattr(self, 'log_path', None) is not None and self.args.distributed_rank == 0:
             self.log_path.write("T-x\t" + self.tgt_dict.string(sort_id) + "\n")
-            self.log_path.write("F-x\t" + " ".join(["{:.3f}".format(ff) for ff in sorted_frac]) + "\n")
+            self.log_path.write("L-x\t" + " ".join(["{:.10f}".format(ff) for ff in sorted_losses]) + "\n")
+            self.log_path.write("F-x\t" + " ".join(["{:.10f}".format(ff) for ff in sorted_frac]) + "\n")
             self.log_path.write("\n")
             self.log_path.flush()
 
