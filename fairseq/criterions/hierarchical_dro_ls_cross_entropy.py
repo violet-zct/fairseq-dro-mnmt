@@ -71,7 +71,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.inner_groups = len(task.target_dictionary)
         self.tgt_dict = task.target_dictionary
         self.log_path = open(log_path, "w", encoding="utf-8") if log_path is not None else None
-
+        self.first_time_log = True
         self.initialize()
 
     @staticmethod
@@ -149,11 +149,15 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         if getattr(self, 'log_path', None) is not None and self.args.distributed_rank == 0:
             for idx, count in enumerate(cutoff_count):
-                self.log_path.write("T-{}\t".format(idx) + self.tgt_dict.string(sort_id[idx]) + "\n")
+                self.log_path.write("Cutoff-{} = {}\n".format(idx, cutoff_count[idx]))
+                self.log_path.write("I-{}\t".format(idx) + " ".join([str(ii) for ii in sort_id[idx]]) + "\n")
+                if self.first_time_log:
+                    self.log_path.write("T-{}\t".format(idx) + self.tgt_dict.string(sort_id[idx]) + "\n")
+                    self.first_time_log = False
                 self.log_path.write(
-                    "L-{}\t".format(idx) + " ".join(["{:.10f}".format(ff) for ff in sorted_losses[idx]]) + "\n")
+                    "L-{}\t".format(idx) + " ".join(["{:.6f}".format(ff) for ff in sorted_losses[idx]]) + "\n")
                 self.log_path.write(
-                    "F-{}\t".format(idx) + " ".join(["{:.10f}".format(ff) for ff in sorted_frac[idx]]) + "\n")
+                    "F-{}\t".format(idx) + " ".join(["{:.6f}".format(ff) for ff in sorted_frac[idx]]) + "\n")
                 self.log_path.flush()
             self.log_path.write("\n")
 
@@ -293,6 +297,8 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
             outer_group_denom = outer_group_counts + 1e-8
             reduce_outer_group_losses = reduce_outer_group_losses / outer_group_denom
+            inner_group_denom = inner_group_counts + 1e-8
+            reduce_inner_group_losses = reduce_inner_group_losses / inner_group_denom
             outer_group_losses = outer_group_losses * self.distributed_world_size / outer_group_denom / outer_denom
 
             valid_outer_index, valid_inner_index = reduce_outer_group_losses.ne(0), reduce_inner_group_losses.ne(0)

@@ -71,6 +71,7 @@ class HierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(FairseqCriteri
             raise ValueError
         self.inner_groups = len(task.target_dictionary)
         self.tgt_dict = task.target_dictionary
+        self.first_time_log = True
 
         self.log_path = open(log_path, "w", encoding="utf-8") if log_path is not None else None
         self.initialize()
@@ -149,9 +150,13 @@ class HierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(FairseqCriteri
             cutoff_count = len(sorted_frac) - 1
 
         if getattr(self, 'log_path', None) is not None and self.args.distributed_rank == 0:
-            self.log_path.write("T-x\t" + self.tgt_dict.string(sort_id) + "\n")
-            self.log_path.write("L-x\t" + " ".join(["{:.10f}".format(ff) for ff in sorted_losses]) + "\n")
-            self.log_path.write("F-x\t" + " ".join(["{:.10f}".format(ff) for ff in sorted_frac]) + "\n")
+            self.log_path.write("Cutoff = {}\n".format(cutoff_count))
+            self.log_path.write("I-x\t" + " ".join([str(ii) for ii in sort_id]) + "\n")
+            if self.first_time_log:
+                self.log_path.write("T-x\t" + self.tgt_dict.string(sort_id) + "\n")
+                self.first_time_log = False
+            self.log_path.write("L-x\t" + " ".join(["{:.6f}".format(ff) for ff in sorted_losses]) + "\n")
+            self.log_path.write("F-x\t" + " ".join(["{:.6f}".format(ff) for ff in sorted_frac]) + "\n")
             self.log_path.write("\n")
             self.log_path.flush()
 
@@ -284,6 +289,8 @@ class HierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(FairseqCriteri
 
             outer_group_denom = outer_group_counts + 1e-8
             reduce_outer_group_losses = reduce_outer_group_losses / outer_group_denom
+            inner_group_denom = inner_group_counts + 1e-8
+            reduce_inner_group_losses = reduce_inner_group_losses / inner_group_denom
             outer_group_losses = outer_group_losses * self.distributed_world_size / outer_group_denom / outer_denom
 
             valid_outer_index, valid_inner_index = reduce_outer_group_losses.ne(0), reduce_inner_group_losses.ne(0)
