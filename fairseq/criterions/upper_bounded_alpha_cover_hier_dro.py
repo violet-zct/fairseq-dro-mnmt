@@ -80,7 +80,7 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
                 self.register_buffer('avg_inner_frac', torch.full((1,), inner_avg_frac))
             else:
                 inner_avg_frac = task.data_manager.uniq_token_counts
-                self.register_buffer('avg_inner_frac', torch.full((self.n_groups, 1), inner_avg_frac))
+                self.register_buffer('avg_inner_frac', torch.FloatTensor(inner_avg_frac))
         else:
             raise ValueError
         self.tgt_dict = task.target_dictionary
@@ -199,7 +199,7 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
         for idx, count in enumerate(cutoff_count):
             tokens = self.tgt_dict.string(sort_id[idx, :20])
             logger.info("Lang = {}, Cutoff = {}, Tokens with top-k losses = {}".format(idx, cutoff_count[idx], tokens))
-            logger.info("Top-k freq = {}".format(sorted_frac[idx, :20]))
+            logger.info("Top-k freq = {}".format(" ".join(["{:.5}".format(xx) for xx in sorted_train_frac[idx, :20]])))
 
         self.inner_h_fun = inner_h_fun.view(-1)
 

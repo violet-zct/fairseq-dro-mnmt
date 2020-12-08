@@ -162,7 +162,7 @@ class HierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(FairseqCriteri
 
         tokens = self.tgt_dict.string(sort_id[:20])
         logger.info("Cutoff = {}, Tokens with top-k losses = {}".format(cutoff_count, tokens))
-        logger.info("Top-k freq = {}".format(sorted_frac[:20]))
+        logger.info("Top-k freq = {}".format(" ".join(["{:.5}".format(xx) for xx in sorted_frac[:20]])))
         self.inner_h_fun.fill_(0.1)
         self.inner_h_fun[sort_id[:cutoff_count]] = 1.0 / self.beta
         leftover_mass = 1.0 - sorted_frac[:cutoff_count].sum().div(self.beta)

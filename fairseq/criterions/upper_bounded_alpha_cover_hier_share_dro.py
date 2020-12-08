@@ -185,7 +185,7 @@ class UpperBoundHierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(Fair
 
         tokens = self.tgt_dict.string(sort_id[:20])
         logger.info("Cutoff = {}, Tokens with top-k losses = {}".format(cutoff_count, tokens))
-        logger.info("Top-k freq = {}".format(sorted_frac[:20]))
+        logger.info("Top-k freq = {}".format(" ".join(["{:.5}".format(xx) for xx in sorted_train_frac[:20]])))
 
     def individual_losses(self, model, net_output, sample):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
