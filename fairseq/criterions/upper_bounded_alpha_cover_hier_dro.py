@@ -75,8 +75,8 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
         elif self.group_level == "target_lang":
             # en - xx
             self.n_groups = len(task.data_manager.tgt_langs)
-            if inner_dro_K <= 0:
-                inner_avg_frac = 1. / self.inner_groups
+            if inner_dro_K > 0:
+                inner_avg_frac = 1. / inner_dro_K
                 self.register_buffer('avg_inner_frac', torch.full((1,), inner_avg_frac))
             else:
                 inner_avg_frac = task.data_manager.uniq_token_counts
