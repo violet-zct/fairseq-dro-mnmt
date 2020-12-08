@@ -78,10 +78,12 @@ class MultilingualDatasetManager(object):
         self._num_shards_dict = {}
 
         self.uniq_token_counts = [-1] * len(self.tgt_langs)
+        
         with open(os.path.join(args.data, "uniq.token.counts")) as fin:
             for line in fin:
                 key, value = line.strip().split()
                 if key in self.tgt_langs:
+                    logger.info("+++++++++++++++++++++++ " + key)
                     self.uniq_token_counts[_lang_id(self.tgt_lang_dict, key)] = float(value)
 
     @classmethod

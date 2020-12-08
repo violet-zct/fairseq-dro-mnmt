@@ -3,8 +3,8 @@
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
-#SBATCH --comment="TACL 12.2"
-#SBATCH --job-name=mt.ted8related.o2m
+#SBATCH --comment="TACL 12.12"
+#SBATCH --job-name=4.mt.ted8related.o2m
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -14,19 +14,20 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-2
+#SBATCH --array=0-1
 
 source activate mnmt
 
 data_names=(ted8_related_30k ted8_related ted8_related_sep)
-split=${data_names[$SLURM_ARRAY_TASK_ID]}
+splits=(1 100)
+split=${splits[$SLURM_ARRAY_TASK_ID]}
 SAVE_ROOT=/private/home/chuntinz/work/fairseq-dro-mnmt/saved_models
-DATA=/checkpoint/chuntinz/data/mnmt_data/ted/${split}/data-bin
+DATA=/checkpoint/chuntinz/data/mnmt_data/ted/ted8_related/data-bin
 
 langs="aze,bel,glg,slk,tur,rus,por,ces"
 lang_pairs="en-aze,en-bel,en-glg,en-slk,en-tur,en-rus,en-por,en-ces"
 model=transformer_iwslt_de_en
-exp_name=4_baseline_temp_5_${split}_o2m
+exp_name=4_baseline_temp_${split}_ted8_related_o2m
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
@@ -37,7 +38,7 @@ cp $0 ${SAVE}/run.sh
 python train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset cap.valid \
-	  --sampling-method "temperature" --sampling-temperature 5 \
+	  --sampling-method "temperature" --sampling-temperature ${split} \
 	  --encoder-langtok "tgt" \
 	  --max-update 150000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
