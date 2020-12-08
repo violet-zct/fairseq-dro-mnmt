@@ -70,7 +70,8 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
                 inner_avg_frac = 1. / self.inner_groups
 
             else:
-                inner_avg_frac = task.data_manager.uniq_token_counts[0]
+                assert len(task.data_manager.uniq_token_counts) == 1
+                inner_avg_frac = 1. / task.data_manager.uniq_token_counts[0]
             self.register_buffer('avg_inner_frac', torch.full((1,), inner_avg_frac))
         elif self.group_level == "target_lang":
             # en - xx
@@ -79,8 +80,8 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
                 inner_avg_frac = 1. / inner_dro_K
                 self.register_buffer('avg_inner_frac', torch.full((1,), inner_avg_frac))
             else:
-                inner_avg_frac = task.data_manager.uniq_token_counts
-                self.register_buffer('avg_inner_frac', torch.FloatTensor(inner_avg_frac))
+                inner_avg_frac = [1./n for n in task.data_manager.uniq_token_counts]
+                self.register_buffer('avg_inner_frac', torch.FloatTensor(inner_avg_frac).view(self.inner_groups, 1))
         else:
             raise ValueError
         self.tgt_dict = task.target_dictionary
@@ -166,7 +167,7 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
         past_frac = count_cat / count_cat.sum(1, keepdim=True)  # p_train_t
         sorted_losses, sort_id = torch.sort(baselined_losses, dim=-1, descending=True)
         #
-        q_dist = torch.max(past_frac, self.avg_inner_frac)  # L x V
+        q_dist = torch.max(past_frac, self.avg_inner_frac.)  # L x V
         q_dist = torch.min(past_frac / self.beta, q_dist)
 
         sorted_frac = q_dist[torch.arange(self.n_groups), sort_id.transpose(0, 1)].transpose(0, 1)
