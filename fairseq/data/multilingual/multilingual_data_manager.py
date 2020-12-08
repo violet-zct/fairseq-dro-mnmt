@@ -77,7 +77,7 @@ class MultilingualDatasetManager(object):
         self._has_sharded_data = False
         self._num_shards_dict = {}
 
-        self.uniq_token_counts = [-1] * len(self.tgt_lang_dict)
+        self.uniq_token_counts = [-1] * len(self.tgt_langs)
         with open(os.path.join(args.data, "uniq.token.counts")) as fin:
             for line in fin:
                 key, value = line.strip().split()
