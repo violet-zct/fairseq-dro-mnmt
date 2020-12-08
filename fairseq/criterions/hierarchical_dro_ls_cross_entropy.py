@@ -150,7 +150,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         if getattr(self, 'log_path', None) is not None and self.args.distributed_rank == 0:
             for idx, count in enumerate(cutoff_count):
                 self.log_path.write("Cutoff-{} = {}\n".format(idx, cutoff_count[idx]))
-                self.log_path.write("I-{}\t".format(idx) + " ".join([str(ii) for ii in sort_id[idx]]) + "\n")
+                self.log_path.write("I-{}\t".format(idx) + " ".join([str(ii.item()) for ii in sort_id[idx]]) + "\n")
                 if self.first_time_log:
                     self.log_path.write("T-{}\t".format(idx) + self.tgt_dict.string(sort_id[idx]) + "\n")
                     self.first_time_log = False

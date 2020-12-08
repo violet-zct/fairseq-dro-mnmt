@@ -151,7 +151,7 @@ class HierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(FairseqCriteri
 
         if getattr(self, 'log_path', None) is not None and self.args.distributed_rank == 0:
             self.log_path.write("Cutoff = {}\n".format(cutoff_count))
-            self.log_path.write("I-x\t" + " ".join([str(ii) for ii in sort_id]) + "\n")
+            self.log_path.write("I-x\t" + " ".join([str(ii.item()) for ii in sort_id]) + "\n")
             if self.first_time_log:
                 self.log_path.write("T-x\t" + self.tgt_dict.string(sort_id) + "\n")
                 self.first_time_log = False
