@@ -81,7 +81,7 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
                 self.register_buffer('avg_inner_frac', torch.full((1,), inner_avg_frac))
             else:
                 inner_avg_frac = [1./n for n in task.data_manager.uniq_token_counts]
-                self.register_buffer('avg_inner_frac', torch.FloatTensor(inner_avg_frac).view(self.groups, 1))
+                self.register_buffer('avg_inner_frac', torch.FloatTensor(inner_avg_frac).view(self.n_groups, 1))
         else:
             raise ValueError
         self.tgt_dict = task.target_dictionary
