@@ -167,7 +167,7 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
         past_frac = count_cat / count_cat.sum(1, keepdim=True)  # p_train_t
         sorted_losses, sort_id = torch.sort(baselined_losses, dim=-1, descending=True)
         #
-        q_dist = torch.max(past_frac, self.avg_inner_frac.)  # L x V
+        q_dist = torch.max(past_frac, self.avg_inner_frac)  # L x V
         q_dist = torch.min(past_frac / self.beta, q_dist)
 
         sorted_frac = q_dist[torch.arange(self.n_groups), sort_id.transpose(0, 1)].transpose(0, 1)
