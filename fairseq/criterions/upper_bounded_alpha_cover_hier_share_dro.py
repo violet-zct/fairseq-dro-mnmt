@@ -37,15 +37,16 @@ def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=T
     return loss, nll_loss
 
 
-@register_criterion('hier_dro_label_smoothed_cross_entropy')
-class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
+@register_criterion('upper_bound_hier_dro_share_inner_label_smoothed_cross_entropy')
+class UpperBoundHierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, outer_group_level,
                  dro_outer_alpha, dro_inner_beta,
                  baselines,
-                 update_dro_freq, start_ft_steps, ema, log_path):
+                 update_dro_freq, start_ft_steps,
+                 ema, log_path, outer_dro_K, inner_dro_K):
         super().__init__(task)
-
         self.args = self.task.args
+
         self.distributed_world_size = self.task.args.distributed_world_size
         self.eps = label_smoothing
         self.group_level = outer_group_level
@@ -70,8 +71,14 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             raise ValueError
         self.inner_groups = len(task.target_dictionary)
         self.tgt_dict = task.target_dictionary
-        self.log_path = open(log_path, "w", encoding="utf-8") if log_path is not None else None
         self.first_time_log = True
+        self.log_path = open(log_path, "w", encoding="utf-8") if log_path is not None else None
+
+        outer_avg_frac = 1. / self.n_groups if outer_dro_K <= 0 else 1. / outer_dro_K
+        self.register_buffer('avg_outer_frac', torch.full((1,), outer_avg_frac))
+        inner_avg_frac = 1. / self.inner_groups if inner_dro_K <= 0 else 1. / inner_dro_K
+        self.register_buffer('avg_inner_frac', torch.full((1,), inner_avg_frac))
+
         self.initialize()
 
     @staticmethod
@@ -88,6 +95,8 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--start-ft-steps', default=0, type=int)
         parser.add_argument('--ema', default=0.1, type=float)
         parser.add_argument('--log-path', default=None, type=str)
+        parser.add_argument('--outer-dro-K', default=-1, type=float)
+        parser.add_argument('--inner-dro-K', default=-1, type=float)
         # fmt: on
 
     def initialize(self):
@@ -100,9 +109,9 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.register_buffer('outer_sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('outer_count_cat', torch.ones(self.n_groups))
 
-        self.register_buffer('inner_h_fun', torch.ones(self.n_groups * self.inner_groups))
-        self.register_buffer('inner_sum_losses', torch.zeros(self.n_groups * self.inner_groups))  # historical loss sum over category
-        self.register_buffer('inner_count_cat', torch.ones(self.n_groups * self.inner_groups))
+        self.register_buffer('inner_h_fun', torch.ones(self.inner_groups))
+        self.register_buffer('inner_sum_losses', torch.zeros(self.inner_groups))  # historical loss sum over category
+        self.register_buffer('inner_count_cat', torch.ones(self.inner_groups))
 
     def reset_history(self):
         self.outer_h_fun.fill_(1.)
@@ -114,16 +123,21 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         baselined_losses = past_losses - self.loss_baselines
 
         past_frac = self.outer_count_cat / self.outer_count_cat.sum()  # p_train_t
-        #
         sorted_losses, sort_id = torch.sort(baselined_losses, descending=True)
-        sorted_frac = past_frac[sort_id]
-        cutoff_count = torch.sum(torch.cumsum(sorted_frac, 0) < self.alpha)
+        #
+        q_dist = torch.max(past_frac, self.avg_outer_frac)
+        q_dist = torch.min(past_frac / self.alpha, q_dist)
+
+        sorted_frac = q_dist[sort_id]
+        sorted_train_frac = past_frac[sort_id]
+        cutoff_count = torch.sum(torch.cumsum(sorted_frac, 0) < 1.)
         if cutoff_count == len(sorted_frac):
             cutoff_count = len(sorted_frac) - 1
         self.outer_h_fun.fill_(0.1)
-        self.outer_h_fun[sort_id[:cutoff_count]] = 1.0 / self.alpha
-        leftover_mass = 1.0 - sorted_frac[:cutoff_count].sum().div(self.alpha)
-        tiebreak_fraction = leftover_mass / sorted_frac[cutoff_count]  # check!
+        self.outer_h_fun[sort_id[:cutoff_count]] = sorted_frac[:cutoff_count] / sorted_train_frac[:cutoff_count]
+
+        leftover_mass = 1.0 - sorted_frac[:cutoff_count].sum()
+        tiebreak_fraction = leftover_mass / sorted_train_frac[cutoff_count]  # check!
         self.outer_h_fun[sort_id[cutoff_count]] = tiebreak_fraction
 
         self.temp_idx += 1
@@ -136,45 +150,42 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def update_mw_token(self):
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
         logger.info("Update token weight table!")
-        baselined_losses = self.inner_sum_losses.view(self.n_groups, self.inner_groups)
-        count_cat = self.inner_count_cat.view(self.n_groups, self.inner_groups)
+        baselined_losses = self.inner_sum_losses
+        count_cat = self.inner_count_cat
 
-        past_frac = count_cat / count_cat.sum(1, keepdim=True)  # p_train_t
+        past_frac = count_cat / count_cat.sum()  # p_train_t
+        sorted_losses, sort_id = torch.sort(baselined_losses, descending=True)
         #
-        sorted_losses, sort_id = torch.sort(baselined_losses, dim=-1, descending=True)
+        q_dist = torch.max(past_frac, self.avg_inner_frac)
+        q_dist = torch.min(past_frac / self.beta, q_dist)
 
-        sorted_frac = past_frac[torch.arange(self.n_groups), sort_id.transpose(0, 1)].transpose(0, 1)
-        cutoff_count = torch.sum(torch.cumsum(sorted_frac, 1) < self.beta, dim=1)
-        cutoff_count[cutoff_count == sorted_frac.size(1)] = sorted_frac.size(1) - 1
+        sorted_frac = q_dist[sort_id]
+        sorted_train_frac = past_frac[sort_id]
+        cutoff_count = torch.sum(torch.cumsum(sorted_frac, 0) < 1.)
+        if cutoff_count == len(sorted_frac):
+            cutoff_count = len(sorted_frac) - 1
+        self.inner_h_fun.fill_(0.1)
+        self.inner_h_fun[sort_id[:cutoff_count]] = sorted_frac[:cutoff_count] / sorted_train_frac[:cutoff_count]
+
+        leftover_mass = 1.0 - sorted_frac[:cutoff_count].sum()
+        tiebreak_fraction = leftover_mass / sorted_train_frac[cutoff_count]  # check!
+        self.inner_h_fun[sort_id[cutoff_count]] = tiebreak_fraction
 
         if getattr(self, 'log_path', None) is not None and self.args.distributed_rank == 0:
-            for idx, count in enumerate(cutoff_count):
-                self.log_path.write("Cutoff-{} = {}\n".format(idx, cutoff_count[idx]))
-                self.log_path.write("I-{}\t".format(idx) + " ".join([str(ii.item()) for ii in sort_id[idx]]) + "\n")
-                if self.first_time_log:
-                    self.log_path.write("T-{}\t".format(idx) + self.tgt_dict.string(sort_id[idx]) + "\n")
-                    self.first_time_log = False
-                self.log_path.write(
-                    "L-{}\t".format(idx) + " ".join(["{:.6f}".format(ff) for ff in sorted_losses[idx]]) + "\n")
-                self.log_path.write(
-                    "F-{}\t".format(idx) + " ".join(["{:.6f}".format(ff) for ff in sorted_frac[idx]]) + "\n")
-                self.log_path.flush()
+            self.log_path.write("Cutoff = {}\n".format(cutoff_count))
+            self.log_path.write("I-x\t" + " ".join([str(ii.item()) for ii in sort_id]) + "\n")
+            if self.first_time_log:
+                self.log_path.write("T-x\t" + self.tgt_dict.string(sort_id) + "\n")
+                self.first_time_log = False
+            self.log_path.write(
+                "H-x\t" + " ".join(["{:.6f}".format(ff.item()) for ff in self.inner_h_fun]) + "\n")
+            self.log_path.write("F-x\t" + " ".join(["{:.6f}".format(ff.item()) for ff in sorted_train_frac]) + "\n")
             self.log_path.write("\n")
+            self.log_path.flush()
 
-        for idx, count in enumerate(cutoff_count):
-            tokens = self.tgt_dict.string(sort_id[idx, :20])
-            logger.info("Lang = {}, Cutoff = {}, Tokens with top-k losses = {}".format(idx, cutoff_count[idx], tokens))
-            logger.info("Top-k freq = {}".format(sorted_frac[idx, :20]))
-
-        inner_h_fun = self.inner_h_fun.new_full((self.n_groups, self.inner_groups), 0.1)
-        leftover_masses = inner_h_fun.new_zeros(self.n_groups)
-        for idx, cutoff in enumerate(cutoff_count):
-            inner_h_fun[idx, sort_id[idx, :cutoff_count[idx]]] = 1.0 / self.beta
-            leftover_masses[idx] = 1.0 - sorted_frac[idx, :cutoff_count[idx]].sum().div(self.beta)
-
-        tiebreak_fraction = leftover_masses.unsqueeze(1) / sorted_frac.gather(1, cutoff_count.unsqueeze(1))
-        inner_h_fun.scatter_(1, sort_id[torch.arange(self.n_groups), cutoff_count].unsqueeze(1), tiebreak_fraction)
-        self.inner_h_fun = inner_h_fun.view(-1)
+        tokens = self.tgt_dict.string(sort_id[:20])
+        logger.info("Cutoff = {}, Tokens with top-k losses = {}".format(cutoff_count, tokens))
+        logger.info("Top-k freq = {}".format(sorted_frac[:20]))
 
     def individual_losses(self, model, net_output, sample):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
@@ -196,7 +207,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             index = sample["tgt_lang_id"]
         else:
             index = None
-        return index, sample['target']
+        return index, sample['target'].view(-1)
 
     def compute_loss(self, model, sample):
         net_output = model(**sample['net_input'])
@@ -213,9 +224,8 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             return nll_loss, token_losses.sum(), 0, 0, 0
 
         outer_index, inner_index = self.retrieve_group_labels(sample)
-        offset_index = (inner_index + outer_index.unsqueeze(1) * self.inner_groups).view(-1)
 
-        weights = self.inner_h_fun[offset_index].reshape_as(sample['target'])
+        weights = self.inner_h_fun[inner_index].reshape_as(sample['target'])
         weighted_token_losses = token_losses * weights
         outer_ind_loss = weighted_token_losses.sum(1)
 
@@ -223,10 +233,10 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         outer_group_losses = zero_vec.scatter_add(0, outer_index, outer_ind_loss)
         outer_group_counts = zero_vec.scatter_add(0, outer_index, mask.sum(1))
 
-        inner_zero_vec = torch.zeros(self.inner_groups*self.n_groups, device='cuda')
-        inner_group_losses = inner_zero_vec.scatter_add(0, offset_index, token_losses.view(-1))
-        one_vec = torch.ones(offset_index.numel(), device='cuda')  # B
-        inner_group_counts = inner_zero_vec.scatter_add(0, offset_index, one_vec)
+        inner_zero_vec = torch.zeros(self.inner_groups, device='cuda')
+        inner_group_losses = inner_zero_vec.scatter_add(0, inner_index, token_losses.view(-1))
+        one_vec = torch.ones(self.inner_groups, device='cuda')  # B
+        inner_group_counts = inner_zero_vec.scatter_add(0, inner_index, one_vec)
 
         return nll_loss.sum(), outer_group_losses, outer_group_counts, inner_group_losses, inner_group_counts
 
@@ -319,6 +329,12 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             'sample_size': sample_size,
         }
 
+        # if self.training:
+        #     for ii in range(self.n_groups):
+        #         logging_output['w{}'.format(ii)] = self.outer_h_fun[ii]
+        #         logging_output['l{}'.format(ii)] = self.outer_sum_losses[ii]
+        #         logging_output["n_groups"] = self.n_groups
+        #         logging_output['gpu_count'] = 1
         if not self.training:
             for ii in range(self.n_groups):
                 logging_output["fg_gnll{}".format(ii)] = fg_group_nll[ii].data

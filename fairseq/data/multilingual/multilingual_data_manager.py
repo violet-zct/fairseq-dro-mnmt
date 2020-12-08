@@ -77,6 +77,13 @@ class MultilingualDatasetManager(object):
         self._has_sharded_data = False
         self._num_shards_dict = {}
 
+        self.uniq_token_counts = [-1] * len(self.tgt_lang_dict)
+        with open(args.data, "uniq.token.counts") as fin:
+            for line in fin:
+                key, value = line.strip().split()
+                if key in self.tgt_langs:
+                    self.uniq_token_counts[_lang_id(self.tgt_lang_dict, key)] = float(value)
+
     @classmethod
     def setup_data_manager(cls, args, lang_pairs, langs, dicts, sampling_method):
         return MultilingualDatasetManager(
@@ -790,6 +797,7 @@ class MultilingualDatasetManager(object):
             else None,
             langpairs_sharing_datasets=langpairs_sharing_datasets,
         )
+
         # TODO: handle modified lang toks for mined data and dae data
         if self.args.lang_tok_replacing_bos_eos:
             ds = self.alter_dataset_langtok(
