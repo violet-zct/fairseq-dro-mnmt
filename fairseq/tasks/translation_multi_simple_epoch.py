@@ -451,7 +451,7 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
         import sacrebleu
 
         def decode(toks, escape_unk=False):
-            s = self.tgt_dict.string(
+            s = self.target_dictionary.string(
                 toks.int().cpu(),
                 self.args.eval_bleu_remove_bpe,
                 # The default unknown string in fairseq is `<unk>`, but
@@ -472,7 +472,7 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
         for i in range(len(gen_out)):
             hyps.append(decode(gen_out[i][0]['tokens']))
             refs.append(decode(
-                utils.strip_pad(sample['target'][i], self.tgt_dict.pad()),
+                utils.strip_pad(sample['target'][i], self.target_dictionary.pad()),
                 escape_unk=True,  # don't count <unk> as matches to the hypo
             ))
         if self.args.eval_bleu_print_samples:
