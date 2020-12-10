@@ -83,7 +83,6 @@ class MultilingualDatasetManager(object):
             for line in fin:
                 key, value = line.strip().split()
                 if key in self.tgt_langs:
-                    logger.info("+++++++++++++++++++++++ " + key)
                     self.uniq_token_counts[_lang_id(self.tgt_lang_dict, key)] = float(value)
 
     @classmethod
