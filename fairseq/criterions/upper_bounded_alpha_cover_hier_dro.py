@@ -327,7 +327,7 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
             reduce_outer_group_losses = reduce_outer_group_losses / outer_group_denom
             inner_group_denom = inner_group_counts + 1e-8
             reduce_inner_group_losses = reduce_inner_group_losses / inner_group_denom
-            outer_group_losses = outer_group_losses * self.distributed_world_size / outer_group_denom / outer_denom
+            # outer_group_losses = outer_group_losses * self.distributed_world_size / outer_group_denom / outer_denom
 
             valid_outer_index, valid_inner_index = reduce_outer_group_losses.ne(0), reduce_inner_group_losses.ne(0)
             self.outer_sum_losses[valid_outer_index] = self.outer_sum_losses[valid_outer_index].mul(1 - self.EMA_alpha).add(reduce_outer_group_losses[valid_outer_index], alpha=self.EMA_alpha)
@@ -337,7 +337,7 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
 
             self.update_mw()
             loss = (outer_group_losses * self.outer_h_fun).sum()
-            sample_size = 1
+            sample_size = sample['ntokens']
 
         logging_output = {
             'loss': loss.data,
