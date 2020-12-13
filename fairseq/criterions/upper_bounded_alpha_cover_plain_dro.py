@@ -238,7 +238,7 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
             group_denom = group_counts + 1e-8
             reduce_group_losses = reduce_group_losses / group_denom
-            group_losses = group_losses * self.distributed_world_size / group_denom / denom
+            # group_losses = group_losses * self.distributed_world_size / group_denom / denom
 
             valid_index = reduce_group_losses.ne(0)
             valid_losses = self.sum_losses[valid_index]
@@ -250,7 +250,7 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 self.update_mw()
 
             loss = (group_losses * self.h_fun).sum()
-            sample_size = 1
+            sample_size = sample['ntokens']
 
         logging_output = {
             'loss': loss.data,

@@ -230,7 +230,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
             group_denom = group_counts + 1e-8
             reduce_group_losses = reduce_group_losses / group_denom
-            group_losses = group_losses * self.distributed_world_size / group_denom / denom
+            # group_losses = group_losses * self.distributed_world_size / group_denom / denom
 
             valid_index = reduce_group_losses.ne(0)
             valid_losses = self.sum_losses[valid_index]
@@ -242,7 +242,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 self.update_mw()
 
             loss = (group_losses * self.h_fun).sum()
-            sample_size = 1
+            sample_size = sample['ntokens']
 
         logging_output = {
             'loss': loss.data,
@@ -253,12 +253,6 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         }
 
         if self.logging:
-            # if self.training:
-            #     for ii in range(self.n_groups):
-            #         logging_output['w{}'.format(ii)] = self.h_fun[ii]
-            #         logging_output['l{}'.format(ii)] = self.sum_losses[ii]
-            #         logging_output["n_groups"] = self.n_groups
-            #         logging_output['gpu_count'] = 1
             if not self.training:
                 for ii in range(self.n_groups):
                     logging_output["fg_gnll{}".format(ii)] = fg_group_nll[ii].data
