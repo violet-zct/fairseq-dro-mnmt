@@ -187,20 +187,20 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
         if getattr(self, 'log_path', None) is not None and self.args.distributed_rank == 0:
             for idx, count in enumerate(cutoff_count):
                 self.log_path.write("Cutoff-{} = {}\n".format(idx, cutoff_count[idx]))
-                self.log_path.write("I-{}\t".format(idx) + " ".join([str(ii.item()) for ii in sort_id[idx]]) + "\n")
-                if self.first_time_log:
-                    self.log_path.write("T-{}\t".format(idx) + self.tgt_dict.string(sort_id[idx]) + "\n")
-                    self.first_time_log = False
+                # if self.first_time_log:
+                #     self.log_path.write("I-{}\t".format(idx) + " ".join([str(ii.item()) for ii in sort_id[idx]]) + "\n")
+                #     self.log_path.write("T-{}\t".format(idx) + self.tgt_dict.string(sort_id[idx]) + "\n")
+                #     self.first_time_log = False
                 self.log_path.write(
-                    "H-{}\t".format(idx) + " ".join(["{:.6f}".format(ff.item()) for ff in inner_h_fun[idx]]) + "\n")
-                self.log_path.write("F-x\t" + " ".join(["{:.6f}".format(ff.item()) for ff in sorted_train_frac[idx]]) + "\n")
+                    "H-{}\t".format(idx) + " ".join(["{:.6f}".format(ff.item()) for ff in inner_h_fun[idx][sort_id[idx]]]) + "\n")
+                self.log_path.write("F-{}\t".format(idx) + " ".join(["{:.6f}".format(ff.item()) for ff in sorted_train_frac[idx]]) + "\n")
                 self.log_path.flush()
             self.log_path.write("\n")
 
         for idx, count in enumerate(cutoff_count):
             tokens = self.tgt_dict.string(sort_id[idx, :20])
             logger.info("Lang = {}, Cutoff = {}, Tokens with top-k losses = {}".format(idx, cutoff_count[idx], tokens))
-            logger.info("Top-k freq = {}".format(" ".join(["{:.5}".format(xx) for xx in sorted_train_frac[idx, :20]])))
+            logger.info("Freqs of top-k losses = {}".format(" ".join(["{:.5}".format(xx) for xx in sorted_train_frac[idx, :20]])))
 
         self.inner_h_fun = inner_h_fun.view(-1)
 

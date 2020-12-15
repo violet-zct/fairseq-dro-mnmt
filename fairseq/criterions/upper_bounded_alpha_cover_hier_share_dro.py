@@ -173,19 +173,19 @@ class UpperBoundHierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(Fair
 
         if getattr(self, 'log_path', None) is not None and self.args.distributed_rank == 0:
             self.log_path.write("Cutoff = {}\n".format(cutoff_count))
-            self.log_path.write("I-x\t" + " ".join([str(ii.item()) for ii in sort_id]) + "\n")
-            if self.first_time_log:
-                self.log_path.write("T-x\t" + self.tgt_dict.string(sort_id) + "\n")
-                self.first_time_log = False
+            # if self.first_time_log:
+            #     self.log_path.write("I-x\t" + " ".join([str(ii.item()) for ii in sort_id]) + "\n")
+            #     self.log_path.write("T-x\t" + self.tgt_dict.string(sort_id) + "\n")
+            #     self.first_time_log = False
             self.log_path.write(
-                "H-x\t" + " ".join(["{:.6f}".format(ff.item()) for ff in self.inner_h_fun]) + "\n")
+                "H-x\t" + " ".join(["{:.6f}".format(ff.item()) for ff in self.inner_h_fun[sort_id]]) + "\n")
             self.log_path.write("F-x\t" + " ".join(["{:.6f}".format(ff.item()) for ff in sorted_train_frac]) + "\n")
             self.log_path.write("\n")
             self.log_path.flush()
 
         tokens = self.tgt_dict.string(sort_id[:20])
         logger.info("Cutoff = {}, Tokens with top-k losses = {}".format(cutoff_count, tokens))
-        logger.info("Top-k freq = {}".format(" ".join(["{:.5}".format(xx) for xx in sorted_train_frac[:20]])))
+        logger.info("Freqs of top-k losses = {}".format(" ".join(["{:.5}".format(xx) for xx in sorted_train_frac[:20]])))
 
     def individual_losses(self, model, net_output, sample):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)

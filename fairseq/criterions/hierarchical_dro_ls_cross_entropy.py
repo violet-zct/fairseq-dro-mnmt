@@ -150,12 +150,12 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         if getattr(self, 'log_path', None) is not None and self.args.distributed_rank == 0:
             for idx, count in enumerate(cutoff_count):
                 self.log_path.write("Cutoff-{} = {}\n".format(idx, cutoff_count[idx]))
-                self.log_path.write("I-{}\t".format(idx) + " ".join([str(ii.item()) for ii in sort_id[idx]]) + "\n")
-                if self.first_time_log:
-                    self.log_path.write("T-{}\t".format(idx) + self.tgt_dict.string(sort_id[idx]) + "\n")
-                    self.first_time_log = False
-                self.log_path.write(
-                    "L-{}\t".format(idx) + " ".join(["{:.6f}".format(ff) for ff in sorted_losses[idx]]) + "\n")
+                # if self.first_time_log:
+                #     self.log_path.write("I-{}\t".format(idx) + " ".join([str(ii.item()) for ii in sort_id[idx]]) + "\n")
+                #     self.log_path.write("T-{}\t".format(idx) + self.tgt_dict.string(sort_id[idx]) + "\n")
+                #     self.first_time_log = False
+                # self.log_path.write(
+                #     "L-{}\t".format(idx) + " ".join(["{:.6f}".format(ff) for ff in sorted_losses[idx]]) + "\n")
                 self.log_path.write(
                     "F-{}\t".format(idx) + " ".join(["{:.6f}".format(ff) for ff in sorted_frac[idx]]) + "\n")
                 self.log_path.flush()
@@ -164,7 +164,7 @@ class HierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         for idx, count in enumerate(cutoff_count):
             tokens = self.tgt_dict.string(sort_id[idx, :20])
             logger.info("Lang = {}, Cutoff = {}, Tokens with top-k losses = {}".format(idx, cutoff_count[idx], tokens))
-            logger.info("Top-k freq = {}".format(" ".join(["{:.5}".format(xx) for xx in sorted_frac[idx, :20]])))
+            logger.info("Freqs of top-k losses = {}".format(" ".join(["{:.5}".format(xx) for xx in sorted_frac[idx, :20]])))
 
         inner_h_fun = self.inner_h_fun.new_full((self.n_groups, self.inner_groups), 0.1)
         leftover_masses = inner_h_fun.new_zeros(self.n_groups)
