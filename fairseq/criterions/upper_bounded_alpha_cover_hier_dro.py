@@ -126,7 +126,7 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
 
     def reset_history(self):
         self.outer_h_fun.fill_(1.)
-        self.outer_sum_losses.fill_(0.)
+        # self.outer_sum_losses.fill_(0.)
 
     def update_mw(self):
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
