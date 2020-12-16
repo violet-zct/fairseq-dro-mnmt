@@ -85,7 +85,7 @@ class SanityPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
     def initialize(self):
         logger.info("Group num = {}".format(self.n_groups))
-        weights = self.task.data_manager.lang_weights
+        weights = torch.Tensor(self.task.data_manager.lang_weights)
         self.register_buffer('h_fun', weights)
 
     def individual_losses(self, model, net_output, sample):
