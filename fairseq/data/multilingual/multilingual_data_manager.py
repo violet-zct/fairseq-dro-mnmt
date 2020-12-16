@@ -72,6 +72,19 @@ class MultilingualDatasetManager(object):
         self.src_lang_dict = self.create_lang_dictionary(self.src_langs)
         self.tgt_lang_dict = self.create_lang_dictionary(self.tgt_langs)
 
+        #
+        low_langs = ['aze', 'bel', 'glg', 'slk', 'bos', 'mar', 'hin', 'mkd']
+        if len(self.src_langs) > 1:
+            self.lang_weights = [1.0] * len(self.src_langs)
+            for lang in low_langs:
+                if lang in self.src_langs:
+                    self.lang_weights[_lang_id(self.src_lang_dict, lang)] = 2.0
+        else:
+            self.lang_weights = [1.0] * len(self.tgt_langs)
+            for lang in low_langs:
+                if lang in self.tgt_langs:
+                    self.lang_weights[_lang_id(self.tgt_lang_dict, lang)] = 2.0
+        #
         self.sampling_method = sampling_method
         self.sampling_scheduler = None
         self._has_sharded_data = False
