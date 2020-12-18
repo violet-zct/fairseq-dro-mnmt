@@ -3,34 +3,60 @@
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
-#SBATCH --comment="TACL 12.14"
-#SBATCH --job-name=49.m2o.relate
+#SBATCH --comment="TACL 12.18"
+#SBATCH --job-name=38.hier.lang.dro.e0.1.a0.5.wu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:0
-#SBATCH --mem=7g
+#SBATCH --gres=gpu:8
+#SBATCH --mem=700g
 #SBATCH -C volta32gb
 #SBATCH --cpus-per-task=30
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0
-
+#SBATCH --array=0-3
 
 source activate mnmt
 
-#data_names=(ted8_related)
-#split=${data_names[$SLURM_ARRAY_TASK_ID]}
 SAVE_ROOT=/private/home/chuntinz/work/fairseq-dro-mnmt/saved_models
-DATA=/checkpoint/chuntinz/data/mnmt_data/ted/ted8_related/data-bin
+if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
+    langs="aze,bel,glg,slk,tur,rus,por,ces"
+    lang_pairs="en-aze,en-bel,en-glg,en-slk,en-tur,en-rus,en-por,en-ces"
+    DATA=/checkpoint/chuntinz/data/mnmt_data/ted/ted8_related/data-bin
+    ename="related_o2m"
+    gtgt="xx"
+    etok="tgt"
+    glevel="target_lang"
+elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
+    langs="aze,bel,glg,slk,tur,rus,por,ces"
+    lang_pairs="aze-en,bel-en,glg-en,slk-en,tur-en,rus-en,por-en,ces-en"
+    DATA=/checkpoint/chuntinz/data/mnmt_data/ted/ted8_related/data-bin
+    ename="related_m2o"
+    gtgt="en"
+    etok="src"
+    glevel="source_lang"
+elif [ $SLURM_ARRAY_TASK_ID = 2 ]; then
+    langs="bos,mar,hin,mkd,ell,bul,fra,kor"
+    lang_pairs="en-bos,en-mar,en-hin,en-mkd,en-ell,en-bul,en-fra,en-kor"
+    DATA=/checkpoint/chuntinz/data/mnmt_data/ted/ted8_diverse/data-bin
+    ename="diverse_o2m"
+    gtgt="xx"
+    etok="tgt"
+    glevel="target_lang"
+elif [ $SLURM_ARRAY_TASK_ID = 3 ]; then
+    langs="bos,mar,hin,mkd,ell,bul,fra,kor"
+    lang_pairs="bos-en,mar-en,hin-en,mkd-en,ell-en,bul-en,fra-en,kor-en"
+    DATA=/checkpoint/chuntinz/data/mnmt_data/ted/ted8_diverse/data-bin
+    ename="diverse_m2o"
+    gtgt="en"
+    etok="src"
+    glevel="source_lang"
+else
+    exit
+fi
 
-langs="aze,bel,glg,slk,tur,rus,por,ces"
-lang_pairs="aze-en,bel-en,glg-en,slk-en,tur-en,rus-en,por-en,ces-en"
-
-#langs="aze,bel,glg,slk,tur,rus,por,ces"
-#lang_pairs="en-aze,en-bel,en-glg,en-slk,en-tur,en-rus,en-por,en-ces"
 model=transformer_iwslt_de_en
-exp_name=debug
+exp_name=38_hier_ema0.1_alpha0.5_beta0.5_wu_ub_step_lr_lang_dro_ted8_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
@@ -38,22 +64,23 @@ mkdir -p ${SAVE}
 
 cp $0 ${SAVE}/run.sh
 
-python train.py ${DATA} \
-    --start-ft-steps 200 \
+bash exps/send.sh ${exp_name} &
+
+python train.py ${DATA}\
+    --start-ft-steps 25000 \
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset cap.valid \
-	  --encoder-langtok "src" --enable-lang-ids --log-path ${SAVE}/inner_log.txt \
+	  --encoder-langtok ${etok} --enable-lang-ids --log-path ${SAVE}/inner_log.txt \
 	  --criterion 'upper_bound_hier_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-	  --dro-outer-alpha 0.5 --dro-inner-beta 0.5 --ema 0.5 \
-	  --update-dro-freq 100 --outer-group-level "source_lang"\
-	  --max-update 200000 --layernorm-embedding \
+	  --dro-outer-alpha 0.5 --dro-inner-beta 0.5 --update-dro-freq 100 --outer-group-level ${glevel} --ema 0.1 \
+	  --max-update 300 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
 	  --no-epoch-checkpoints \
 	  --share-decoder-input-output-embed \
 	  --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 0.0 \
 	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'step' \
-	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --lr-decay-rate 0.5 --lr-decay-steps 50000 \
+      --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --lr-decay-rate 0.5 --lr-decay-steps 50000 \
 	  --max-tokens 8192 \
 	  --update-freq 1 \
 	  --seed 222 \
@@ -62,12 +89,17 @@ python train.py ${DATA} \
     --encoder-normalize-before --decoder-normalize-before \
 	  --log-interval 100 --log-format simple | tee ${SAVE}/log.txt
 
-exit
 date
-wait
+#wait
 
 for lang in ${langs//,/ }; do
-      python fairseq_cli/generate.py ${DATA} \
+    if [ $gtgt = "en" ]; then
+        gsrc=${lang}
+    else
+        gsrc="en"
+        gtgt=${lang}
+    fi
+    python fairseq_cli/generate.py ${DATA} \
           --task translation_multi_simple_epoch  \
           --gen-subset test \
           --path ${SAVE}/checkpoint_best.pt \
@@ -76,7 +108,9 @@ for lang in ${langs//,/ }; do
           --remove-bpe sentencepiece \
 	        --scoring sacrebleu \
           --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
-          --encoder-langtok "src" \
-          --target-lang en --source-lang ${lang} \
+          --encoder-langtok ${etok} \
+          --source-lang ${gsrc} --target-lang ${gtgt} \
           --beam 5  | tee ${SAVE}/test_${lang}_en.log
 done
+
+touch ${SAVE}/END
