@@ -17,7 +17,6 @@
 #SBATCH --array=0-3
 
 source activate mnmt
-
 SAVE_ROOT=/private/home/chuntinz/work/fairseq-dro-mnmt/saved_models
 if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
     langs="aze,bel,glg,slk,tur,rus,por,ces"
@@ -56,7 +55,7 @@ else
 fi
 
 model=transformer_iwslt_de_en
-exp_name=38_hier_ema0.1_alpha0.5_beta0.5_wu_ub_step_lr_lang_dro_ted8_${ename}
+exp_name=debug_38_hier_ema0.1_alpha0.5_beta0.5_wu_ub_step_lr_lang_dro_ted8_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
@@ -64,7 +63,7 @@ mkdir -p ${SAVE}
 
 cp $0 ${SAVE}/run.sh
 
-bash exps/send.sh ${exp_name} &
+bash exps/send2.sh ${exp_name} &
 
 python train.py ${DATA}\
     --start-ft-steps 25000 \
@@ -90,7 +89,8 @@ python train.py ${DATA}\
 	  --log-interval 100 --log-format simple | tee ${SAVE}/log.txt
 
 date
-#wait
+
+echo -e "test" | tee -a ${SAVE}/log.txt
 
 for lang in ${langs//,/ }; do
     if [ $gtgt = "en" ]; then
@@ -110,7 +110,7 @@ for lang in ${langs//,/ }; do
           --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
           --encoder-langtok ${etok} \
           --source-lang ${gsrc} --target-lang ${gtgt} \
-          --beam 5  | tee ${SAVE}/test_${lang}_en.log
+          --beam 5  | tee -a ${SAVE}/log.txt
 done
 
-echo "end" | tee ${SAVE}/END
+touch ${SAVE}/END
