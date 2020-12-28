@@ -9,6 +9,8 @@
 #SBATCH --time=4320
 #SBATCH --array=0-4
 
+module load cuda-11.0
+source activate mnmt
 SAVE_ROOT=/home/chuntinz/tir5/fairseq-dro-mnmt/saved_models
 if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
     langs="aze,bel,glg,slk,tur,rus,por,ces"
