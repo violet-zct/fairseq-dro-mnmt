@@ -54,7 +54,7 @@ mkdir -p ${SAVE}
 
 cp $0 ${SAVE}/run.sh
 
-python train.py ${DATA}\
+python -u train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset cap.valid \
 	  --sampling-method "temperature" --sampling-temperature 1 \
