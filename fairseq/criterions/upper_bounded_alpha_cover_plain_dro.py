@@ -312,11 +312,13 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                                              "acl{}".format(ii))
 
         if len(logging_outputs) > 0 and 'fg_gnll0' in logging_outputs[0]:
-            for ii in range(5):
+            for ii in range(8):
                 g_nll = sum(log.get('fg_gnll{}'.format(ii), 0) for log in logging_outputs)
                 g_tokens = sum(log.get('fg_gcount{}'.format(ii), 0) for log in logging_outputs)
                 division_g_ntokens = g_tokens if g_tokens > 0 else 1
                 metrics.log_scalar('fg_gnll{}'.format(ii), g_nll / division_g_ntokens, g_tokens, round=1)
+                metrics.log_derived_with_key('fg_ppl{}'.format(ii), lambda value: utils.get_perplexity(value, base=math.e),
+                                             "fg_gnll{}".format(ii))
 
     @staticmethod
     def logging_outputs_can_be_summed() -> bool:

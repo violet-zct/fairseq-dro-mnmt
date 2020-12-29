@@ -199,7 +199,7 @@ class MultilingualDatasetManager(object):
         )
         parser.add_argument(
             "--enable-lang-ids",
-            default=False,
+            default=True,
             action="store_true",
             help="whether to include language IDs in samples",
         )
