@@ -4,7 +4,7 @@
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
 #SBATCH --comment="TACL 1.10"
-#SBATCH --job-name=2.hier.ted
+#SBATCH --job-name=3.hier.sanity.ted
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -60,7 +60,7 @@ else
 fi
 
 model=transformer_iwslt_de_en
-exp_name=2_analyze_hier_ema0.1_alpha0.5_beta0.5_wu_ub_ted8_${ename}
+exp_name=3_sanity_hier_ema0.1_alpha0.5_beta1.0_wu_ub_ted8_${ename}
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
 mkdir -p ${SAVE}
@@ -78,7 +78,7 @@ python train.py ${DATA}\
 	  --arch ${model} --valid-subset cap.valid \
 	  --encoder-langtok ${etok} --enable-lang-ids --log-path ${SAVE}/inner_log.txt \
 	  --criterion 'upper_bound_hier_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-	  --dro-outer-alpha 0.5 --dro-inner-beta 0.5 --update-dro-freq 1000 --outer-group-level ${glevel} --ema 0.1 \
+	  --dro-outer-alpha 0.5 --dro-inner-beta 1.0 --update-dro-freq 1000 --outer-group-level ${glevel} --ema 0.1 \
 	  --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \

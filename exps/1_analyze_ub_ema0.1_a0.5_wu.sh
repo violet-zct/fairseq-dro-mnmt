@@ -75,7 +75,7 @@ if [ ${log} = 1 ]; then
 fi
 
 python train.py ${DATA}\
-    --start-ft-steps 10000 \
+    --start-ft-steps 25000 \
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset cap.valid \
 	  --encoder-langtok ${etok} --enable-lang-ids \
