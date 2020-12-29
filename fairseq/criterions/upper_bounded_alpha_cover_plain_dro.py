@@ -211,7 +211,7 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 nll_loss = nll_loss.reshape_as(sample['target']).sum(1)
                 mask = (sample['target'] != self.padding_idx).float()
                 sample_size = sample['ntokens']
-                fg_labels, _ = self.retrieve_group_labels(sample)
+                fg_labels = self.retrieve_group_labels(sample)
                 fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
                 fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
                 fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1))
