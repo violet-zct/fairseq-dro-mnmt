@@ -18,6 +18,7 @@
 
 source activate mnmt
 
+SLURM_ARRAY_TASK_ID=1
 savedir=/home/chuntinz/tir5/fairseq-dro-mnmt
 datadir=/home/chuntinz/tir5/data/mnmt_data
 log=2
@@ -75,28 +76,29 @@ if [ ${log} = 1 ]; then
 fi
 
 python train.py ${DATA}\
-    --start-ft-steps 10000 \
-	  --task translation_multi_simple_epoch \
-	  --arch ${model} --valid-subset cap.valid \
-	  --encoder-langtok ${etok} --enable-lang-ids \
-	  --criterion 'upper_bound_plain_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-	  --dro-alpha 0.5 --update-dro-freq 1 --group-level ${glevel} --ema 0.1 \
-	  --max-update 300000 --layernorm-embedding \
+    --start-ft-steps 200 \
+    --task translation_multi_simple_epoch \
+    --arch ${model} --valid-subset cap.valid \
+    --encoder-langtok ${etok} --enable-lang-ids \
+    --criterion 'upper_bound_plain_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
+    --dro-alpha 0.5 --update-dro-freq 1 --group-level ${glevel} --ema 0.1 \
+    --max-update 400 --validate-interval-updates 150 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
-	  --no-epoch-checkpoints \
-	  --share-decoder-input-output-embed \
-	  --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 0.0 \
-	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'step' \
-      --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --lr-decay-rate 0.5 --lr-decay-steps 50000 \
-	  --max-tokens 8192 \
-	  --update-freq 1 \
-	  --seed 222 \
-  	--max-source-positions 512 --max-target-positions 512 \
-  	--save-dir ${SAVE} \
+    --no-epoch-checkpoints \
+    --share-decoder-input-output-embed \
+    --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 0.0 \
+    --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'step' \
+    --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --lr-decay-rate 0.5 --lr-decay-steps 50000 \
+    --max-tokens 8192 \
+    --update-freq 1 \
+    --seed 222 \
+    --max-source-positions 512 --max-target-positions 512 \
+    --save-dir ${SAVE} \
     --encoder-normalize-before --decoder-normalize-before \
-	  --log-interval 100 --log-format simple | tee ${SAVE}/log.txt
+    --log-interval 100 --log-format simple | tee ${SAVE}/log.txt
 
+exit
 date
 wait
 
