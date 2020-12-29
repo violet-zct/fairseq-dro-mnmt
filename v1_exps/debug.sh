@@ -16,7 +16,8 @@
 #SBATCH --time=4320
 #SBATCH --array=0-3
 
-source activate mnmt
+conda activate mnmt
+which python
 SLURM_ARRAY_TASK_ID=0
 SAVE_ROOT=/private/home/ghazvini/chunting/fairseq-dro-mnmt/saved_models
 if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
@@ -64,7 +65,7 @@ mkdir -p ${SAVE}
 
 cp $0 ${SAVE}/run.sh
 
-bash exps/send.sh ${exp_name} &
+bash v1_exps/send.sh ${exp_name} &
 
 python train.py ${DATA}\
     --start-ft-steps 30 \
