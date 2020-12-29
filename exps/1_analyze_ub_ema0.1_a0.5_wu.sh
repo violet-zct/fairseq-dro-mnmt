@@ -123,3 +123,4 @@ for lang in ${langs//,/ }; do
       scp ${SAVE}/test_${lang}_en.log tir:${send_dir}/
     fi
 done
+echo "end" | tee ${SAVE}/END

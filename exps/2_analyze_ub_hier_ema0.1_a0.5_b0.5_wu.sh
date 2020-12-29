@@ -125,3 +125,4 @@ done
 if [ ${log} = 1 ]; then
   scp ${SAVE}/inner_log.txt ${send_dir}/
 fi
+echo "end" | tee ${SAVE}/END
