@@ -32,7 +32,7 @@ def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=T
 
 
 @register_criterion('baseline_label_smoothed_cross_entropy')
-class LabelSmoothedCrossEntropyCriterion(FairseqCriterion):
+class BaselineLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
     def __init__(self, task, sentence_avg, label_smoothing, group_level, log_dir):
         super().__init__(task)
