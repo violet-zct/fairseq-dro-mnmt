@@ -17,7 +17,7 @@
 #SBATCH --array=0-3
 
 source activate mnmt
-
+SLURM_ARRAY_TASK_ID=0
 SAVE_ROOT=/private/home/chuntinz/work/fairseq-dro-mnmt/saved_models
 if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
     langs="aze,bel,glg,slk,tur,rus,por,ces"
@@ -56,7 +56,7 @@ else
 fi
 
 model=transformer_iwslt_de_en
-exp_name=38_hier_ema0.1_alpha0.5_beta0.5_wu_ub_step_lr_lang_dro_ted8_${ename}
+exp_name=debug_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
@@ -67,7 +67,7 @@ cp $0 ${SAVE}/run.sh
 bash exps/send.sh ${exp_name} &
 
 python train.py ${DATA}\
-    --start-ft-steps 25000 \
+    --start-ft-steps 30 \
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset cap.valid \
 	  --encoder-langtok ${etok} --enable-lang-ids --log-path ${SAVE}/inner_log.txt \
