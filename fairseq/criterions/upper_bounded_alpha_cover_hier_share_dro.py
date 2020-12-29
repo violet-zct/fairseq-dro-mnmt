@@ -260,22 +260,22 @@ class UpperBoundHierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(Fair
 
         if self.update_steps < self.start_ft_steps:
             nsentences = sample['target'].size(0)
+            net_output = model(**sample['net_input'])
             if self.training:
                 self.update_steps += 1
                 net_output = model(**sample['net_input'])
                 loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=reduce)
                 sample_size = sample['ntokens']
             else:
-                nll_loss, outer_group_losses, outer_group_counts, inner_group_losses, inner_group_counts = \
-                    self.compute_loss(model, sample)
-
-                loss = outer_group_losses.sum()
+                loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=False)
+                loss = loss.sum()
+                nll_loss = nll_loss.reshape_as(sample['target']).sum(1)
+                mask = (sample['target'] != self.padding_idx).float()
                 sample_size = sample['ntokens']
                 fg_labels, _ = self.retrieve_group_labels(sample)
-                fg_one_vec = torch.ones(sample['nsentences'], device='cuda')  # B
                 fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
                 fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
-                fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, fg_one_vec)
+                fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1))
                 nll_loss = nll_loss.sum()
             logging_output = {
                 'loss': loss.data,

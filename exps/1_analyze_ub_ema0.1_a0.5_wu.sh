@@ -3,18 +3,18 @@
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
-#SBATCH --comment="TACL 12.18"
-#SBATCH --job-name=28.lang.dro.e0.1.a0.5.wu
+#SBATCH --comment="TACL 1.10"
+#SBATCH --job-name=1.lang.ted
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
 #SBATCH --mem=700g
-#SBATCH -C volta32gb
+##SBATCH -C volta32gb
 #SBATCH --cpus-per-task=30
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=1,3
+#SBATCH --array=0-3
 
 source activate mnmt
 
@@ -88,7 +88,7 @@ python train.py ${DATA}\
 	  --share-decoder-input-output-embed \
 	  --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 0.0 \
 	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'step' \
-      --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --lr-decay-rate 0.5 --lr-decay-steps 50000 \
+    --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --lr-decay-rate 0.5 --lr-decay-steps 50000 \
 	  --max-tokens 8192 \
 	  --update-freq 1 \
 	  --seed 222 \

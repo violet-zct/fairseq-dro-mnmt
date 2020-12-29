@@ -3,13 +3,13 @@
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
-#SBATCH --comment="TACL 12.18"
-#SBATCH --job-name=38.hier.lang.dro.e0.1.a0.5.wu
+#SBATCH --comment="TACL 1.10"
+#SBATCH --job-name=1.lang.ted
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
 #SBATCH --mem=700g
-#SBATCH -C volta32gb
+##SBATCH -C volta32gb
 #SBATCH --cpus-per-task=30
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
