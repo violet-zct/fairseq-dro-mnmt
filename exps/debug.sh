@@ -101,6 +101,7 @@ date
 wait
 
 for lang in ${langs//,/ }; do
+    echo "test on $lang"
     if [ $gtgt = "en" ]; then
         gsrc=${lang}
     else
