@@ -118,7 +118,7 @@ class BaselineLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         offset_index = (inner_index + outer_index.unsqueeze(1) * self.inner_groups).view(-1)
 
         self.outer_losses.scatter_add_(0, outer_index, token_losses.sum(1))
-        self.outer_counts.scatter_add(0, outer_index, mask.sum(1))
+        self.outer_counts.scatter_add_(0, outer_index, mask.sum(1))
 
         self.inner_losses.scatter_add_(0, offset_index, token_losses.view(-1))
         one_vec = torch.ones(offset_index.numel(), device='cuda')  # B
