@@ -113,12 +113,12 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
 
     def initialize(self):
         logger.info("Outer group num = {}, Inner group num = {}".format(self.n_groups, self.inner_groups))
-        if self.args.baseline_line != "inner" and self.task.data_manager.outer_baseline is not None:
+        if self.args.baseline_level != "inner" and self.task.data_manager.outer_baseline is not None:
             self.loss_baselines = torch.Tensor(self.task.data_manager.outer_baseline).to(self.device)
         else:
             self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
 
-        if self.args.baseline_line != "outer" and self.task.data_manager.inner_baseline is not None:
+        if self.args.baseline_level != "outer" and self.task.data_manager.inner_baseline is not None:
             self.inner_baselines = torch.Tensor(self.task.data_manager.inner_baseline).to(self.device)
         else:
             self.inner_baselines = None

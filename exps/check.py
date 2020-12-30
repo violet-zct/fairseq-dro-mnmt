@@ -18,4 +18,4 @@ for exp in ["1_analyze_ema0.1_alpha0.5_wu_ub_lang_dro_ted8", "2_analyze_hier_ema
 if safe:
     print("All the test exists, please transfer them via scp exps/scp.sh")
 else:
-    print("Genetions were not successfully done, please dig into slurm_logs/xx.err and then rerun sbatch exps/test.sh")
+    print("Genetions were not successfully done, please dig into slurm_logs/xx.err (if nothing in the err file, just ignore) and then rerun sbatch exps/test.sh")

@@ -84,7 +84,7 @@ fi
 python train.py ${DATA}\
     --start-ft-steps 25000 \
     --task translation_multi_simple_epoch \
-    --arch ${model} --valid-subset cap.valid --inner-baseline-file ${DATA}/${ibfile}\
+    --arch ${model} --valid-subset cap.valid --inner-baseline-file ${DATA}/${ibfile} \
     --encoder-langtok ${etok} --enable-lang-ids --log-path ${SAVE}/inner_log.txt \
     --criterion 'upper_bound_hier_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
     --dro-outer-alpha 0.5 --dro-inner-beta 0.5 --update-dro-freq 1000 --outer-group-level ${glevel} --ema 0.1 \
