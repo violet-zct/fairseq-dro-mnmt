@@ -1,3 +1,5 @@
+#! /bin/bash
+
 dirname=$1 # exp name
 
 end=$((SECONDS+114400))
