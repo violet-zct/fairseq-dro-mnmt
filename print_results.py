@@ -3,11 +3,11 @@ import sys
 
 dirname = sys.argv[1]
 
-lang_list_dir = "/private/home/chuntinz/work/data/mnmt_data/ted/lang_lists"
+lang_list_dir = "/home/chuntinz/tir5/data/mnmt_data/ted/lang_lists"
 
-if "ted" in dirname and "related" in dirname:
+if "related" in dirname:
     lang_file = os.path.join(lang_list_dir, "8re.langs.list")
-elif "ted" in dirname and "diverse" in dirname:
+elif "diverse" in dirname:
     lang_file = os.path.join(lang_list_dir, "8di.langs.list")
 elif "ted" in dirname and "all":
     lang_file = os.path.join(lang_list_dir, "all.langs.list")

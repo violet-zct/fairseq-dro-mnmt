@@ -76,26 +76,26 @@ fi
 
 python train.py ${DATA}\
     --start-ft-steps 25000 \
-	  --task translation_multi_simple_epoch \
-	  --arch ${model} --valid-subset cap.valid \
-	  --encoder-langtok ${etok} --enable-lang-ids \
-	  --criterion 'upper_bound_plain_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-	  --dro-alpha 0.5 --update-dro-freq 1 --group-level ${glevel} --ema 0.1 \
-	  --max-update 300000 --layernorm-embedding \
+    --task translation_multi_simple_epoch \
+    --arch ${model} --valid-subset cap.valid \
+    --encoder-langtok ${etok} --enable-lang-ids \
+    --criterion 'upper_bound_plain_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
+    --dro-alpha 0.5 --update-dro-freq 1 --group-level ${glevel} --ema 0.1 \
+    --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
-	  --no-epoch-checkpoints \
-	  --share-decoder-input-output-embed \
-	  --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 0.0 \
-	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'step' \
+    --no-epoch-checkpoints \
+    --share-decoder-input-output-embed \
+    --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 0.0 \
+    --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'step' \
     --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --lr-decay-rate 0.5 --lr-decay-steps 50000 \
-	  --max-tokens 8192 \
-	  --update-freq 1 \
-	  --seed 222 \
-  	--max-source-positions 512 --max-target-positions 512 \
-  	--save-dir ${SAVE} \
+    --max-tokens 8192 \
+    --update-freq 1 \
+    --seed 222 \
+    --max-source-positions 512 --max-target-positions 512 \
+    --save-dir ${SAVE} \
     --encoder-normalize-before --decoder-normalize-before \
-	  --log-interval 100 --log-format simple | tee ${SAVE}/log.txt
+    --log-interval 100 --log-format simple | tee ${SAVE}/log.txt
 
 date
 wait
@@ -114,13 +114,10 @@ for lang in ${langs//,/ }; do
           --batch-size 300 \
           --lenpen 1.0 \
           --remove-bpe sentencepiece \
-	        --scoring sacrebleu \
+	  --scoring sacrebleu \
           --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
           --encoder-langtok ${etok} \
           --source-lang ${gsrc} --target-lang ${gtgt} \
-          --beam 5  | tee ${SAVE}/test_${lang}_en.log
-    if [ ${log} = 1 ]; then
-      scp ${SAVE}/test_${lang}_en.log tir:${send_dir}/
-    fi
+          --quiet --beam 5 | tee -a ${SAVE}/log.txt ${SAVE}/test_${lang}_en.log
 done
 echo "end" | tee ${SAVE}/END
