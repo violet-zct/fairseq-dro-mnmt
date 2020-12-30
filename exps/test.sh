@@ -61,7 +61,7 @@ fi
 
 for exp in 1_analyze_ema0.1_alpha0.5_wu_ub_lang_dro_ted8 2_analyze_hier_ema0.1_alpha0.5_beta0.5_wu_ub_ted8 3_sanity_hier_ema0.1_alpha0.5_beta1.0_wu_ub_ted8; do
 exp_name=${exp}_${ename}
-
+send_dir=/home/chuntinz/tir5/logs/${exp_name}
 SAVE=${SAVE_ROOT}/${exp_name}
 
 for lang in ${langs//,/ }; do
@@ -82,5 +82,6 @@ for lang in ${langs//,/ }; do
           --encoder-langtok ${etok} \
           --source-lang ${gsrc} --target-lang ${gtgt} \
           --beam 5 | tee -a ${SAVE}/test_${lang}_en.log
+    scp ${SAVE}/test_${lang}_en.log tir:${send_dir}/
 done
 done
