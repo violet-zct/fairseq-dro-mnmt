@@ -21,7 +21,7 @@ source activate mnmt
 savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/marjan_data/mnmt_data
 log=1
-#SLURM_ARRAY_TASK_ID=0
+SLURM_ARRAY_TASK_ID=0
 SAVE_ROOT=${savedir}/saved_models
 
 if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
@@ -118,6 +118,6 @@ for lang in ${langs//,/ }; do
           --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
           --encoder-langtok ${etok} \
           --source-lang ${gsrc} --target-lang ${gtgt} \
-          --beam 5  | tee -a ${SAVE}/log.txt ${SAVE}/test_${lang}_en.log
+          --quiet --beam 5  | tee -a ${SAVE}/log.txt ${SAVE}/test_${lang}_en.log
 done
 echo "end" | tee ${SAVE}/END
