@@ -69,7 +69,6 @@ mkdir -p ${SAVE}
 
 cp $0 ${SAVE}/run.sh
 
-send_dir=/home/chuntinz/tir5/logs/${exp_name}
 if [ ${log} = 1 ]; then
   bash v1_exps/send.sh ${exp_name} &
 fi
@@ -113,8 +112,7 @@ for lang in ${langs//,/ }; do
           --path ${SAVE}/checkpoint_best.pt \
           --batch-size 300 \
           --lenpen 1.0 \
-          --remove-bpe sentencepiece \
-	  --scoring sacrebleu \
+          --remove-bpe sentencepiece --scoring sacrebleu \
           --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
           --encoder-langtok ${etok} \
           --source-lang ${gsrc} --target-lang ${gtgt} \

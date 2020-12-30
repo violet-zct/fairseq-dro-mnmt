@@ -108,14 +108,20 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
         parser.add_argument('--log-path', default=None, type=str)
         parser.add_argument('--outer-dro-K', default=-1, type=float)
         parser.add_argument('--inner-dro-K', default=-1, type=float)
+        parser.add_argument('--baseline-level', default="inner", type=str, choices=["inner", "outer", "both"])
         # fmt: on
 
     def initialize(self):
         logger.info("Outer group num = {}, Inner group num = {}".format(self.n_groups, self.inner_groups))
-        if self.baselines is None:
-            self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
+        if self.args.baseline_line != "inner" and self.task.data_manager.outer_baseline is not None:
+            self.loss_baselines = torch.Tensor(self.task.data_manager.outer_baseline).to(self.device)
         else:
-            self.loss_baselines = torch.Tensor(convert_to_list(self.baselines, float)).to(self.device)
+            self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
+
+        if self.args.baseline_line != "outer" and self.task.data_manager.inner_baseline is not None:
+            self.inner_baselines = torch.Tensor(self.task.data_manager.inner_baseline).to(self.device)
+        else:
+            self.inner_baselines = None
         self.register_buffer('outer_h_fun', torch.ones(self.n_groups))
         self.register_buffer('outer_sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('outer_count_cat', torch.ones(self.n_groups))
@@ -161,7 +167,10 @@ class UpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCriteri
     def update_mw_token(self):
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
         logger.info("Update token weight table!")
-        baselined_losses = self.inner_sum_losses.view(self.n_groups, self.inner_groups)
+        if self.inner_baselines is not None:
+            baselined_losses = self.inner_sum_losses.view(self.n_groups, self.inner_groups) - self.inner_baselines
+        else:
+            baselined_losses = self.inner_sum_losses.view(self.n_groups, self.inner_groups)
         count_cat = self.inner_count_cat.view(self.n_groups, self.inner_groups)
 
         past_frac = count_cat / count_cat.sum(1, keepdim=True)  # p_train_t

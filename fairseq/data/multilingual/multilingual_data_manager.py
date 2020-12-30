@@ -98,6 +98,33 @@ class MultilingualDatasetManager(object):
                 if key in self.tgt_langs:
                     self.uniq_token_counts[_lang_id(self.tgt_lang_dict, key)] = float(value)
 
+        target_group = args.group_level if hasattr(args, 'group_level') else args.outer_group_level
+        lang_dict = self.tgt_lang_dict if target_group == "target_lang" else self.src_lang_dict
+        n_groups = len(self.tgt_langs) if target_group == "target_lang" else len(self.src_langs)
+        if args.outer_baseline_file is not None:
+            outer_baseline = np.zeros(n_groups)
+            with open(args.outer_baseline_file) as fin:
+                for line in fin:
+                    fields = line.strip().split("=")
+                    lang = _lang_id(lang_dict, fields[0])
+                    outer_baseline[lang] = float(fields[1])
+            self.outer_baseline = outer_baseline
+        else:
+            self.outer_baseline = None
+
+        if args.inner_baseline_file is not None:
+            fmat = open(args.inner_baseline_file).readlines()
+            vocab_size = len(fmat[0].strip().split("=")[-1].split())
+            inner_baseline = np.zeros((n_groups, vocab_size))
+            for line in fmat:
+                fields = line.strip().split("=")
+                lang = _lang_id(lang_dict, fields[0])
+                bls = np.array(list(map(float, fields[1].split())))
+                inner_baseline[lang] = bls
+            self.inner_baseline = inner_baseline
+        else:
+            self.inner_baseline = None
+
     @classmethod
     def setup_data_manager(cls, args, lang_pairs, langs, dicts, sampling_method):
         return MultilingualDatasetManager(
@@ -271,6 +298,14 @@ class MultilingualDatasetManager(object):
             "up data loading and have specific dynamic sampling strategy interval",
         )
 
+        parser.add_argument(
+            '--inner-baseline-file',
+            default=None, type=str
+        )
+        parser.add_argument(
+            '--outer-baseline-file',
+            default=None, type=str
+        )
     @classmethod
     def load_langs(cls, args, **kwargs):
         if args.lang_dict and args.langs:

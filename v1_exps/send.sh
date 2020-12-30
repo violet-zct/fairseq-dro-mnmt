@@ -9,7 +9,7 @@ scp $saved_models/run.sh tir:${send_dir}/
 echo ${send_dir}
 while [ $SECONDS -lt $end ]; do
     scp $saved_models/log.txt tir:${send_dir}/
-    if [[ -f $saved_models/END ]]; then
+    if [[ -f "$saved_models/END" ]]; then
         break
     fi
     sleep 1800s

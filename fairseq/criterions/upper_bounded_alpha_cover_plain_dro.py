@@ -88,10 +88,10 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
     def initialize(self):
         logger.info("Group num = {}".format(self.n_groups))
-        if self.baselines is None:
-            self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
+        if self.task.data_manager.outer_baseline is not None:
+            self.loss_baselines = torch.Tensor(self.task.data_manager.outer_baseline).to(self.device)
         else:
-            self.loss_baselines = torch.Tensor(convert_to_list(self.baselines, float)).to(self.device)
+            self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
         self.register_buffer('h_fun', torch.ones(self.n_groups))
         self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('count_cat', torch.ones(self.n_groups))

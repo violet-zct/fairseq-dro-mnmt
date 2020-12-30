@@ -4,7 +4,7 @@
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
 #SBATCH --comment="TACL 1.10"
-#SBATCH --job-name=2.hier.ted
+#SBATCH --job-name=1.lang.ted
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -17,6 +17,7 @@
 #SBATCH --array=0-3
 
 source activate mnmt
+
 savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/marjan_data/mnmt_data
 log=1
@@ -31,6 +32,8 @@ if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
     gtgt="xx"
     etok="tgt"
     glevel="target_lang"
+    obfile="enxx_outer_baselines"
+    ibfile="enxx_inner_baselines"
 elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
     langs="aze,bel,glg,slk,tur,rus,por,ces"
     lang_pairs="aze-en,bel-en,glg-en,slk-en,tur-en,rus-en,por-en,ces-en"
@@ -39,6 +42,8 @@ elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
     gtgt="en"
     etok="src"
     glevel="source_lang"
+    obfile="xxen_outer_baselines"
+    ibfile="xxen_inner_baselines"
 elif [ $SLURM_ARRAY_TASK_ID = 2 ]; then
     langs="bos,mar,hin,mkd,ell,bul,fra,kor"
     lang_pairs="en-bos,en-mar,en-hin,en-mkd,en-ell,en-bul,en-fra,en-kor"
@@ -47,6 +52,8 @@ elif [ $SLURM_ARRAY_TASK_ID = 2 ]; then
     gtgt="xx"
     etok="tgt"
     glevel="target_lang"
+    obfile="enxx_outer_baselines"
+    ibfile="enxx_inner_baselines"
 elif [ $SLURM_ARRAY_TASK_ID = 3 ]; then
     langs="bos,mar,hin,mkd,ell,bul,fra,kor"
     lang_pairs="bos-en,mar-en,hin-en,mkd-en,ell-en,bul-en,fra-en,kor-en"
@@ -55,12 +62,15 @@ elif [ $SLURM_ARRAY_TASK_ID = 3 ]; then
     gtgt="en"
     etok="src"
     glevel="source_lang"
+    obfile="xxen_outer_baselines"
+    ibfile="xxen_inner_baselines"
 else
     exit
 fi
 
 model=transformer_iwslt_de_en
-exp_name=2_analyze_hier_ema0.1_alpha0.5_beta0.5_wu_ub_ted8_${ename}
+exp_name=5_hier_baseline_ema0.1_alpha0.5_beta0.5_wu_ub_lang_dro_ted8_${ename}
+
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
 mkdir -p ${SAVE}
@@ -74,7 +84,7 @@ fi
 python train.py ${DATA}\
     --start-ft-steps 25000 \
     --task translation_multi_simple_epoch \
-    --arch ${model} --valid-subset cap.valid \
+    --arch ${model} --valid-subset cap.valid --inner-baseline-file ${DATA}/${ibfile}\
     --encoder-langtok ${etok} --enable-lang-ids --log-path ${SAVE}/inner_log.txt \
     --criterion 'upper_bound_hier_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
     --dro-outer-alpha 0.5 --dro-inner-beta 0.5 --update-dro-freq 1000 --outer-group-level ${glevel} --ema 0.1 \
@@ -118,3 +128,4 @@ for lang in ${langs//,/ }; do
 done
 
 echo "end" | tee ${SAVE}/END
+
