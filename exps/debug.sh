@@ -98,7 +98,6 @@ python train.py ${DATA}\
 	  --log-interval 100 --log-format simple | tee ${SAVE}/log.txt
 
 date
-wait
 
 for lang in ${langs//,/ }; do
     echo "test on $lang"
