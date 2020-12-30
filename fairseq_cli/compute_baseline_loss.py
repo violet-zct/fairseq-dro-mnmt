@@ -161,9 +161,14 @@ def validate(args, trainer, task, epoch_itr, subsets):
 
         # create a new root metrics aggregator so validation metrics
         # don't pollute other aggregators (e.g., train meters)
+
+        count = 0
         with metrics.aggregate(new_root=True) as agg:
             for sample in progress:
                 trainer.valid_step(sample)
+                count += 1
+                if count % 50 == 0:
+                    logger.info("Processed {} batches!".format(count))
 
         # log validation stats
         stats = get_valid_stats(args, trainer, agg.get_smoothed_values())
