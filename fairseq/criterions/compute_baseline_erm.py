@@ -124,6 +124,7 @@ class BaselineLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         one_vec = torch.ones(offset_index.numel(), device='cuda')  # B
         self.inner_counts.scatter_add_(0, offset_index, one_vec)
 
+        nll_loss = nll_loss.sum()
         logging_output = {
             'loss': loss.data,
             'nll_loss': nll_loss.data,
