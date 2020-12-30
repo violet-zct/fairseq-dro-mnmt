@@ -102,7 +102,7 @@ class MultilingualDatasetManager(object):
             target_group = args.group_level if hasattr(args, 'group_level') else args.outer_group_level
             lang_dict = self.tgt_lang_dict if target_group == "target_lang" else self.src_lang_dict
             n_groups = len(self.tgt_langs) if target_group == "target_lang" else len(self.src_langs)
-            
+
         if args.outer_baseline_file is not None:
             outer_baseline = np.zeros(n_groups)
             with open(args.outer_baseline_file) as fin:

@@ -71,7 +71,7 @@ cp $0 ${SAVE}/run.sh
 
 send_dir=/home/chuntinz/tir5/logs/${exp_name}
 if [ ${log} = 1 ]; then
-  bash v1_exps/send.sh ${exp_name} &
+  bash v1_exps/send2.sh ${exp_name} &
 fi
 
 python train.py ${DATA}\
@@ -99,7 +99,9 @@ python train.py ${DATA}\
 
 date
 
-for lang in ${langs//,/ }; do
+echo "end" | tee ${SAVE}/END
+
+for lang in aze bel; do
     echo "test on $lang"
     if [ $gtgt = "en" ]; then
         gsrc=${lang}
@@ -119,5 +121,5 @@ for lang in ${langs//,/ }; do
           --encoder-langtok ${etok} \
           --source-lang ${gsrc} --target-lang ${gtgt} \
           --quiet --beam 5  | tee -a ${SAVE}/log.txt ${SAVE}/test_${lang}_en.log
+    scp ${SAVE}/test_${lang}_en.log tir:${send_dir}/
 done
-echo "end" | tee ${SAVE}/END

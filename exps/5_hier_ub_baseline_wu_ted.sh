@@ -76,7 +76,7 @@ rm -rf ${SAVE}
 mkdir -p ${SAVE}
 
 cp $0 ${SAVE}/run.sh
-
+send_dir=/home/chuntinz/tir5/logs/${exp_name}
 if [ ${log} = 1 ]; then
   bash v1_exps/send.sh ${exp_name} &
 fi
@@ -105,7 +105,7 @@ python train.py ${DATA}\
     --log-interval 100 --log-format simple | tee ${SAVE}/log.txt
 
 date
-wait
+echo "end" | tee ${SAVE}/END
 
 for lang in ${langs//,/ }; do
     if [ $gtgt = "en" ]; then
@@ -125,7 +125,7 @@ for lang in ${langs//,/ }; do
         --encoder-langtok ${etok} \
         --source-lang ${gsrc} --target-lang ${gtgt} \
         --quiet --beam 5 | tee -a ${SAVE}/log.txt ${SAVE}/test_${lang}_en.log
+    scp ${SAVE}/test_${lang}_en.log tir:${send_dir}/
 done
 
-echo "end" | tee ${SAVE}/END
-
+scp ${SAVE}/inner_log.txt tir:${send_dir}/
