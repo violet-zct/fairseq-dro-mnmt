@@ -61,7 +61,7 @@ else
 fi
 
 model=transformer_iwslt_de_en
-exp_name=1_analyze_ema0.1_alpha0.5_wu_ub_lang_dro_ted8_${ename}
+exp_name=debug
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
