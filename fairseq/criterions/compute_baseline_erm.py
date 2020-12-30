@@ -136,12 +136,13 @@ class BaselineLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
     def summarize(self):
         avg_outer_losses = self.outer_losses / self.outer_counts
+        self.inner_counts[self.inner_counts == 0] = 1.
         avg_inner_losses = (self.inner_losses / self.inner_counts).view(self.n_groups, self.inner_groups)
         for idx, loss in enumerate(avg_outer_losses):
             self.f_outer_log.write("{}={}\n".format(self.lang_dict[idx+1], loss.item()))
 
         for idx in range(self.n_groups):
-            ss = " ".join([ele.item() for ele in avg_inner_losses[idx]])
+            ss = " ".join([str(ele.item()) for ele in avg_inner_losses[idx]])
             self.f_inner_log.write("{}={}\n".format(self.lang_dict[idx+1], ss))
         self.f_outer_log.close()
         self.f_inner_log.close()
