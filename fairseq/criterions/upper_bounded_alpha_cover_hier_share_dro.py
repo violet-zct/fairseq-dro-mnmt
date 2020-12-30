@@ -301,17 +301,15 @@ class UpperBoundHierarchicalDROShareInnerLabelSmoothedCrossEntropyCriterion(Fair
         if not self.training:
             loss = outer_group_losses.sum()
             sample_size = sample['ntokens']
-
+            mask = (sample['target'] != self.padding_idx).float()
             fg_labels, _ = self.retrieve_group_labels(sample)
-            fg_one_vec = torch.ones(sample['nsentences'], device='cuda')  # B
             fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
             fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
-            fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, fg_one_vec)
+            fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1))
 
             nll_loss = nll_loss.sum()
         else:
             self.update_steps += 1
-            outer_denom = outer_group_losses.ne(0).sum()
 
             reduce_outer_group_losses = outer_group_losses.detach().clone()
             reduce_inner_group_losses = inner_group_losses.detach().clone()
