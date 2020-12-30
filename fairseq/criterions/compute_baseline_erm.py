@@ -81,6 +81,16 @@ class BaselineLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             index = None
         return index, sample['target']
 
+    def individual_losses(self, model, net_output, sample):
+        lprobs = model.get_normalized_probs(net_output, log_probs=True)
+        lprobs = lprobs.view(-1, lprobs.size(-1))
+        target = model.get_targets(sample, net_output).view(-1)
+
+        losses = label_smoothed_nll_loss(
+            lprobs, target, self.eps, ignore_index=self.padding_idx, reduce=False,
+        )
+        return losses
+
     def forward(self, model, sample, reduce=True):
         """Compute the loss for the given sample.
 
