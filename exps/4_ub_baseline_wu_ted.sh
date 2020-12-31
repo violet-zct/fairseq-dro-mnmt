@@ -19,7 +19,7 @@
 source activate mnmt
 
 savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
-datadir=/private/home/ghazvini/chunting/data/marjan_data/mnmt_data
+datadir=/private/home/ghazvini/chunting/data/mnmt_data
 log=1
 
 SAVE_ROOT=${savedir}/saved_models
