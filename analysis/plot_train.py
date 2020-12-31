@@ -10,8 +10,7 @@ root = "/Users/chuntinz/Documents/research/fairseq-dro-mnmt/analysis/"
 opt_dir = os.path.join(root, log)
 if not os.path.exists(opt_dir):
     os.mkdir(opt_dir)
-os.system("scp fair:/private/home/chuntinz/work/fairseq-dro-mnmt/saved_models/{}/*log.txt {}/".format(log, opt_dir))
-
+    os.system("scp tir:/home/chuntinz/tir5/logs/{}/*log.txt {}/".format(log, opt_dir))
 
 langs = []
 lang_train_size = dict()
@@ -62,7 +61,11 @@ with open(os.path.join(opt_dir, "log.txt").format(root, log)) as fin:
             train_ppl.append(ppl)
 
         if "| valid on" in line:
-            valid_ppl.append(float(line.strip().split("|")[-6].strip().split()[-1].strip()))
+            for ff in line.strip().split("|"):
+                fields = ff.strip().split()
+                if fields[0].strip() == "ppl":
+                    valid_ppl.append(float(fields[1].strip()))
+                    break
 
         if " EMA past losses: tensor" in line:
             losses = line.strip().split("([")[-1].rstrip("],").split(",")
@@ -112,7 +115,7 @@ plot_ax(ax[1], train_ppl[K:], "train_ppl", "ppl", colors[1])
 plot_ax(ax[2], valid_ppl[K:], "valid_ppl", "ppl", colors[2], 100)
 fig.savefig(os.path.join(opt_dir, "{}_loss_ppl.pdf".format(log)), bbox_inches='tight')
 
-# plot ema losses, ema weights
+### plot ema losses, ema weights
 fig, ax = plt.subplots(1)
 fig.set_size_inches(20, 10)
 plot_ax_ema(ax, lang_ema_losses, "ema_loss")
@@ -223,4 +226,4 @@ for idx, lang in enumerate(bucket_scores.keys()):
     ax[i][j].legend(legends, loc='best', fontsize=10)
     ax[i][j].set_ylim([0, max_value])
     ax[i][j].set(title=lang, xlabel="steps", ylabel="avg ema weights")
-fig.savefig(os.path.join(opt_dir, "token_bucket_ema_weights_{}.pdf".format(log)), bbox_inches='tight')
+fig.savefig(os.path.join(opt_dir, "{}_token_bucket_ema_weights.pdf".format(log)), bbox_inches='tight')

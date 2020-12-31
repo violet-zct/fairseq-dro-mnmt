@@ -4,7 +4,7 @@
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
 #SBATCH --comment="TACL 1.10"
-#SBATCH --job-name=4
+#SBATCH --job-name=6.erm
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -69,7 +69,7 @@ else
 fi
 
 model=transformer_iwslt_de_en
-exp_name=4_baseline_ema0.1_alpha0.5_wu_ub_lang_dro_ted8_${ename}
+exp_name=6_erm_ted8_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
@@ -82,28 +82,26 @@ if [ ${log} = 1 ]; then
   bash v1_exps/send.sh ${exp_name} &
 fi
 
-python train.py ${DATA}\
-    --start-ft-steps 25000 \
-    --task translation_multi_simple_epoch --outer-baseline-file ${DATA}/${obfile} \
-    --arch ${model} --valid-subset cap.valid \
-    --encoder-langtok ${etok} --enable-lang-ids \
-    --criterion 'upper_bound_plain_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-    --dro-alpha 0.5 --update-dro-freq 1 --group-level ${glevel} --ema 0.1 \
-    --max-update 300000 --layernorm-embedding \
+python -u train.py ${DATA}\
+	  --task translation_multi_simple_epoch \
+	  --arch ${model} --valid-subset cap.valid \
+	  --sampling-method "temperature" --sampling-temperature 1 \
+	  --encoder-langtok ${etok} --group-level ${glevel} \
+	  --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
-    --no-epoch-checkpoints \
-    --share-decoder-input-output-embed \
-    --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 0.0 \
-    --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'step' \
-    --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --lr-decay-rate 0.5 --lr-decay-steps 50000 \
-    --max-tokens 8192 \
-    --update-freq 1 \
-    --seed 222 \
-    --max-source-positions 512 --max-target-positions 512 \
-    --save-dir ${SAVE} \
+	  --no-epoch-checkpoints \
+	  --share-decoder-input-output-embed \
+	  --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 0.0 \
+	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'inverse_sqrt' \
+	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --min-lr -1 \
+	  --criterion 'logged_label_smoothed_cross_entropy' --label-smoothing 0.1 \
+	  --max-tokens 8192 \
+	  --seed 222 \
+  	--max-source-positions 512 --max-target-positions 512 \
+  	--save-dir ${SAVE} \
     --encoder-normalize-before --decoder-normalize-before \
-    --log-interval 100 --log-format simple | tee ${SAVE}/log.txt
+	  --log-interval 100 --log-format simple | tee ${SAVE}/log.txt
 
 date
 echo "end" | tee ${SAVE}/END

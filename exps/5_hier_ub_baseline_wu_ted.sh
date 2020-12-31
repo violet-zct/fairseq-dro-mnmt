@@ -4,7 +4,7 @@
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
 #SBATCH --comment="TACL 1.10"
-#SBATCH --job-name=1.lang.ted
+#SBATCH --job-name=5
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
