@@ -178,7 +178,7 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             one_vec = torch.ones(ind_loss.size(0), device='cuda')  # B
             group_counts = zero_vec.scatter_add(0, index, one_vec)
 
-        return nll_loss.sum(), group_losses, group_counts
+        return nll_loss.sum(1), group_losses, group_counts
 
     def simple_loss(self, model, net_output, sample, reduce=True):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
@@ -260,9 +260,8 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                         torch.distributed.all_reduce(reduce_fg_loss_vec)
                     fg_group_denom = fg_group_count + 1e-8
                     self.loss_baselines = reduce_fg_loss_vec / fg_group_denom
-
             loss = group_losses.sum()
-            nll_loss = nll_loss.sum()
+
         else:
             self.update_steps += 1
 
@@ -283,9 +282,9 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
             if self.update_steps % self.update_freq == 0:
                 self.update_mw()
-
             loss = (group_losses * self.h_fun).sum()
 
+        nll_loss = nll_loss.sum()
         logging_output = {
             'loss': loss.data,
             'nll_loss': nll_loss.data,

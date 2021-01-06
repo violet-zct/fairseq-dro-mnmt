@@ -336,7 +336,7 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
                     torch.distributed.all_reduce(reduce_fg_loss_vec)
                 fg_group_denom = fg_group_count + 1e-8
                 self.loss_baselines = reduce_fg_loss_vec / fg_group_denom
-                
+
             loss = outer_group_losses.sum()
             nll_loss = nll_loss.sum()
         else:
