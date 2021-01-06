@@ -322,8 +322,17 @@ def validate(args, trainer, task, epoch_itr, subsets):
 
         # log validation stats
         stats = get_valid_stats(args, trainer, agg.get_smoothed_values())
-        progress.print(stats, tag=subset, step=trainer.get_num_updates())
+        if "fg_gloss0" in stats:
+            criterion = trainer.get_criterion()
+            ngroups = criterion.n_groups
+            baselines = torch.zeros(ngroups, device='cuda')
+            for ii in range(ngroups):
+                key = "fg_gloss{}".format(ii)
+                baselines[ii] = stats[key]
+                stats.pop(key, None)
+            criterion.set_valid_baselines(baselines)
 
+        progress.print(stats, tag=subset, step=trainer.get_num_updates())
         valid_losses.append(stats[args.best_checkpoint_metric])
     return valid_losses
 

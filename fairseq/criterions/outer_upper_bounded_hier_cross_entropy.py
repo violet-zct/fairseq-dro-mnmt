@@ -122,6 +122,9 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
         self.outer_h_fun.fill_(1.)
         # self.outer_sum_losses.fill_(0.)
 
+    def set_valid_baselines(self, baselines):
+        self.loss_baselines = baselines
+
     def update_mw(self):
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
         past_losses = self.outer_sum_losses
@@ -286,17 +289,8 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
                 fg_labels, _ = self.retrieve_group_labels(sample)
                 fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
                 fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
-                fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1)).detach().clone()
-
-                if hasattr(self, 'valid_baseline') and self.valid_baseline:
-                    loss = loss.reshape_as(sample['target']).sum(1)
-                    fg_loss_vec = fg_zero_vec.scatter_add(0, fg_labels, loss)
-                    reduce_fg_loss_vec = fg_loss_vec.detach().clone()
-                    if torch.cuda.device_count() > 1:
-                        torch.distributed.all_reduce(fg_group_count)
-                        torch.distributed.all_reduce(reduce_fg_loss_vec)
-                    fg_group_denom = fg_group_count + 1e-8
-                    self.loss_baselines = reduce_fg_loss_vec / fg_group_denom
+                fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1))
+                fg_loss_vec = fg_zero_vec.scatter_add(0, fg_labels, loss)
 
                 loss = loss.sum()
                 nll_loss = nll_loss.sum()
@@ -312,6 +306,8 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
                 for ii in range(self.n_groups):
                     logging_output["fg_gnll{}".format(ii)] = fg_group_nll[ii].data
                     logging_output["fg_gcount{}".format(ii)] = fg_group_count[ii].data
+                    if hasattr(self, 'valid_baseline') and self.valid_baseline:
+                        logging_output["fg_gloss{}".format(ii)] = fg_loss_vec[ii].data
             return loss, sample_size, logging_output
 
         if self.update_steps % self.update_freq == 1:
@@ -328,15 +324,8 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
             fg_labels, _ = self.retrieve_group_labels(sample)
             fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
             fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
-            fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1)).detach().clone()
-            if hasattr(self, 'valid_baseline') and self.valid_baseline:
-                reduce_fg_loss_vec = fg_zero_vec.scatter_add(0, fg_labels, outer_group_losses).detach().clone()
-                if torch.cuda.device_count() > 1:
-                    torch.distributed.all_reduce(fg_group_count)
-                    torch.distributed.all_reduce(reduce_fg_loss_vec)
-                fg_group_denom = fg_group_count + 1e-8
-                self.loss_baselines = reduce_fg_loss_vec / fg_group_denom
-
+            fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1))
+            fg_loss_vec = fg_zero_vec.scatter_add(0, fg_labels, outer_group_losses)
             loss = outer_group_losses.sum()
             nll_loss = nll_loss.sum()
         else:
@@ -378,6 +367,8 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
             for ii in range(self.n_groups):
                 logging_output["fg_gnll{}".format(ii)] = fg_group_nll[ii].data
                 logging_output["fg_gcount{}".format(ii)] = fg_group_count[ii].data
+                if hasattr(self, 'valid_baseline') and self.valid_baseline:
+                    logging_output["fg_gloss{}".format(ii)] = fg_loss_vec[ii].data
 
         return loss, sample_size, logging_output
 
@@ -422,10 +413,14 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
             for ii in range(8):
                 g_nll = sum(log.get('fg_gnll{}'.format(ii), 0) for log in logging_outputs)
                 g_tokens = sum(log.get('fg_gcount{}'.format(ii), 0) for log in logging_outputs)
-                division_g_ntokens = g_tokens if g_tokens > 0 else 1
+                division_g_ntokens = g_tokens + 1e-8
                 metrics.log_scalar('fg_gnll{}'.format(ii), g_nll / division_g_ntokens / math.log(2), g_tokens, round=3)
                 metrics.log_derived_with_key('fg_ppl{}'.format(ii), lambda value: utils.get_perplexity(value),
                                              "fg_gnll{}".format(ii))
+
+                if 'fg_gloss0' in logging_outputs[0]:
+                    g_loss = sum(log.get('fg_gloss{}'.format(ii), 0) for log in logging_outputs)
+                    metrics.log_scalar('fg_gloss{}'.format(ii), g_loss / division_g_ntokens, g_tokens, round=3)
 
     @staticmethod
     def logging_outputs_can_be_summed() -> bool:
