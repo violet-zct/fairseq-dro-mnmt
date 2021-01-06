@@ -212,6 +212,8 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             else:
                 loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=False)
                 nll_loss = nll_loss.reshape_as(sample['target']).sum(1)
+                loss = loss.reshape_as(sample['target']).sum(1)
+
                 mask = (sample['target'] != self.padding_idx).float()
                 sample_size = sample['ntokens']
                 fg_labels = self.retrieve_group_labels(sample)
