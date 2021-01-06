@@ -232,7 +232,7 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
             token_losses = token_losses.reshape_as(sample['target']) * mask
 
         if not self.training:
-            return nll_loss, token_losses.sum(), 0, 0, 0
+            return nll_loss, token_losses.sum(1), 0, 0, 0
 
         outer_index, inner_index = self.retrieve_group_labels(sample)
         offset_index = (inner_index + outer_index.unsqueeze(1) * self.inner_groups).view(-1)
@@ -290,8 +290,7 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
 
                 if hasattr(self, 'valid_baseline') and self.valid_baseline:
                     loss = loss.reshape_as(sample['target']).sum(1)
-                    fg_loss_vec = torch.zeros(self.n_groups, device='cuda')
-                    fg_loss_vec = fg_loss_vec.scatter_add(0, fg_labels, loss)
+                    fg_loss_vec = fg_zero_vec.scatter_add(0, fg_labels, loss)
                     reduce_fg_loss_vec = fg_loss_vec.detach().clone()
                     if torch.cuda.device_count() > 1:
                         torch.distributed.all_reduce(fg_group_count)
@@ -325,17 +324,19 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
         sample_size = sample['ntokens']
 
         if not self.training:
+            mask = (sample['target'] != self.padding_idx).float()
             fg_labels, _ = self.retrieve_group_labels(sample)
             fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
             fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
-            fg_group_count = outer_group_counts.detach().clone()
+            fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1)).detach().clone()
             if hasattr(self, 'valid_baseline') and self.valid_baseline:
-                reduce_fg_loss_vec = outer_group_losses.detach().clone()
+                reduce_fg_loss_vec = fg_zero_vec.scatter_add(0, fg_labels, outer_group_losses).detach().clone()
                 if torch.cuda.device_count() > 1:
                     torch.distributed.all_reduce(fg_group_count)
                     torch.distributed.all_reduce(reduce_fg_loss_vec)
                 fg_group_denom = fg_group_count + 1e-8
                 self.loss_baselines = reduce_fg_loss_vec / fg_group_denom
+                
             loss = outer_group_losses.sum()
             nll_loss = nll_loss.sum()
         else:

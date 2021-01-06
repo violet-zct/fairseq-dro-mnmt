@@ -168,9 +168,6 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         else:
             ind_loss = (token_losses.reshape_as(sample['target']) * mask).sum(1)
 
-        if not self.training:
-            return nll_loss, ind_loss, 0
-
         index = self.retrieve_group_labels(sample)
         zero_vec = torch.zeros(self.n_groups, device='cuda')  # G
         group_losses = zero_vec.scatter_add(0, index, ind_loss)
