@@ -178,7 +178,7 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             one_vec = torch.ones(ind_loss.size(0), device='cuda')  # B
             group_counts = zero_vec.scatter_add(0, index, one_vec)
 
-        return nll_loss.sum(1), group_losses, group_counts
+        return nll_loss, group_losses, group_counts
 
     def simple_loss(self, model, net_output, sample, reduce=True):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
