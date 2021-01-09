@@ -22,5 +22,5 @@ for lang in langs:
             else:
                 src_file = os.path.join(input_lang_dir, "opus.en-{}-{}.{}".format(lang, split, ll))
             rename_split = split if split != "dev" else "valid"
-            tgt_file = os.path.join(input_lang_dir, "{}.{}".format(rename_split, ll))
+            tgt_file = os.path.join(lang_dir, "{}.{}".format(rename_split, ll))
             os.system("cp {} {}".format(src_file, tgt_file))
