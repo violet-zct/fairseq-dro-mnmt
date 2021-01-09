@@ -6,8 +6,7 @@ np.random.seed(1)
 temperature = 5.
 cap_valid = 800
 
-target = "opus10"
-root = "/private/home/chuntinz/work/data/mnmt_data/opus10/"
+root = "/home/chuntinz/tir5/data/mnmt_data/opus10"
 rawdir = os.path.join(root, "raw")
 
 # yi mr oc be ta ka gl ur bg is
@@ -15,7 +14,7 @@ rawdir = os.path.join(root, "raw")
 # en-yi,en-mr,en-oc,en-be,en-ta,en-ka,en-gl,en-ur,en-bg,en-is
 # yi-en,mr-en,oc-en,be-en,ta-en,ka-en,gl-en,ur-en,bg-en,is-en
 langs = "yi,mr,oc,be,ta,ka,gl,ur,bg,is"
-opt_root = "/checkpoint/chuntinz/data/mnmt_data/{}".format(target)
+opt_root = "/home/chuntinz/tir5/data/mnmt_data/opus10"
 opt_root = os.path.join(opt_root, "data")
 langs = langs.split(",")
 
