@@ -12,6 +12,7 @@ for lang in langs:
     if not os.path.exists(input_lang_dir):
         input_lang_dir = os.path.join(input_dir, "{}-en".format(lang))
         reverse = True
+    os.rmdir(os.path.join(opt_dir, "raw", "{}_en".format(lang)))
     lang_dir = os.path.join(opt_dir, "raw", "{}_en".format(lang))
     os.mkdir(lang_dir)
     for split in ["train", "dev", "test"]:
