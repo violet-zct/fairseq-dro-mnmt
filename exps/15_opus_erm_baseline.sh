@@ -16,7 +16,7 @@
 #SBATCH --time=4320
 #SBATCH --array=0-5
 
-source activate mnmt
+source activate mnmt2
 
 savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
@@ -66,7 +66,7 @@ fi
 
 python -u train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
-	  --arch ${model} --valid-subset cap.valid \
+	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
 	  --sampling-method "temperature" --sampling-temperature ${temp} \
 	  --encoder-langtok ${etok} --group-level ${glevel} \
 	  --max-update 300000 --layernorm-embedding \
@@ -97,7 +97,7 @@ for lang in ${langs//,/ }; do
     fi
     python fairseq_cli/generate.py ${DATA} \
           --task translation_multi_simple_epoch  \
-          --gen-subset test \
+          --gen-subset test --skip-invalid-size-inputs-valid-test \
           --path ${SAVE}/checkpoint_best.pt \
           --batch-size 300 \
           --lenpen 1.0 \

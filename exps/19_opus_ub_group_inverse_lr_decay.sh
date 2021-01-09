@@ -16,7 +16,7 @@
 #SBATCH --time=4320
 #SBATCH --array=0-1
 
-source activate mnmt
+source activate mnmt2
 
 savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
@@ -63,7 +63,7 @@ fi
 python train.py ${DATA}\
     --start-ft-steps 25000 \
     --task translation_multi_simple_epoch \
-    --arch ${model} --valid-subset cap.valid \
+    --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'upper_bound_plain_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
     --dro-alpha 0.5 --update-dro-freq 1 --group-level ${glevel} --ema 0.05 \
@@ -96,7 +96,7 @@ for lang in ${langs//,/ }; do
     fi
     python fairseq_cli/generate.py ${DATA} \
           --task translation_multi_simple_epoch  \
-          --gen-subset test \
+          --gen-subset test --skip-invalid-size-inputs-valid-test \
           --path ${SAVE}/checkpoint_best.pt \
           --batch-size 300 \
           --lenpen 1.0 \
