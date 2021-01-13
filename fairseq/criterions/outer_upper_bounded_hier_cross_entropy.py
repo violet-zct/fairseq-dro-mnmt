@@ -150,9 +150,9 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
 
         self.temp_idx += 1
         if self.temp_idx % self.print_steps == 0:
-            logger.info("EMA past losses: {}".format(" ".join(["{}".format(xx) for xx in past_losses[0:self.n_groups]])))
-            logger.info("EMA group fractions: {}".format(" ".join(["{}".format(xx) for xx in past_frac[0:self.n_groups]])))
-            logger.info("Group loss weights: {}".format(" ".join(["{}".format(xx) for xx in self.outer_h_fun[0:self.n_groups]])))
+            logger.info("EMA past losses: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_losses[0:self.n_groups]])))
+            logger.info("EMA group fractions: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_frac[0:self.n_groups]])))
+            logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.outer_h_fun[0:self.n_groups]])))
 
     def update_mw_token(self):
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)

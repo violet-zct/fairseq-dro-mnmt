@@ -113,9 +113,9 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         self.temp_idx += 1
         if self.logging and self.temp_idx % self.print_steps == 0:
-            logger.info("EMA past losses: {}".format(" ".join(["{}".format(xx) for xx in past_losses[0:self.n_groups]])))
-            logger.info("EMA group fractions: {}".format(" ".join(["{}".format(xx) for xx in past_frac[0:self.n_groups]])))
-            logger.info("Group loss weights: {}".format(" ".join(["{}".format(xx) for xx in self.h_fun[0:self.n_groups]])))
+            logger.info("EMA past losses: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_losses[0:self.n_groups]])))
+            logger.info("EMA group fractions: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_frac[0:self.n_groups]])))
+            logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.h_fun[0:self.n_groups]])))
 
     def individual_losses(self, model, net_output, sample):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
