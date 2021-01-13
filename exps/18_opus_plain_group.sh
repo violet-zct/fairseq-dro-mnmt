@@ -16,7 +16,7 @@
 #SBATCH --time=4320
 #SBATCH --array=0-1
 
-ource activate mnmt2
+source activate mnmt2
 
 savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
