@@ -150,10 +150,9 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
 
         self.temp_idx += 1
         if self.temp_idx % self.print_steps == 0:
-            logger.info("EMA past losses: {}".format(past_losses[0:self.n_groups]))
-            # logger.info("Baseline losses: {}".format(baselined_losses[0:self.n_train_groups]))
-            logger.info("EMA group fractions: {}".format(past_frac[0:self.n_groups]))
-            logger.info("Group loss weights: {}".format(self.outer_h_fun[0:self.n_groups]))
+            logger.info("EMA past losses: {}".format(" ".join(["{}".format(xx) for xx in past_losses[0:self.n_groups]])))
+            logger.info("EMA group fractions: {}".format(" ".join(["{}".format(xx) for xx in past_frac[0:self.n_groups]])))
+            logger.info("Group loss weights: {}".format(" ".join(["{}".format(xx) for xx in self.outer_h_fun[0:self.n_groups]])))
 
     def update_mw_token(self):
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
@@ -303,6 +302,8 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
                 'ntokens': sample['ntokens'],
                 'nsentences': nsentences,
                 'sample_size': sample_size,
+                'n_groups': self.n_groups,
+                'gpu_count': 1,
             }
             if not self.training:
                 for ii in range(self.n_groups):
@@ -363,6 +364,8 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
             'ntokens': sample['ntokens'],
             'nsentences': nsentences,
             'sample_size': sample_size,
+            'n_groups': self.n_groups,
+            'gpu_count': 1,
         }
 
         if not self.training:
@@ -383,6 +386,8 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
         sample_size = utils.item(sum(log.get('sample_size', 0) for log in logging_outputs))
         nsentences = utils.item(sum(log.get('nsentences', 0) for log in logging_outputs))
         gpu_counts = utils.item(sum(log.get('gpu_count', 0) for log in logging_outputs))
+        ngroups = sum(log.get('n_groups', 0) for log in logging_outputs) / gpu_counts
+        ngroups = int(ngroups.item()) if torch.is_tensor(ngroups) else int(ngroups)
 
         if sample_size > 1:
             metrics.log_scalar('loss', loss_sum / sample_size / math.log(2), sample_size, round=3)
@@ -392,8 +397,6 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
             metrics.log_derived('ppl', lambda meters: utils.get_perplexity(meters['nll_loss'].avg))
 
         if len(logging_outputs) > 0 and 'w1' in logging_outputs[0]:
-            ngroups = sum(log.get('n_groups', 0) for log in logging_outputs) / gpu_counts
-            ngroups = int(ngroups.item()) if torch.is_tensor(ngroups) else int(ngroups)
             for ii in range(ngroups):
                 group_loss = sum(log.get('l{}'.format(ii), 0) for log in logging_outputs) / gpu_counts
                 metrics.log_scalar('acl{}'.format(ii), group_loss, 1, round=3)
@@ -412,7 +415,7 @@ class OuterUpperBoundHierarchicalDROLabelSmoothedCrossEntropyCriterion(FairseqCr
                                              "acl{}".format(ii))
 
         if len(logging_outputs) > 0 and 'fg_gnll0' in logging_outputs[0]:
-            for ii in range(8):
+            for ii in range(ngroups):
                 g_nll = sum(log.get('fg_gnll{}'.format(ii), 0) for log in logging_outputs)
                 g_tokens = sum(log.get('fg_gcount{}'.format(ii), 0) for log in logging_outputs)
                 division_g_ntokens = g_tokens + 1e-8

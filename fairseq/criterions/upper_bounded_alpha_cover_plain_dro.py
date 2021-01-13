@@ -126,9 +126,9 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         self.temp_idx += 1
         if self.logging and self.temp_idx % self.print_steps == 0:
-            logger.info("EMA past losses: {}".format(past_losses[0:self.n_groups]))
-            logger.info("EMA group fractions: {}".format(past_frac[0:self.n_groups]))
-            logger.info("Group loss weights: {}".format(self.h_fun[0:self.n_groups]))
+            logger.info("EMA past losses: {}".format(" ".join(["{}".format(xx) for xx in past_losses[0:self.n_groups]])))
+            logger.info("EMA group fractions: {}".format(" ".join(["{}".format(xx) for xx in past_frac[0:self.n_groups]])))
+            logger.info("Group loss weights: {}".format(" ".join(["{}".format(xx) for xx in self.h_fun[0:self.n_groups]])))
 
     def individual_losses(self, model, net_output, sample):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
@@ -231,6 +231,8 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 'ntokens': sample['ntokens'],
                 'nsentences': nsentences,
                 'sample_size': sample_size,
+                'n_groups': self.n_groups,
+                'gpu_count': 1,
             }
             if not self.training:
                 for ii in range(self.n_groups):
@@ -281,6 +283,8 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             'ntokens': sample['ntokens'],
             'nsentences': nsentences,
             'sample_size': sample_size,
+            'n_groups': self.n_groups,
+            'gpu_count': 1,
         }
 
         if self.logging and not self.training:
@@ -301,6 +305,8 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         sample_size = utils.item(sum(log.get('sample_size', 0) for log in logging_outputs))
         nsentences = utils.item(sum(log.get('nsentences', 0) for log in logging_outputs))
         gpu_counts = utils.item(sum(log.get('gpu_count', 0) for log in logging_outputs))
+        ngroups = sum(log.get('n_groups', 0) for log in logging_outputs) / gpu_counts
+        ngroups = int(ngroups.item()) if torch.is_tensor(ngroups) else int(ngroups)
 
         if sample_size > 1:
             metrics.log_scalar('loss', loss_sum / sample_size / math.log(2), sample_size, round=3)
@@ -310,8 +316,6 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             metrics.log_derived('ppl', lambda meters: utils.get_perplexity(meters['nll_loss'].avg))
 
         if len(logging_outputs) > 0 and 'w1' in logging_outputs[0]:
-            ngroups = sum(log.get('n_groups', 0) for log in logging_outputs) / gpu_counts
-            ngroups = int(ngroups.item()) if torch.is_tensor(ngroups) else int(ngroups)
             for ii in range(ngroups):
                 group_loss = sum(log.get('l{}'.format(ii), 0) for log in logging_outputs) / gpu_counts
                 metrics.log_scalar('acl{}'.format(ii), group_loss, 1, round=3)
@@ -330,7 +334,7 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                                              "acl{}".format(ii))
 
         if len(logging_outputs) > 0 and 'fg_gnll0' in logging_outputs[0]:
-            for ii in range(8):
+            for ii in range(ngroups):
                 g_nll = sum(log.get('fg_gnll{}'.format(ii), 0) for log in logging_outputs)
 
                 g_tokens = sum(log.get('fg_gcount{}'.format(ii), 0) for log in logging_outputs)
