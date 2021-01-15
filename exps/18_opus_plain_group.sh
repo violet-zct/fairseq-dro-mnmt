@@ -47,7 +47,7 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=18_ema0.05_alpha0.5_wu_plain_lang_dro_opus10_${ename}
+exp_name=18_ema0.05_alpha0.25_wu_plain_lang_dro_opus10_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
@@ -66,7 +66,7 @@ python train.py ${DATA}\
 	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
 	  --encoder-langtok ${etok} --enable-lang-ids \
 	  --criterion 'plain_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-	  --dro-alpha 0.5 --update-dro-freq 1 --group-level ${glevel} --ema 0.05 \
+	  --dro-alpha 0.25 --update-dro-freq 1 --group-level ${glevel} --ema 0.05 \
 	  --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
