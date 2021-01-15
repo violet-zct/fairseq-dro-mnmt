@@ -3,7 +3,7 @@
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
-#SBATCH --comment="TACL 1.10"
+#SBATCH --comment="ACL 1.26"
 #SBATCH --job-name=18
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
