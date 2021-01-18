@@ -15,8 +15,8 @@ mkdir -p ${opt_data}
 
 SPM_TRAIN=scripts/spm_train.py
 SPM_ENCODE=scripts/spm_encode.py
-BPE_SIZE=37000
-EN_BPE_SIZE=32000
+BPE_SIZE=32000
+EN_BPE_SIZE=16000
 
 python utils/opus_upsample_cat_and_valid_cap.py
 

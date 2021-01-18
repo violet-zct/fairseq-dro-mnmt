@@ -119,6 +119,9 @@ for lang in ${langs//,/ }; do
           --source-lang ${gsrc} --target-lang ${gtgt} \
           --quiet --beam 5 | tee -a ${SAVE}/log.txt ${SAVE}/test_${lang}_en.log
     scp ${SAVE}/test_${lang}_en.log tir:${send_dir}/
-
 done
+
+scp ${SAVE}/log.txt tir:${send_dir}/
+scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.out tir:${send_dir}/
+scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.err tir:${send_dir}/
 
