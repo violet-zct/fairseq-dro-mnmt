@@ -45,7 +45,7 @@ python -u train.py ${DATA} \
     --valid-subset valid \
     --eval-bleu --eval-bleu-remove-bpe '@@ ' --best-checkpoint-metric bleu --maximize-best-checkpoint-metric \
     --eval-tokenized-bleu --eval-bleu-detok "space" \
-    -a ${model} --optimizer adabelief --lr 0.0005 --clip-norm 1.0 --clip-mode 'total' -s $src -t $tgt \
+    -a ${model} --optimizer adabelief --lr 0.0005 --clip-norm 1.0 -s $src -t $tgt \
     --label-smoothing 0.1 --max-tokens 8192 --share-all-embeddings \
     --attention-dropout 0.1 --activation-dropout 0.1 \
     --lr-scheduler milestone --lr-decay-rate 0.1 --milestones 250000 450000 \
