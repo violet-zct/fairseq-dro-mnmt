@@ -355,25 +355,48 @@ class Trainer(object):
                 combine=combine,
                 data_selector=data_selector,
             )
-        return self.task.get_batch_iterator(
-            dataset=self.task.dataset(self.args.train_subset),
-            max_tokens=self.args.max_tokens,
-            max_sentences=self.args.max_sentences,
-            max_positions=utils.resolve_max_positions(
-                self.task.max_positions(),
-                self.model.max_positions(),
-                self.args.max_tokens,
-            ),
-            ignore_invalid_inputs=True,
-            required_batch_size_multiple=self.args.required_batch_size_multiple,
-            seed=self.args.seed,
-            num_shards=self.data_parallel_world_size if shard_batch_itr else 1,
-            shard_id=self.data_parallel_rank if shard_batch_itr else 0,
-            num_workers=self.args.num_workers,
-            epoch=epoch,
-            data_buffer_size=self.args.data_buffer_size,
-            disable_iterator_cache=disable_iterator_cache,
-        )
+        if hasattr(self.criterion, 'resample'):
+            sample_ratios = self.criterion.update_mw(epoch)
+            return self.task.get_batch_iterator(
+                dataset=self.task.dataset(self.args.train_subset),
+                max_tokens=self.args.max_tokens,
+                max_sentences=self.args.max_sentences,
+                max_positions=utils.resolve_max_positions(
+                    self.task.max_positions(),
+                    self.model.max_positions(),
+                    self.args.max_tokens,
+                ),
+                ignore_invalid_inputs=True,
+                required_batch_size_multiple=self.args.required_batch_size_multiple,
+                seed=self.args.seed,
+                num_shards=self.data_parallel_world_size if shard_batch_itr else 1,
+                shard_id=self.data_parallel_rank if shard_batch_itr else 0,
+                num_workers=self.args.num_workers,
+                epoch=epoch,
+                data_buffer_size=self.args.data_buffer_size,
+                disable_iterator_cache=disable_iterator_cache,
+                reset_sample_ratios=sample_ratios,
+            )
+        else:
+            return self.task.get_batch_iterator(
+                dataset=self.task.dataset(self.args.train_subset),
+                max_tokens=self.args.max_tokens,
+                max_sentences=self.args.max_sentences,
+                max_positions=utils.resolve_max_positions(
+                    self.task.max_positions(),
+                    self.model.max_positions(),
+                    self.args.max_tokens,
+                ),
+                ignore_invalid_inputs=True,
+                required_batch_size_multiple=self.args.required_batch_size_multiple,
+                seed=self.args.seed,
+                num_shards=self.data_parallel_world_size if shard_batch_itr else 1,
+                shard_id=self.data_parallel_rank if shard_batch_itr else 0,
+                num_workers=self.args.num_workers,
+                epoch=epoch,
+                data_buffer_size=self.args.data_buffer_size,
+                disable_iterator_cache=disable_iterator_cache,
+            )
 
     def get_valid_iterator(
         self,

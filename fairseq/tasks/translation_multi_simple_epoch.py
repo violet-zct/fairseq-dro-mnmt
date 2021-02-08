@@ -329,6 +329,7 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
         ignore_invalid_inputs=False, required_batch_size_multiple=1,
         seed=1, num_shards=1, shard_id=0, num_workers=0, epoch=1,
         data_buffer_size=0, disable_iterator_cache=False,
+        reset_sample_ratios=None,
     ):
         """
         Get an iterator that yields batches of data from the given dataset.
@@ -389,6 +390,10 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
             )
             self.dataset_to_epoch_iter[dataset] = batch_iter
             return batch_iter
+
+        if reset_sample_ratios is not None:
+            # dataset is the train split
+            dataset.adjust_sampling(None, reset_sample_ratios, None)
 
         construct_batch_sampler = self.create_batch_sampler_func(
             max_positions, ignore_invalid_inputs,
