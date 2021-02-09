@@ -114,16 +114,16 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         q_dist = torch.min(past_frac / self.alpha, q_dist)
 
         sorted_frac = q_dist[sort_id]
-        sorted_train_frac = past_frac[sort_id]
+        # sorted_train_frac = past_frac[sort_id]
         cutoff_count = torch.sum(torch.cumsum(sorted_frac, 0) < 1.)
         if cutoff_count == len(sorted_frac):
             cutoff_count = len(sorted_frac) - 1
         self.h_fun.fill_(0.1)
-        self.h_fun[sort_id[:cutoff_count]] = sorted_frac[:cutoff_count] / sorted_train_frac[:cutoff_count]
+        self.h_fun[sort_id[:cutoff_count]] = sorted_frac[:cutoff_count]  #/ sorted_train_frac[:cutoff_count]
 
         leftover_mass = 1.0 - sorted_frac[:cutoff_count].sum()
-        tiebreak_fraction = leftover_mass / sorted_train_frac[cutoff_count]  # check!
-        self.h_fun[sort_id[cutoff_count]] = tiebreak_fraction
+        # tiebreak_fraction = leftover_mass / sorted_train_frac[cutoff_count]  # check!
+        self.h_fun[sort_id[cutoff_count]] = leftover_mass
 
         self.temp_idx += 1
         if self.logging:
@@ -131,6 +131,7 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             logger.info("EMA group fractions: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_frac[0:self.n_groups]])))
             logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.h_fun[0:self.n_groups]])))
         self.sum_losses.zero_()
+        self.count_cat.fill_(1.)
 
         return self.h_fun
 
@@ -233,7 +234,7 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             valid_losses = self.sum_losses[valid_index]
             valid_counts = self.count_cat[valid_index]
             self.sum_losses[valid_index] = valid_losses.mul(1 - self.EMA_alpha).add(reduce_group_losses[valid_index], alpha=self.EMA_alpha)
-            self.count_cat[valid_index] = valid_counts.mul(1 - 0.01).add(group_counts[valid_index], alpha=0.01)
+            self.count_cat[valid_index] = valid_counts.add(group_counts[valid_index])
 
             loss = group_losses.sum()
 
