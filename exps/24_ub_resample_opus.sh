@@ -108,3 +108,6 @@ for lang in ${langs//,/ }; do
 
 done
 
+scp ${SAVE}/log.txt tir:${send_dir}/
+scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.out tir:${send_dir}/
+scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.err tir:${send_dir}/

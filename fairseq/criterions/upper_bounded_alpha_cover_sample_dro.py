@@ -130,6 +130,8 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             logger.info("EMA past losses: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_losses[0:self.n_groups]])))
             logger.info("EMA group fractions: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_frac[0:self.n_groups]])))
             logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.h_fun[0:self.n_groups]])))
+        self.sum_losses.zero_()
+
         return self.h_fun
 
     def individual_losses(self, model, net_output, sample):

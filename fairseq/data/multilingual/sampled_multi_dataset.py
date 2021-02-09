@@ -155,7 +155,8 @@ class SampledMultiDataset(FairseqDataset):
     def _sync_sample_ratios(self, ratios):
         # in case the ratios are not precisely the same across processes
         # also to ensure every procresses update the ratios in the same pace
-        ratios = torch.DoubleTensor(ratios)
+        # fixme: this has bug only on tir?
+        # ratios = torch.DoubleTensor(ratios)
         if torch.distributed.is_initialized():
             if torch.cuda.is_available():
                 distributed_utils.all_reduce(ratios.cuda())

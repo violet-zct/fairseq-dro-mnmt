@@ -288,7 +288,7 @@ class MultilingualDatasetManager(object):
         )
         parser.add_argument(
             "--virtual-epoch-size",
-            default=1000000,
+            default=10000000,
             type=int,
             help="virtual epoch size to speed up data loading",
         )
