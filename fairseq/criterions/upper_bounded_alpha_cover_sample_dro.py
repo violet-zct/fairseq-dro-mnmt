@@ -74,6 +74,8 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.register_buffer('avg_frac', torch.full((1,), avg_frac))
         self.initialize()
 
+        self.p_train = None
+
     @staticmethod
     def add_args(parser):
         """Add criterion-specific arguments to the parser."""
@@ -95,8 +97,6 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             self.loss_baselines = torch.Tensor(self.task.data_manager.outer_baseline).to(self.device)
         else:
             self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
-        self.p_train = torch.Tensor(self.task.data_manager.data_ratios).to(self.device)
-        logger.info("Fixed P train = {}".format(self.p_train))
         self.register_buffer('h_fun', torch.ones(self.n_groups))
         self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('count_cat', torch.ones(self.n_groups))
@@ -209,6 +209,10 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         3) logging outputs to display while training
         """
 
+        if self.p_train is None:
+            self.p_train = torch.Tensor(self.task.data_manager.data_ratios).to(self.device)
+            logger.info("Fixed P train = {}".format(self.p_train))
+            
         nll_loss, group_losses, group_counts = self.compute_loss(model, sample)
         nsentences = sample['target'].size(0)
         sample_size = sample['ntokens']
