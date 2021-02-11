@@ -95,6 +95,8 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             self.loss_baselines = torch.Tensor(self.task.data_manager.outer_baseline).to(self.device)
         else:
             self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
+        self.p_train = torch.Tensor(self.task.data_manager.data_ratios).to(self.device)
+        logger.info("Fixed P train = {}".format(self.p_train))
         self.register_buffer('h_fun', torch.ones(self.n_groups))
         self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('count_cat', torch.ones(self.n_groups))
@@ -106,7 +108,7 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         past_losses = self.sum_losses
         baselined_losses = past_losses - self.loss_baselines
 
-        past_frac = self.count_cat / self.count_cat.sum()  # p_train_t
+        past_frac = self.p_train
         #
         sorted_losses, sort_id = torch.sort(baselined_losses, descending=True)
 
@@ -114,26 +116,27 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         q_dist = torch.min(past_frac / self.alpha, q_dist)
 
         sorted_frac = q_dist[sort_id]
-        # sorted_train_frac = past_frac[sort_id]
+        sorted_train_frac = past_frac[sort_id]
         cutoff_count = torch.sum(torch.cumsum(sorted_frac, 0) < 1.)
         if cutoff_count == len(sorted_frac):
             cutoff_count = len(sorted_frac) - 1
         self.h_fun.fill_(0.1)
-        self.h_fun[sort_id[:cutoff_count]] = sorted_frac[:cutoff_count]  #/ sorted_train_frac[:cutoff_count]
+        self.h_fun[sort_id[:cutoff_count]] = sorted_frac[:cutoff_count] / sorted_train_frac[:cutoff_count]
 
         leftover_mass = 1.0 - sorted_frac[:cutoff_count].sum()
-        # tiebreak_fraction = leftover_mass / sorted_train_frac[cutoff_count]  # check!
-        self.h_fun[sort_id[cutoff_count]] = leftover_mass
+        tiebreak_fraction = leftover_mass / sorted_train_frac[cutoff_count]  # check!
+        self.h_fun[sort_id[cutoff_count]] = tiebreak_fraction
 
+        q = self.h_fun * self.p_train
         self.temp_idx += 1
         if self.logging:
             logger.info("EMA past losses: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_losses[0:self.n_groups]])))
             logger.info("EMA group fractions: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_frac[0:self.n_groups]])))
-            logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.h_fun[0:self.n_groups]])))
+            logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in q[0:self.n_groups]])))
         self.sum_losses.zero_()
         self.count_cat.fill_(1.)
 
-        return self.h_fun
+        return q
 
     def individual_losses(self, model, net_output, sample):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)

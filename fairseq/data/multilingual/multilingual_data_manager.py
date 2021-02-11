@@ -98,17 +98,16 @@ class MultilingualDatasetManager(object):
                 if key in self.tgt_langs:
                     self.uniq_token_counts[_lang_id(self.tgt_lang_dict, key)] = float(value)
 
-        if args.outer_baseline_file is not None or args.inner_baseline_file is not None:
-            target_group = args.group_level if hasattr(args, 'group_level') else args.outer_group_level
-            lang_dict = self.tgt_lang_dict if target_group == "target_lang" else self.src_lang_dict
-            n_groups = len(self.tgt_langs) if target_group == "target_lang" else len(self.src_langs)
+        self.target_group = args.group_level if hasattr(args, 'group_level') else args.outer_group_level
+        self.lang_dict = self.tgt_lang_dict if self.target_group == "target_lang" else self.src_lang_dict
+        n_groups = len(self.tgt_langs) if self.target_group == "target_lang" else len(self.src_langs)
 
         if args.outer_baseline_file is not None:
             outer_baseline = np.zeros(n_groups)
             with open(args.outer_baseline_file) as fin:
                 for line in fin:
                     fields = line.strip().split("=")
-                    lang = _lang_id(lang_dict, fields[0])
+                    lang = _lang_id(self.lang_dict, fields[0])
                     outer_baseline[lang] = float(fields[1])
             self.outer_baseline = outer_baseline
         else:
@@ -120,7 +119,7 @@ class MultilingualDatasetManager(object):
             inner_baseline = np.zeros((n_groups, vocab_size))
             for line in fmat:
                 fields = line.strip().split("=")
-                lang = _lang_id(lang_dict, fields[0])
+                lang = _lang_id(self.lang_dict, fields[0])
                 bls = np.array(list(map(float, fields[1].split())))
                 inner_baseline[lang] = bls
             self.inner_baseline = inner_baseline
@@ -1003,6 +1002,21 @@ class MultilingualDatasetManager(object):
         )
         return [s for _, s in data_sizes]
 
+    def get_ordered_train_dataset_sizes(self, data_param_list, datasets):
+        num_shards = [
+            (self.get_split_num_data_shards(param["split"])[param["key"]], param["src"], param["tgt"])
+            for param in data_param_list
+        ]
+        data_sizes = [
+            (src, tgt, len(d) * num_shard)
+            for (key, d), (num_shard, src, tgt) in zip(datasets, num_shards)
+        ]
+        ordered_data_sizes = np.zeros(len(datasets))
+        for src, tgt, s in data_sizes:
+            ll = src if self.target_group == "source_lang" else tgt
+            ordered_data_sizes[_lang_id(self.lang_dict, ll)] = s
+        return np.array(ordered_data_sizes)
+
     def get_train_sampling_ratios(self, data_param_list, datasets, epoch=1):
         data_sizes = self.get_train_dataset_sizes(data_param_list, datasets)
         sampling_func = self.sampling_method.sampling_method_selector()
@@ -1074,8 +1088,11 @@ class MultilingualDatasetManager(object):
         datasets, data_param_list = self.load_split_datasets(
             split, training, epoch, combine, shard_epoch=shard_epoch, **kwargs
         )
+
         if training and split == getattr(self.args, "train_subset", None):
             sample_ratios = self.get_sampling_ratios(data_param_list, datasets, epoch)
+            data_sizes = self.get_ordered_train_dataset_sizes(data_param_list, datasets)
+            self.data_ratios = data_sizes / sum(data_sizes)
             return SampledMultiEpochDataset(
                 OrderedDict(datasets),
                 epoch=epoch,
