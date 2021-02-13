@@ -176,17 +176,18 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         else:
             ind_loss = (token_losses.reshape_as(sample['target']) * mask).sum(1)
 
-        index = self.retrieve_group_labels(sample)
-        zero_vec = torch.zeros(self.n_groups, device='cuda')  # G
-        group_losses = zero_vec.scatter_add(0, index, ind_loss)
+        with torch.no_grad():
+            index = self.retrieve_group_labels(sample)
+            zero_vec = torch.zeros(self.n_groups, device='cuda')  # G
+            group_losses = zero_vec.scatter_add(0, index, ind_loss)
 
-        if self.group_level != "token":
-            group_counts = zero_vec.scatter_add(0, index, mask.sum(1))
-        else:
-            one_vec = torch.ones(ind_loss.size(0), device='cuda')  # B
-            group_counts = zero_vec.scatter_add(0, index, one_vec)
+            if self.group_level != "token":
+                group_counts = zero_vec.scatter_add(0, index, mask.sum(1))
+            else:
+                one_vec = torch.ones(ind_loss.size(0), device='cuda')  # B
+                group_counts = zero_vec.scatter_add(0, index, one_vec)
 
-        return nll_loss, group_losses, group_counts
+        return nll_loss, ind_loss, group_losses, group_counts
 
     def simple_loss(self, model, net_output, sample, reduce=True):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
@@ -212,8 +213,8 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         if self.p_train is None:
             self.p_train = torch.Tensor(self.task.data_manager.data_ratios).to(self.device)
             logger.info("Fixed P train = {}".format(self.p_train))
-            
-        nll_loss, group_losses, group_counts = self.compute_loss(model, sample)
+
+        nll_loss, ind_loss, group_losses, group_counts = self.compute_loss(model, sample)
         nsentences = sample['target'].size(0)
         sample_size = sample['ntokens']
 
@@ -224,7 +225,7 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
                 fg_group_count = group_counts.detach().clone()
                 fg_loss_vec = group_losses
-            loss = group_losses.sum()
+            # loss = group_losses.sum()
         else:
             self.update_steps += 1
 
@@ -243,9 +244,10 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             self.sum_losses[valid_index] = valid_losses.mul(1 - self.EMA_alpha).add(reduce_group_losses[valid_index], alpha=self.EMA_alpha)
             self.count_cat[valid_index] = valid_counts.add(group_counts[valid_index])
 
-            loss = group_losses.sum()
+            # loss = group_losses.sum()
 
         nll_loss = nll_loss.sum()
+        loss = ind_loss.sum()
         logging_output = {
             'loss': loss.data,
             'nll_loss': nll_loss.data,
