@@ -102,8 +102,6 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.register_buffer('count_cat', torch.ones(self.n_groups))
 
     def update_mw(self, epoch):
-        if epoch <= self.warmup_epochs:
-            return None
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
         past_losses = self.sum_losses
         baselined_losses = past_losses - self.loss_baselines
@@ -135,8 +133,11 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in q[0:self.n_groups]])))
         self.sum_losses.zero_()
         self.count_cat.fill_(1.)
-
-        return q
+        
+        if epoch <= self.warmup_epochs:
+            return None
+        else:
+            return q
 
     def individual_losses(self, model, net_output, sample):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
