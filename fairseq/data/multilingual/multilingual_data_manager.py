@@ -1093,7 +1093,6 @@ class MultilingualDatasetManager(object):
             sample_ratios = self.get_sampling_ratios(data_param_list, datasets, epoch)
             data_sizes = self.get_ordered_train_dataset_sizes(data_param_list, datasets)
             self.data_ratios = data_sizes / sum(data_sizes)
-            keys = list(datasets.keys())
             datasets = OrderedDict(datasets)
             idx = 1 if self.target_group == "target_lang" else 0
             my_lang_ids = [_lang_id(self.lang_dict, key.split(":")[-1].split("-")[idx]) for key in list(datasets.keys())]
