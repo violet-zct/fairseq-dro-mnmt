@@ -83,6 +83,7 @@ class SampledMultiDataset(FairseqDataset):
         split='',
         shared_collater=False,
         shuffle=True,
+        remapped_lang_ids=None,
     ):
         super().__init__()
         self.shared_collater = shared_collater
@@ -98,6 +99,7 @@ class SampledMultiDataset(FairseqDataset):
         self.datasets = datasets
         self.split = split
 
+        self.remapped_lang_ids = remapped_lang_ids
         self.eval_key = eval_key
         if self.eval_key is not None:
             self.collate_format = CollateFormat.single
@@ -164,6 +166,9 @@ class SampledMultiDataset(FairseqDataset):
                 distributed_utils.all_reduce(ratios)
             ret = ratios.cpu()
             ret = ret.numpy()
+            # Ad-hoc FIX!
+            if self.remapped_lang_ids is not None:
+                ret = ret[self.remapped_lang_ids]
         return ret
 
     def random_choice_in_dataset(self, rng, dataset, choice_size):

@@ -1093,8 +1093,13 @@ class MultilingualDatasetManager(object):
             sample_ratios = self.get_sampling_ratios(data_param_list, datasets, epoch)
             data_sizes = self.get_ordered_train_dataset_sizes(data_param_list, datasets)
             self.data_ratios = data_sizes / sum(data_sizes)
+            keys = list(datasets.keys())
+            datasets = OrderedDict(datasets)
+            idx = 1 if self.target_group == "target_lang" else 0
+            my_lang_ids = [_lang_id(self.lang_dict, key.split(":")[-1].split("-")[idx]) for key in list(datasets.keys())]
+            logger.info("Mapped lang ids = {}".format(my_lang_ids))
             return SampledMultiEpochDataset(
-                OrderedDict(datasets),
+                datasets,
                 epoch=epoch,
                 shard_epoch=shard_epoch,
                 # valid and test datasets will be degenerate to concating datasets:
@@ -1106,6 +1111,7 @@ class MultilingualDatasetManager(object):
                 virtual_epoch_size=self.args.virtual_epoch_size,
                 # if not using lang_tok altering, simplified to use the same collater
                 shared_collater=self._shared_collater(),
+                remapped_lang_ids=np.array(my_lang_ids)
             )
         else:
             return self.load_into_concat_dataset(split, datasets, data_param_list)

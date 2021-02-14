@@ -58,6 +58,7 @@ class SampledMultiEpochDataset(SampledMultiDataset):
         shared_collater=False,
         shard_epoch=1,
         shuffle=True,
+        remapped_lang_ids=None,
     ):
         self.virtual_epoch_size = virtual_epoch_size
         self._current_epoch_start_index = None
@@ -76,6 +77,7 @@ class SampledMultiEpochDataset(SampledMultiDataset):
             split=split,
             shared_collater=shared_collater,
             shuffle=shuffle,
+            remapped_lang_ids=remapped_lang_ids,
         )
 
     def _setup(self, epoch):
