@@ -30,7 +30,7 @@ with open(flog) as fin, open(ffout, "w") as fout:
                 size = int(field.split(":")[-1])
                 sampled_ratios[final_lang_dict[lang]] = size
             sampled_ratios = sampled_ratios / sum(sampled_ratios)
-            fout.write("Normalized corresponding samplie ratio: " + " ".join("{:.6f}".format(s) for s in sampled_ratios]) + "\n")
+            fout.write("Normalized corresponding samplie ratio: " + " ".join(["{:.6f}".format(s) for s in sampled_ratios]) + "\n")
             fout.write(line)
         else:
             fout.write(line)
