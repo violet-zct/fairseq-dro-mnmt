@@ -4,7 +4,7 @@
 #SBATCH --partition=learnfair
 ##SBATCH --partition=priority
 ##SBATCH --comment="TACL 2.20"
-#SBATCH --job-name=24.opus.0.5.step
+#SBATCH --job-name=27.0.2.step.opus
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -47,7 +47,7 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=24_resample_ema0.1_alpha0.5_wu_ub_lang_dro_opus10_${ename}
+exp_name=27_resample_ema0.1_alpha0.2_wu_ub_lang_dro_opus10_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
@@ -66,7 +66,7 @@ python train.py ${DATA}\
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'upper_bound_resample_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-    --dro-alpha 0.5 --group-level ${glevel} --ema 0.1 \
+    --dro-alpha 0.2 --group-level ${glevel} --ema 0.1 \
     --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
