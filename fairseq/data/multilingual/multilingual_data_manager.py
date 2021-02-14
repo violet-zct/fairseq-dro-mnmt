@@ -72,7 +72,7 @@ class MultilingualDatasetManager(object):
         self.src_lang_dict = self.create_lang_dictionary(self.src_langs)
         self.tgt_lang_dict = self.create_lang_dictionary(self.tgt_langs)
 
-        #
+        # used for sanity check
         low_langs = ['aze', 'bel', 'glg', 'slk', 'bos', 'mar', 'hin', 'mkd']
         if len(self.src_langs) > 1:
             self.lang_weights = [1.0] * len(self.src_langs)

@@ -104,7 +104,7 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def update_mw(self, epoch):
         if epoch == 1:
             return None
-        
+
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
         past_losses = self.sum_losses
         baselined_losses = past_losses - self.loss_baselines
@@ -133,7 +133,8 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         if self.logging:
             logger.info("EMA past losses: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_losses[0:self.n_groups]])))
             logger.info("EMA group fractions: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_frac[0:self.n_groups]])))
-            logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in q[0:self.n_groups]])))
+            sum_weights = q[0:self.n_groups].sum().item()
+            logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item() / sum_weights) for xx in q[0:self.n_groups]])))
         self.sum_losses.zero_()
         self.count_cat.fill_(1.)
 
