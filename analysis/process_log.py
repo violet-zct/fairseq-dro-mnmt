@@ -20,7 +20,7 @@ with open(flog) as fin, open(ffout, "w") as fout:
         if "fairseq.criterions.upper_bounded_alpha_cover_sample_dro | Group loss weights:" in line:
             fields = line.strip().split("weights:")
             normalized = np.array([float(v) for v in fields[-1].strip().split()])
-            normalized = " ".join([str(v) for v in normalized / sum(normalized)])
+            normalized = " ".join(["{:.6f}".format(v) for v in (normalized / sum(normalized))])
             fout.write("weights: ".join([fields[0], normalized]) + "\n")
         elif "fairseq.data.multilingual.sampled_multi_dataset | [train] Resampled sizes: {" in line:
             dicts = line.strip().split("Resampled sizes: {")[-1].split("};")[0]
@@ -30,7 +30,7 @@ with open(flog) as fin, open(ffout, "w") as fout:
                 size = int(field.split(":")[-1])
                 sampled_ratios[final_lang_dict[lang]] = size
             sampled_ratios = sampled_ratios / sum(sampled_ratios)
-            fout.write("Normalized corresponding samplie ratio: " + " ".join([str(s) for s in sampled_ratios]) + "\n")
+            fout.write("Normalized corresponding samplie ratio: " + " ".join("{:.6f}".format(s) for s in sampled_ratios]) + "\n")
             fout.write(line)
         else:
             fout.write(line)
