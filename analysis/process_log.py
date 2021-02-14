@@ -7,8 +7,8 @@ flog = os.path.join(folder, "log.txt")
 ffout = os.path.join(folder, "processed.log.txt")
 
 lang_pairs = "en-yi,en-mr,en-oc,en-be,en-ta,en-ka,en-gl,en-ur,en-bg,en-is"
-src_langs = sorted(list(set([langpair.split("-")[0] for langpair in lang_pairs])))
-tgt_langs = sorted(list(set([langpair.split("-")[1] for langpair in lang_pairs])))
+src_langs = sorted(list(set([langpair.split("-")[0] for langpair in lang_pairs.split(",")])))
+tgt_langs = sorted(list(set([langpair.split("-")[1] for langpair in lang_pairs.split(",")])))
 
 src_lang_dict = {lang:i for i, lang in enumerate(src_langs)}
 tgt_lang_dict = {lang:i for i, lang in enumerate(tgt_langs)}
