@@ -1,9 +1,9 @@
 #! /bin/bash
 #SBATCH --output=slurm_logs/slurm-%A-%a.out
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
-#SBATCH --partition=learnfair
-##SBATCH --partition=priority
-##SBATCH --comment="TACL 2.20"
+##SBATCH --partition=learnfair
+#SBATCH --partition=priority
+#SBATCH --comment="TACL 2.20"
 #SBATCH --job-name=24.opus.0.5.step
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-1
+#SBATCH --array=0
 
 source activate mnmt2
 
