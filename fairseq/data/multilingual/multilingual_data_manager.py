@@ -98,9 +98,10 @@ class MultilingualDatasetManager(object):
                 if key in self.tgt_langs:
                     self.uniq_token_counts[_lang_id(self.tgt_lang_dict, key)] = float(value)
 
-        self.target_group = args.group_level if hasattr(args, 'group_level') else args.outer_group_level
-        self.lang_dict = self.tgt_lang_dict if self.target_group == "target_lang" else self.src_lang_dict
-        n_groups = len(self.tgt_langs) if self.target_group == "target_lang" else len(self.src_langs)
+        if hasattr(args, 'group_level') or hasattr(args, 'outer_group_level'):
+            self.target_group = args.group_level if hasattr(args, 'group_level') else args.outer_group_level
+            self.lang_dict = self.tgt_lang_dict if self.target_group == "target_lang" else self.src_lang_dict
+            n_groups = len(self.tgt_langs) if self.target_group == "target_lang" else len(self.src_langs)
 
         if args.outer_baseline_file is not None:
             outer_baseline = np.zeros(n_groups)
