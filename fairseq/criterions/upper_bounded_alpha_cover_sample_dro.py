@@ -102,7 +102,7 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.register_buffer('count_cat', torch.ones(self.n_groups))
 
     def update_mw(self, epoch):
-        if epoch == 1:
+        if epoch == 1 or self.p_train is None:
             return None
 
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
