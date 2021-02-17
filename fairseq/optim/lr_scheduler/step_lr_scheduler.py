@@ -54,12 +54,16 @@ class StepScheduler(FairseqLRScheduler):
         # we don't change the learning rate at epoch boundaries
         return self.optimizer.get_lr()
 
+    def get_cur_lr(self, num_updates):
+        counts = num_updates // self.step_size
+        return self.args.lr[0] * (self.gamma ** counts)
+
     def step_update(self, num_updates):
         """Update the learning rate after each update."""
         if num_updates <= self.args.warmup_updates:
             self.lr = self.args.warmup_init_lr + num_updates*self.lr_step
-        elif num_updates > 0 and num_updates % self.step_size == 0:
-            self.lr = self.lr * self.gamma
+        else:
+            self.lr = self.get_cur_lr(num_updates)
 
         self.optimizer.set_lr(self.lr)
         return self.lr

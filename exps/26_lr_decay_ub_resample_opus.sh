@@ -1,9 +1,9 @@
 #! /bin/bash
 #SBATCH --output=slurm_logs/slurm-%A-%a.out
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
-#SBATCH --partition=learnfair
-##SBATCH --partition=priority
-##SBATCH --comment="TACL 2.20"
+##SBATCH --partition=learnfair
+#SBATCH --partition=priority
+#SBATCH --comment="TACL 3.1"
 #SBATCH --job-name=26
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -50,10 +50,10 @@ model=transformer_wmt_en_de
 exp_name=26_resample_alpha0.5_wu_ub_lang_dro_opus10_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
-rm -rf ${SAVE}
-mkdir -p ${SAVE}
-
-cp $0 ${SAVE}/run.sh
+#rm -rf ${SAVE}
+#mkdir -p ${SAVE}
+#
+#cp $0 ${SAVE}/run.sh
 
 send_dir=/home/chuntinz/tir5/logs/${exp_name}
 if [ ${log} = 1 ]; then
@@ -81,7 +81,7 @@ python train.py ${DATA}\
     --max-source-positions 512 --max-target-positions 512 \
     --save-dir ${SAVE} \
     --encoder-normalize-before --decoder-normalize-before \
-    --log-interval 100 --log-format simple | tee ${SAVE}/log.txt
+    --log-interval 100 --log-format simple | tee -a ${SAVE}/log.txt
 
 date
 echo "end" | tee ${SAVE}/END
