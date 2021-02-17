@@ -3,12 +3,12 @@
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
-#SBATCH --comment="TACL 3.1"
+#SBATCH --comment="TACL 2.20"
 #SBATCH --job-name=23
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
-#SBATCH --mem=100g
+#SBATCH --mem=200g
 ##SBATCH -C volta32gb
 #SBATCH --cpus-per-task=10
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
@@ -69,7 +69,7 @@ else
 fi
 
 model=transformer_iwslt_de_en
-exp_name=29_resample_ema0.1_alpha0.2_wd_1e-4_wu_ub_lang_ted8_${ename}
+exp_name=23_resample_ema0.1_alpha0.5_wd_1e-4_wu_ub_lang_ted8_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
@@ -88,7 +88,7 @@ python train.py ${DATA}\
     --arch ${model} --valid-subset cap.valid \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'upper_bound_resample_dro_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-    --dro-alpha 0.2 --group-level ${glevel} --ema 0.1 \
+    --dro-alpha 0.5 --group-level ${glevel} --ema 0.1 \
     --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
@@ -96,7 +96,7 @@ python train.py ${DATA}\
     --share-decoder-input-output-embed \
     --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 1e-4 \
     --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'step' \
-    --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --lr-decay-rate 0.5 --lr-decay-steps 100000 \
+    --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --lr-decay-rate 0.5 --lr-decay-steps 50000 \
     --max-tokens 8192 \
     --update-freq 1 \
     --seed 222 \
