@@ -54,7 +54,7 @@ SAVE=${SAVE_ROOT}/${exp_name}
 #mkdir -p ${SAVE}
 
 #cp $0 ${SAVE}/run.sh
-
+rm ${SAVE}/END
 send_dir=/home/chuntinz/tir5/logs/${exp_name}
 if [ ${log} = 1 ]; then
   bash v1_exps/send.sh ${exp_name} &
