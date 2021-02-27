@@ -9,6 +9,9 @@ import math
 from fairseq import metrics, utils
 from fairseq.criterions import FairseqCriterion, register_criterion
 import logging
+import numpy as np
+from scipy import optimize
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,29 +39,68 @@ def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=T
     return loss, nll_loss
 
 
-@register_criterion('upper_bound_resample_dro_label_smoothed_cross_entropy')
-class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
-    def __init__(self, task, label_smoothing, group_level, dro_alpha, baselines,
-                 warmup_epochs, ema, dro_K):
+def project_to_cs_ball(v, rho, p_train):
+    """Numpy/Scipy projection to chi-square ball of radius rho"""
+    n = len(v)
+
+    def cs_div(p):
+        return 0.5 * np.mean((p / p_train - 1)**2)
+
+    # first, check if a simplex projection is within the chi-square ball
+    target_simplex = lambda eta: np.sum(np.maximum(v - eta, 0)) - 1.0
+    eta_min_simplex = v.min() - 1 / n
+    eta_max_simplex = v.max()
+    eta_simplex = optimize.brentq(
+        target_simplex, eta_min_simplex, eta_max_simplex)
+    p_candidate = np.maximum(v - eta_simplex, 0)
+    if cs_div(p_candidate) <= rho:
+        return p_candidate
+
+    # second, compute a chi-square best response
+    def target_cs(eta, return_p=False):
+        p = np.maximum(v - eta, 0)
+        if p.sum() == 0.0:
+            p[np.argmax(v)] = 1.0
+        else:
+            p /= p.sum()
+        err = cs_div(p) - rho
+        return p if return_p else err
+    eta_max_cs = v.max()
+    eta_min_cs = v.min()
+    if target_cs(eta_max_cs) <= 0:
+        return target_cs(eta_max_cs, return_p=True)
+    while target_cs(eta_min_cs) > 0.0:  # find left interval edge for bisection
+        eta_min_cs = 2 * eta_min_cs - eta_max_cs
+    eta_cs = optimize.brentq(
+        target_cs, eta_min_cs, eta_max_cs)
+    p_candidate = target_cs(eta_cs, return_p=True)
+    assert np.abs(cs_div(p_candidate) - rho) < rho * 1e-2
+    return p_candidate
+
+
+@register_criterion('chi_square_primal_dual')
+class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
+    def __init__(self, task, label_smoothing, group_level, step_size, rho,
+                 update_dro_freq, start_ft_steps, ema):
         super().__init__(task)
 
         self.args = self.task.args
         self.distributed_world_size = self.task.args.distributed_world_size
         self.eps = label_smoothing
         self.group_level = group_level
-        self.alpha = dro_alpha
-        self.baselines = baselines
-        self.resample = True
+        self.step_size = step_size
+        self.rho = rho
+
+        self.update_freq = update_dro_freq
 
         self.device = torch.cuda.current_device()
         self.temp_idx = 0
         self.print_steps = 100
 
         self.update_steps = 0
-        self.warmup_epochs = warmup_epochs
+        self.start_ft_steps = start_ft_steps
         self.EMA_alpha = ema
 
-        self.valid_baseline = self.args.valid_baseline
         self.logging = True
         if group_level == "source_lang":
             self.n_groups = len(task.data_manager.src_langs)
@@ -70,10 +112,6 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         else:
             raise ValueError
 
-        avg_frac = 1. / self.n_groups if dro_K <= 0 else 1. / dro_K
-        self.register_buffer('avg_frac', torch.full((1,), avg_frac))
-        self.initialize()
-
         self.p_train = None
 
     @staticmethod
@@ -83,65 +121,18 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--label-smoothing', default=0., type=float, metavar='D',
                             help='epsilon for label smoothing, 0 means no label smoothing')
         parser.add_argument('--group-level', type=str, choices=['source_lang', 'target_lang', 'token'])
-        parser.add_argument('--dro-alpha', default=1., type=float, help='alpha value for the DRO loss.')
-        parser.add_argument('--baselines', default=None, type=str, help='baseline loss values.')
-        parser.add_argument('--warmup-epochs', default=1, type=int)
+        parser.add_argument('--step-size', default=1., type=float, help='lr for q')
+        parser.add_argument('--rho', default=0.1)
+        parser.add_argument('--update-dro-freq', default=1, type=int)
+        parser.add_argument('--start-ft-steps', default=0, type=int)
         parser.add_argument('--ema', default=0.1, type=float)
-        parser.add_argument('--dro-K', default=-1, type=float)
-        parser.add_argument('--valid-baseline', default=0, type=int)
         # fmt: on
 
     def initialize(self):
         logger.info("Group num = {}".format(self.n_groups))
-        if self.task.data_manager.outer_baseline is not None:
-            self.loss_baselines = torch.Tensor(self.task.data_manager.outer_baseline).to(self.device)
-        else:
-            self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
-        self.register_buffer('h_fun', torch.ones(self.n_groups))
+        self.h_fun = np.zeros(self.n_groups)
         self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('count_cat', torch.ones(self.n_groups))
-
-    def update_mw(self, epoch):
-        if epoch == 1 or self.p_train is None:
-            return None
-
-        # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
-        past_losses = self.sum_losses
-        baselined_losses = past_losses - self.loss_baselines
-
-        past_frac = self.p_train
-        #
-        sorted_losses, sort_id = torch.sort(baselined_losses, descending=True)
-
-        q_dist = torch.max(past_frac, self.avg_frac)
-        q_dist = torch.min(past_frac / self.alpha, q_dist)
-
-        sorted_frac = q_dist[sort_id]
-        sorted_train_frac = past_frac[sort_id]
-        cutoff_count = torch.sum(torch.cumsum(sorted_frac, 0) < 1.)
-        if cutoff_count == len(sorted_frac):
-            cutoff_count = len(sorted_frac) - 1
-        self.h_fun.fill_(0.1)
-        self.h_fun[sort_id[:cutoff_count]] = sorted_frac[:cutoff_count] / sorted_train_frac[:cutoff_count]
-
-        leftover_mass = 1.0 - sorted_frac[:cutoff_count].sum()
-        tiebreak_fraction = leftover_mass / sorted_train_frac[cutoff_count]  # check!
-        self.h_fun[sort_id[cutoff_count]] = tiebreak_fraction
-
-        q = self.h_fun * self.p_train
-        self.temp_idx += 1
-        if self.logging:
-            logger.info("EMA past losses: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_losses[0:self.n_groups]])))
-            logger.info("EMA group fractions: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_frac[0:self.n_groups]])))
-            sum_weights = q[0:self.n_groups].sum().item()
-            logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item() / sum_weights) for xx in q[0:self.n_groups]])))
-        self.sum_losses.zero_()
-        self.count_cat.fill_(1.)
-
-        if epoch <= self.warmup_epochs:
-            return None
-        else:
-            return q
 
     def individual_losses(self, model, net_output, sample):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
@@ -181,18 +172,17 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         else:
             ind_loss = (token_losses.reshape_as(sample['target']) * mask).sum(1)
 
-        with torch.no_grad():
-            index = self.retrieve_group_labels(sample)
-            zero_vec = torch.zeros(self.n_groups, device='cuda')  # G
-            group_losses = zero_vec.scatter_add(0, index, ind_loss)
+        index = self.retrieve_group_labels(sample)
+        zero_vec = torch.zeros(self.n_groups, device='cuda')  # G
+        group_losses = zero_vec.scatter_add(0, index, ind_loss)
 
-            if self.group_level != "token":
-                group_counts = zero_vec.scatter_add(0, index, mask.sum(1))
-            else:
-                one_vec = torch.ones(ind_loss.size(0), device='cuda')  # B
-                group_counts = zero_vec.scatter_add(0, index, one_vec)
+        if self.group_level != "token":
+            group_counts = zero_vec.scatter_add(0, index, mask.sum(1))
+        else:
+            one_vec = torch.ones(ind_loss.size(0), device='cuda')  # B
+            group_counts = zero_vec.scatter_add(0, index, one_vec)
 
-        return nll_loss, ind_loss, group_losses, group_counts
+        return nll_loss, group_losses, group_counts
 
     def simple_loss(self, model, net_output, sample, reduce=True):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
@@ -203,9 +193,6 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         )
         return loss, nll_loss
 
-    def set_valid_baselines(self, baselines):
-        self.loss_baselines = baselines
-
     def forward(self, model, sample, reduce=True):
         """Compute the loss for the given sample.
 
@@ -214,12 +201,52 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         2) the sample size, which is used as the denominator for the gradient
         3) logging outputs to display while training
         """
-
         if self.p_train is None:
-            self.p_train = torch.Tensor(self.task.data_manager.data_ratios).to(self.device)
+            self.p_train = self.task.data_manager.data_ratios
+            self.p_train_tensor = torch.Tensor(self.p_train).to(self.device)
             logger.info("Fixed P train = {}".format(self.p_train))
 
-        nll_loss, ind_loss, group_losses, group_counts = self.compute_loss(model, sample)
+        # pure warmup
+        if self.update_steps < self.start_ft_steps:
+            nsentences = sample['target'].size(0)
+            net_output = model(**sample['net_input'])
+            if self.training:
+                self.update_steps += 1
+                net_output = model(**sample['net_input'])
+                loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=reduce)
+                sample_size = sample['ntokens']
+            else:
+                loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=False)
+                nll_loss = nll_loss.reshape_as(sample['target']).sum(1)
+                loss = loss.reshape_as(sample['target']).sum(1)
+
+                mask = (sample['target'] != self.padding_idx).float()
+                sample_size = sample['ntokens']
+                fg_labels = self.retrieve_group_labels(sample)
+                fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
+                fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
+                fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1))
+
+                loss = loss.sum()
+                nll_loss = nll_loss.sum()
+
+            logging_output = {
+                'loss': loss.data,
+                'nll_loss': nll_loss.data,
+                'ntokens': sample['ntokens'],
+                'nsentences': nsentences,
+                'sample_size': sample_size,
+                'n_groups': self.n_groups,
+                'gpu_count': 1,
+            }
+            if not self.training:
+                for ii in range(self.n_groups):
+                    logging_output["fg_gnll{}".format(ii)] = fg_group_nll[ii].data
+                    logging_output["fg_gcount{}".format(ii)] = fg_group_count[ii].data
+
+            return loss, sample_size, logging_output
+
+        nll_loss, group_losses, group_counts = self.compute_loss(model, sample)
         nsentences = sample['target'].size(0)
         sample_size = sample['ntokens']
 
@@ -229,8 +256,7 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
                 fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
                 fg_group_count = group_counts.detach().clone()
-                fg_loss_vec = group_losses
-            # loss = group_losses.sum()
+            loss = group_losses.sum()
         else:
             self.update_steps += 1
 
@@ -241,16 +267,9 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
             group_denom = group_counts + 1e-8
             reduce_group_losses = reduce_group_losses / group_denom
-            # group_losses = group_losses * self.distributed_world_size / group_denom / denom
-
-            valid_index = reduce_group_losses.ne(0)
-            valid_losses = self.sum_losses[valid_index]
-            valid_counts = self.count_cat[valid_index]
-            self.sum_losses[valid_index] = valid_losses.mul(1 - self.EMA_alpha).add(reduce_group_losses[valid_index], alpha=self.EMA_alpha)
-            self.count_cat[valid_index] = valid_counts.add(group_counts[valid_index])
+            loss = self.compute_robust_loss(reduce_group_losses, group_losses)
 
         nll_loss = nll_loss.sum()
-        loss = ind_loss.sum()
         logging_output = {
             'loss': loss.data,
             'nll_loss': nll_loss.data,
@@ -265,10 +284,24 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             for ii in range(self.n_groups):
                 logging_output["fg_gnll{}".format(ii)] = fg_group_nll[ii].data
                 logging_output["fg_gcount{}".format(ii)] = fg_group_count[ii].data
-                if hasattr(self, 'valid_baseline')and self.valid_baseline:
-                    logging_output["fg_gloss{}".format(ii)] = fg_loss_vec[ii].data
 
         return loss, sample_size, logging_output
+
+    def compute_robust_loss(self, reduce_group_losses, group_losses):
+        # h_fun is q
+        # reduce_group_losses[i] = mean of group i's losses in a batch
+        np_group_losses = reduce_group_losses.cpu().numpy()
+        # fixme: or as in your code, reduce_group_losses[i] is the sum of losses of group i instead of mean
+        #  and self.step_size / (batch_size * (self.h_fun + 1e-8))?
+        coefs = self.step_size / (self.h_fun + 1e-8)
+        q = self.h_fun + coefs * np_group_losses
+        self.h_fun = project_to_cs_ball(q, self.rho, self.p_train)
+        q = reduce_group_losses.new_tensor(self.h_fun, requires_grad=False)
+        loss = (q / self.p_train_tensor * group_losses).sum()
+
+        if self.update_steps % 100 == 0:
+            logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.h_fun])))
+        return loss
 
     @staticmethod
     def reduce_metrics(logging_outputs) -> None:

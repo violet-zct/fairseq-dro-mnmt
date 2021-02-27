@@ -9,6 +9,8 @@ import math
 from fairseq import metrics, utils
 from fairseq.criterions import FairseqCriterion, register_criterion
 import logging
+import numpy as np
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,9 +38,46 @@ def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=T
     return loss, nll_loss
 
 
-@register_criterion('upper_bound_resample_dro_label_smoothed_cross_entropy')
+def bisection(eta_min, eta_max, f, tol=1e-6, max_iter=1000):
+    """Expects f an increasing function and return eta in [eta_min, eta_max]
+    s.t. |f(eta)| <= tol (or the best solution after max_iter iterations"""
+    lower = f(eta_min)
+    upper = f(eta_max)
+
+    # until the root is between eta_min and eta_max, double the length of the
+    # interval starting at either endpoint.
+    while lower > 0 or upper < 0:
+        length = eta_max - eta_min
+        if lower > 0:
+            eta_max = eta_min
+            eta_min = eta_min - 2 * length
+        if upper < 0:
+            eta_min = eta_max
+            eta_max = eta_max + 2 * length
+
+        lower = f(eta_min)
+        upper = f(eta_max)
+
+    for _ in range(max_iter):
+        eta = 0.5 * (eta_min + eta_max)
+
+        v = f(eta)
+
+        if torch.abs(v) <= tol:
+            return eta
+
+        if v > 0:
+            eta_max = eta
+        elif v < 0:
+            eta_min = eta
+
+    # if the minimum is not reached in max_iter, returns the current value
+    logging.warning('Maximum number of iterations exceeded in bisection')
+    return 0.5 * (eta_min + eta_max)
+
+@register_criterion('chi_square_resample')
 class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
-    def __init__(self, task, label_smoothing, group_level, dro_alpha, baselines,
+    def __init__(self, task, label_smoothing, group_level, rho, baselines,
                  warmup_epochs, ema, dro_K):
         super().__init__(task)
 
@@ -46,9 +85,10 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.distributed_world_size = self.task.args.distributed_world_size
         self.eps = label_smoothing
         self.group_level = group_level
-        self.alpha = dro_alpha
+        self.rho = rho
         self.baselines = baselines
         self.resample = True
+        self.tol = 1e-4
 
         self.device = torch.cuda.current_device()
         self.temp_idx = 0
@@ -69,9 +109,6 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             self.logging = False
         else:
             raise ValueError
-
-        avg_frac = 1. / self.n_groups if dro_K <= 0 else 1. / dro_K
-        self.register_buffer('avg_frac', torch.full((1,), avg_frac))
         self.initialize()
 
         self.p_train = None
@@ -83,7 +120,7 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--label-smoothing', default=0., type=float, metavar='D',
                             help='epsilon for label smoothing, 0 means no label smoothing')
         parser.add_argument('--group-level', type=str, choices=['source_lang', 'target_lang', 'token'])
-        parser.add_argument('--dro-alpha', default=1., type=float, help='alpha value for the DRO loss.')
+        parser.add_argument('--rho', default=0.1)
         parser.add_argument('--baselines', default=None, type=str, help='baseline loss values.')
         parser.add_argument('--warmup-epochs', default=1, type=int)
         parser.add_argument('--ema', default=0.1, type=float)
@@ -104,35 +141,32 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def update_mw(self, epoch):
         if epoch == 1 or self.p_train is None:
             return None
-
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
         past_losses = self.sum_losses
         baselined_losses = past_losses - self.loss_baselines
+        rho = self.rho
 
-        past_frac = self.p_train
-        #
-        sorted_losses, sort_id = torch.sort(baselined_losses, descending=True)
+        def p(eta):
+            pp = torch.relu(past_losses - eta)
+            return pp / pp.sum()
 
-        q_dist = torch.max(past_frac, self.avg_frac)
-        q_dist = torch.min(past_frac / self.alpha, q_dist)
+        def bisection_target(eta):
+            pp = p(eta)
+            w = pp / self.p_train - torch.ones_like(pp)
+            return 0.5 * torch.mean(w ** 2) - rho
 
-        sorted_frac = q_dist[sort_id]
-        sorted_train_frac = past_frac[sort_id]
-        cutoff_count = torch.sum(torch.cumsum(sorted_frac, 0) < 1.)
-        if cutoff_count == len(sorted_frac):
-            cutoff_count = len(sorted_frac) - 1
-        self.h_fun.fill_(0.1)
-        self.h_fun[sort_id[:cutoff_count]] = sorted_frac[:cutoff_count] / sorted_train_frac[:cutoff_count]
+        eta_min = -(1.0 / (np.sqrt(2 * rho + 1) - 1)) * baselined_losses.max()
+        eta_max = baselined_losses.max()
+        eta_star = bisection(
+            eta_min, eta_max, bisection_target,
+            tol=self.tol, max_iter=1000)
 
-        leftover_mass = 1.0 - sorted_frac[:cutoff_count].sum()
-        tiebreak_fraction = leftover_mass / sorted_train_frac[cutoff_count]  # check!
-        self.h_fun[sort_id[cutoff_count]] = tiebreak_fraction
+        q = p(eta_star)
 
-        q = self.h_fun * self.p_train
         self.temp_idx += 1
         if self.logging:
             logger.info("EMA past losses: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_losses[0:self.n_groups]])))
-            logger.info("EMA group fractions: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_frac[0:self.n_groups]])))
+            logger.info("EMA group fractions: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.p_train[0:self.n_groups]])))
             sum_weights = q[0:self.n_groups].sum().item()
             logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item() / sum_weights) for xx in q[0:self.n_groups]])))
         self.sum_losses.zero_()
