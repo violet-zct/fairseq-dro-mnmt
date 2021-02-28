@@ -72,7 +72,7 @@ def bisection(eta_min, eta_max, f, tol=1e-6, max_iter=1000):
             eta_min = eta
 
     # if the minimum is not reached in max_iter, returns the current value
-    logging.warning('Maximum number of iterations exceeded in bisection')
+    logger.info('Maximum number of iterations exceeded in bisection')
     return 0.5 * (eta_min + eta_max)
 
 @register_criterion('chi_square_resample')

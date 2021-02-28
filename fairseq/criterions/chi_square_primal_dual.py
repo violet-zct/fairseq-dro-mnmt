@@ -81,7 +81,7 @@ def project_to_cs_ball(v, rho, p_train):
 @register_criterion('chi_square_primal_dual')
 class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, group_level, step_size, rho,
-                 update_dro_freq, start_ft_steps, ema):
+                 update_dro_freq, start_ft_steps, clip):
         super().__init__(task)
 
         self.args = self.task.args
@@ -99,7 +99,7 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         self.update_steps = 0
         self.start_ft_steps = start_ft_steps
-        self.EMA_alpha = ema
+        self.clip = clip
 
         self.logging = True
         if group_level == "source_lang":
@@ -125,7 +125,7 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--rho', default=0.1)
         parser.add_argument('--update-dro-freq', default=1, type=int)
         parser.add_argument('--start-ft-steps', default=0, type=int)
-        parser.add_argument('--ema', default=0.1, type=float)
+        parser.add_argument('--clip', default=None, type=float)
         # fmt: on
 
     def initialize(self):
@@ -294,7 +294,10 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         # fixme: or as in your code, reduce_group_losses[i] is the sum of losses of group i instead of mean
         #  and self.step_size / (batch_size * (self.h_fun + 1e-8))?
         coefs = self.step_size / (self.h_fun + 1e-8)
-        q = self.h_fun + coefs * np_group_losses
+        q_update = coefs * np_group_losses
+        if self.clip is not None:
+            q_update = np.minimum(q_update, self.clip)
+        q = self.h_fun + q_update
         self.h_fun = project_to_cs_ball(q, self.rho, self.p_train)
         q = reduce_group_losses.new_tensor(self.h_fun, requires_grad=False)
         loss = (q / self.p_train_tensor * group_losses).sum()
