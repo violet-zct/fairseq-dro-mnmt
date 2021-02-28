@@ -143,7 +143,7 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             return None
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
         past_losses = self.sum_losses
-        baselined_losses = past_losses - self.loss_baselines
+        # baselined_losses = past_losses - self.loss_baselines
         rho = self.rho
 
         def p(eta):
@@ -155,8 +155,8 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             w = pp / self.p_train - torch.ones_like(pp)
             return 0.5 * torch.mean(w ** 2) - rho
 
-        eta_min = -(1.0 / (np.sqrt(2 * rho + 1) - 1)) * baselined_losses.max()
-        eta_max = baselined_losses.max()
+        eta_min = -(1.0 / (np.sqrt(2 * rho + 1) - 1)) * past_losses.max()
+        eta_max = past_losses.max()
         eta_star = bisection(
             eta_min, eta_max, bisection_target,
             tol=self.tol, max_iter=1000)
