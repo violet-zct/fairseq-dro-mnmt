@@ -36,7 +36,7 @@ def bisection(eta_min, eta_max, f, tol=1e-6, max_iter=1000):
 
         lower = f(eta_min)
         upper = f(eta_max)
-        # print("lower = {}, upper = {}".format(lower, upper))
+        print("lower = {}, upper = {}".format(lower, upper))
 
     for _ in range(max_iter):
         eta = 0.5 * (eta_min + eta_max)
@@ -61,12 +61,12 @@ def compute_best_response(baselined_losses, rho, p_train, tol=1e-4):
     # losses and p_train are tensors
     def p(eta):
         pp = torch.relu(baselined_losses - eta)
-        return pp / pp.sum()
+        return pp * p_train / (pp * p_train).sum()
 
     def bisection_target(eta):
         pp = p(eta)
-        w = pp / p_train - torch.ones_like(pp)
-        return 0.5 * torch.mean(w ** 2) - rho
+        w = pp - p_train
+        return 0.5 * torch.sum(w ** 2) - rho
 
     eta_min = -(1.0 / (np.sqrt(2 * rho + 1) - 1)) * baselined_losses.max()
     eta_max = baselined_losses.max()
@@ -77,9 +77,11 @@ def compute_best_response(baselined_losses, rho, p_train, tol=1e-4):
     q = p(eta_star)
     print("eta_star: ", eta_star)
     print(baselined_losses)
+    print(p_train)
     print(q)
     input()
     return q
+
 
 def project_to_cs_ball(v, rho, p_train):
     """Numpy/Scipy projection to chi-square ball of radius rho"""
@@ -137,7 +139,7 @@ def compute_primal_dual_q(q_last, reduce_group_losses, rho=1.0, step_size=0.01, 
 if __name__ == '__main__':
     # debug best response
     p_train = np.array([0.016749707678881984, 0.24883687424058096, 0.12823659011863794, 0.24883687424058096, 0.09388764567221664, 0.00672033746261537, 0.008906120565944633, 0.05648945416885125, 0.1876013543693391, 0.00373504148235112])
-    rho = 1
+    rho = 0.1
     # losses[i] is the average losses of group i in a batch
     losses = np.array([7.150322, 5.925216, 6.436857, 5.886299, 6.113926, 7.217082, 6.935157, 6.830746, 5.37761,  7.416435])
     best_q = compute_best_response(torch.from_numpy(losses), rho, torch.from_numpy(p_train))
