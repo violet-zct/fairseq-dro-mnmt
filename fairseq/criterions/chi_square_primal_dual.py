@@ -130,7 +130,7 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
     def initialize(self):
         logger.info("Group num = {}".format(self.n_groups))
-        self.h_fun = np.zeros(self.n_groups)
+        # self.h_fun = np.zeros(self.n_groups)
         self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('count_cat', torch.ones(self.n_groups))
 
@@ -204,6 +204,7 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         if self.p_train is None:
             self.p_train = self.task.data_manager.data_ratios
             self.p_train_tensor = torch.Tensor(self.p_train).to(self.device)
+            self.h_fun = self.p_train
             logger.info("Fixed P train = {}".format(self.p_train))
 
         # pure warmup
