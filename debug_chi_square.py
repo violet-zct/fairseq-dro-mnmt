@@ -139,7 +139,7 @@ def compute_primal_dual_q(q_last, reduce_group_losses, rho=1.0, step_size=0.01, 
     q = q_last + q_update
     q = project_to_cs_ball(q, rho, p_train)
     print(q)
-
+    return q
 
 if __name__ == '__main__':
     # debug best response
