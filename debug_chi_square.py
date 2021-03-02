@@ -159,6 +159,7 @@ if __name__ == '__main__':
     #  e.g. step_size < 1e-5, can lead to the assertion of line 126 break.
     step_size = 1e-5
     new_q = compute_primal_dual_q(q, losses, rho, step_size)
+    loss = (new_q / p_train * losses).sum()
 
 
 
