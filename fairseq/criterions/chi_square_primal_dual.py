@@ -121,8 +121,8 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--label-smoothing', default=0., type=float, metavar='D',
                             help='epsilon for label smoothing, 0 means no label smoothing')
         parser.add_argument('--group-level', type=str, choices=['source_lang', 'target_lang', 'token'])
-        parser.add_argument('--step-size', default=1., type=float, help='lr for q')
-        parser.add_argument('--rho', default=0.1)
+        parser.add_argument('--step-size', default=1e-4, type=float, help='lr for q')
+        parser.add_argument('--rho', default=0.1, type=float)
         parser.add_argument('--update-dro-freq', default=1, type=int)
         parser.add_argument('--start-ft-steps', default=0, type=int)
         parser.add_argument('--clip', default=None, type=float)

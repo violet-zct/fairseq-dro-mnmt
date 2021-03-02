@@ -120,7 +120,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--label-smoothing', default=0., type=float, metavar='D',
                             help='epsilon for label smoothing, 0 means no label smoothing')
         parser.add_argument('--group-level', type=str, choices=['source_lang', 'target_lang', 'token'])
-        parser.add_argument('--rho', default=0.1)
+        parser.add_argument('--rho', default=0.1, type=float)
         parser.add_argument('--baselines', default=None, type=str, help='baseline loss values.')
         parser.add_argument('--warmup-epochs', default=1, type=int)
         parser.add_argument('--ema', default=0.1, type=float)
