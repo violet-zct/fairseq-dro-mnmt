@@ -62,6 +62,9 @@ def compute_best_response(baselined_losses, rho, p_train, tol=1e-4):
     def p(eta):
         pp = torch.relu(baselined_losses - eta)
         q = pp * p_train / (pp * p_train).sum()
+        # fixme: originally, we should return q; can I add the following
+        #  constraint to prevent that some groups are assigned 0 mass in q;
+        #  if so, what is the best form instead of this hard clipping?
         cq = torch.clamp(q/p_train, min=0.1)
         return cq * p_train / (cq * p_train).sum()
 
@@ -151,7 +154,8 @@ if __name__ == '__main__':
 
     # debug primal dual
     q = p_train
-    # fixme: for the current implementation, it's super sensitive to step_size
+    # fixme: for the current implementation, it's super sensitive to step_size,
+    #  e.g. step_size < 1e-5, can lead to the assertion of line 126 break.
     step_size = 1e-5
     new_q = compute_primal_dual_q(q, losses, rho, step_size)
 
