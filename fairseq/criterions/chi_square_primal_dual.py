@@ -289,18 +289,18 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def compute_robust_loss(self, reduce_group_losses, group_losses):
         # h_fun is q
         # reduce_group_losses[i] = mean of group i's losses in a batch
-        np_group_losses = reduce_group_losses.cpu().numpy()
-        coefs = self.step_size * self.h_fun / self.p_train
-        q_update = coefs * np_group_losses
-        if self.clip is not None:
-            q_update = np.minimum(q_update, self.clip)
-        q = self.h_fun + q_update
-        self.h_fun = project_to_cs_ball(q, self.rho, self.p_train)
+        if self.update_steps % 100 == 0:
+            np_group_losses = reduce_group_losses.cpu().numpy()
+            coefs = self.step_size * self.h_fun / self.p_train
+            q_update = coefs * np_group_losses
+            if self.clip is not None:
+                q_update = np.minimum(q_update, self.clip)
+            q = self.h_fun + q_update
+            self.h_fun = project_to_cs_ball(q, self.rho, self.p_train)
+            logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.h_fun])))
+
         q = reduce_group_losses.new_tensor(self.h_fun, requires_grad=False)
         loss = (q * group_losses).sum()
-
-        if self.update_steps % 100 == 0:
-            logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.h_fun])))
         return loss
 
     @staticmethod
