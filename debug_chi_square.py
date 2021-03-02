@@ -132,7 +132,7 @@ def compute_primal_dual_q(q_last, reduce_group_losses, rho=1.0, step_size=0.01, 
     np_group_losses = reduce_group_losses
     # fixme: or as in your code, reduce_group_losses[i] is the sum of losses of group i instead of mean
     #  and self.step_size / (batch_size * (self.h_fun + 1e-8))?
-    coefs = step_size / ((q_last + 1e-8) / p_train * len(reduce_group_losses))
+    coefs = step_size * q_last / (p_train * len(reduce_group_losses))
     q_update = coefs * np_group_losses
     if clip is not None:
         q_update = np.minimum(q_update, clip)
@@ -140,6 +140,7 @@ def compute_primal_dual_q(q_last, reduce_group_losses, rho=1.0, step_size=0.01, 
     q = project_to_cs_ball(q, rho, p_train)
     print(q)
     return q
+
 
 if __name__ == '__main__':
     # debug best response
