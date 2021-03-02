@@ -79,7 +79,7 @@ def project_to_cs_ball(v, rho, p_train):
 
 
 @register_criterion('chi_square_primal_dual')
-class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
+class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, group_level, step_size, rho,
                  update_dro_freq, start_ft_steps, clip):
         super().__init__(task)

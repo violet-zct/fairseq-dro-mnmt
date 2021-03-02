@@ -20,7 +20,6 @@ source activate mnmt2
 
 savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
-DATA=${datadir}/opus10/data-bin
 log=1
 
 SAVE_ROOT=${savedir}/saved_models

@@ -50,10 +50,10 @@ model=transformer_wmt_en_de
 exp_name=32_chi_square_resample_opus10_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
-#rm -rf ${SAVE}
-#mkdir -p ${SAVE}
-#
-#cp $0 ${SAVE}/run.sh
+rm -rf ${SAVE}
+mkdir -p ${SAVE}
+
+cp $0 ${SAVE}/run.sh
 rm ${SAVE}/END
 send_dir=/home/chuntinz/tir5/logs/${exp_name}
 if [ ${log} = 1 ]; then

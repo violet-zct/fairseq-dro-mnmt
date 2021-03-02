@@ -76,7 +76,7 @@ def bisection(eta_min, eta_max, f, tol=1e-6, max_iter=1000):
     return 0.5 * (eta_min + eta_max)
 
 @register_criterion('chi_square_resample')
-class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
+class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, group_level, rho, baselines,
                  warmup_epochs, ema, dro_K):
         super().__init__(task)
