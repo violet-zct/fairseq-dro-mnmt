@@ -113,6 +113,8 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             raise ValueError
 
         self.p_train = None
+        # fixme: initialize with uniform?
+        self.h_fun = np.ones(self.n_groups) / self.n_groups
 
     @staticmethod
     def add_args(parser):
@@ -127,13 +129,6 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--start-ft-steps', default=0, type=int)
         parser.add_argument('--clip', default=None, type=float)
         # fmt: on
-
-    def initialize(self):
-        logger.info("Group num = {}".format(self.n_groups))
-        # fixme: initialize with uniform?
-        self.h_fun = np.ones(self.n_groups) / self.n_groups
-        self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
-        self.register_buffer('count_cat', torch.ones(self.n_groups))
 
     def individual_losses(self, model, net_output, sample):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
