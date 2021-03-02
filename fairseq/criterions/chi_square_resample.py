@@ -150,7 +150,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         def p(eta):
             pp = torch.relu(past_losses - eta)
             q = pp * p_train / (pp * p_train).sum()
-            cq = torch.clamp(q / p_train, min=0.1)
+            cq = torch.clamp(q / p_train, min=0.2)
             return cq * p_train / (cq * p_train).sum()
 
         def bisection_target(eta):
