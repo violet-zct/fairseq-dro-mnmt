@@ -293,8 +293,8 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         # reduce_group_losses[i] = mean of group i's losses in a batch
         np_group_losses = reduce_group_losses.cpu().numpy()
         # fixme: or as in your code, reduce_group_losses[i] is the sum of losses of group i instead of mean
-        #  and self.step_size / (batch_size * (self.h_fun + 1e-8))?
-        coefs = self.step_size / (self.h_fun + 1e-8)
+        #  and coefs = self.step_size / (batch_size * (self.h_fun + 1e-8))?
+        coefs = self.step_size / ((self.h_fun + 1e-8) * len(reduce_group_losses))
         q_update = coefs * np_group_losses
         if self.clip is not None:
             q_update = np.minimum(q_update, self.clip)

@@ -61,7 +61,9 @@ def compute_best_response(baselined_losses, rho, p_train, tol=1e-4):
     # losses and p_train are tensors
     def p(eta):
         pp = torch.relu(baselined_losses - eta)
-        return pp * p_train / (pp * p_train).sum()
+        q = pp * p_train / (pp * p_train).sum()
+        cq = torch.clamp(q/p_train, min=0.1)
+        return cq * p_train / (cq * p_train).sum()
 
     def bisection_target(eta):
         pp = p(eta)
@@ -127,7 +129,7 @@ def compute_primal_dual_q(q_last, reduce_group_losses, rho=1.0, step_size=0.01, 
     np_group_losses = reduce_group_losses
     # fixme: or as in your code, reduce_group_losses[i] is the sum of losses of group i instead of mean
     #  and self.step_size / (batch_size * (self.h_fun + 1e-8))?
-    coefs = step_size / (q_last + 1e-8)
+    coefs = step_size / ((q_last + 1e-8) * len(reduce_group_losses))
     q_update = coefs * np_group_losses
     if clip is not None:
         q_update = np.minimum(q_update, clip)
@@ -142,6 +144,9 @@ if __name__ == '__main__':
     rho = 0.1
     # losses[i] is the average losses of group i in a batch
     losses = np.array([7.150322, 5.925216, 6.436857, 5.886299, 6.113926, 7.217082, 6.935157, 6.830746, 5.37761,  7.416435])
+
+    print(np.argsort(p_train))
+    print(np.argsort(losses))
     best_q = compute_best_response(torch.from_numpy(losses), rho, torch.from_numpy(p_train))
 
     # debug primal dual
