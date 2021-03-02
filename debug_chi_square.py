@@ -130,8 +130,6 @@ def project_to_cs_ball(v, rho, p_train):
 def compute_primal_dual_q(q_last, reduce_group_losses, rho=1.0, step_size=0.01, clip=None):
     # all of the args are numpy arrays
     np_group_losses = reduce_group_losses
-    # fixme: or as in your code, reduce_group_losses[i] is the sum of losses of group i instead of mean
-    #  and self.step_size / (batch_size * (self.h_fun + 1e-8))?
     coefs = step_size * q_last / p_train
     q_update = coefs * np_group_losses
     if clip is not None:
@@ -154,12 +152,13 @@ if __name__ == '__main__':
     best_q = compute_best_response(torch.from_numpy(losses), rho, torch.from_numpy(p_train))
 
     # debug primal dual
-    rho = 1.0
+    # rho roughly checking 0.1, 1, 10
+    rho = 0.1
     q = p_train
     # fixme: for the current implementation, it's super sensitive to step_size,
     #  e.g. step_size < 1e-5, can lead to the assertion of line 126 break.
-    step_size = 1e-5
-    new_q = compute_primal_dual_q(q, losses, rho, step_size)
+    step_size = 1e-4
+    new_q = compute_primal_dual_q(q, losses, rho, step_size, -1)
     loss = (new_q * losses).sum()
 
 

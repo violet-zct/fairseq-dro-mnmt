@@ -90,7 +90,7 @@ python train.py ${DATA}\
     --arch ${model} --valid-subset cap.valid \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_primal_dual' --label-smoothing 0.1 \
-    --step-size 1e-5 --group-level ${glevel} --rho 1.0 --clip -1. \
+    --step-size 1e-4 --group-level ${glevel} --rho 0.1 --clip -1. \
     --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \

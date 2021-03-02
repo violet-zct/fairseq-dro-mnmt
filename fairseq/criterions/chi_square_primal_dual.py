@@ -130,7 +130,8 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
     def initialize(self):
         logger.info("Group num = {}".format(self.n_groups))
-        # self.h_fun = np.zeros(self.n_groups)
+        # fixme: initialize with uniform?
+        self.h_fun = np.ones(self.n_groups) / self.n_groups
         self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('count_cat', torch.ones(self.n_groups))
 
@@ -204,7 +205,7 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         if self.p_train is None:
             self.p_train = self.task.data_manager.data_ratios
             self.p_train_tensor = torch.Tensor(self.p_train).to(self.device)
-            self.h_fun = self.p_train
+            # self.h_fun = self.p_train
             logger.info("Fixed P train = {}".format(self.p_train))
 
         # pure warmup
@@ -249,17 +250,19 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         nll_loss, group_losses, group_counts = self.compute_loss(model, sample)
         nsentences = sample['target'].size(0)
-        sample_size = sample['ntokens']
 
         if not self.training:
+            sample_size = sample['ntokens']
             if self.logging:
                 fg_labels = self.retrieve_group_labels(sample)
                 fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
                 fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
                 fg_group_count = group_counts.detach().clone()
+            # fixme: valid loss = robust loss?
             loss = group_losses.sum()
         else:
             self.update_steps += 1
+            sample_size = 1
 
             reduce_group_losses = group_losses.detach().clone()
             if torch.cuda.device_count() > 1:
@@ -292,16 +295,14 @@ class UpperBoundPlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         # h_fun is q
         # reduce_group_losses[i] = mean of group i's losses in a batch
         np_group_losses = reduce_group_losses.cpu().numpy()
-        # fixme: or as in your code, reduce_group_losses[i] is the sum of losses of group i instead of mean
-        #  and coefs = self.step_size / (batch_size * (self.h_fun + 1e-8))?
-        coefs = self.step_size / ((self.h_fun + 1e-8) * len(reduce_group_losses))
+        coefs = self.step_size * self.h_fun / self.p_train
         q_update = coefs * np_group_losses
         if self.clip is not None:
             q_update = np.minimum(q_update, self.clip)
         q = self.h_fun + q_update
         self.h_fun = project_to_cs_ball(q, self.rho, self.p_train)
         q = reduce_group_losses.new_tensor(self.h_fun, requires_grad=False)
-        loss = (q / self.p_train_tensor * group_losses).sum()
+        loss = (q * group_losses).sum()
 
         if self.update_steps % 100 == 0:
             logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.h_fun])))

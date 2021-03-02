@@ -145,14 +145,17 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         past_losses = self.sum_losses
         # baselined_losses = past_losses - self.loss_baselines
         rho = self.rho
+        p_train = self.p_train
 
         def p(eta):
             pp = torch.relu(past_losses - eta)
-            return pp * self.p_train / (pp * self.p_train).sum()
+            q = pp * p_train / (pp * p_train).sum()
+            cq = torch.clamp(q / p_train, min=0.1)
+            return cq * p_train / (cq * p_train).sum()
 
         def bisection_target(eta):
             pp = p(eta)
-            w = pp - self.p_train
+            w = pp - p_train
             return 0.5 * torch.sum(w ** 2) - rho
 
         eta_min = -(1.0 / (np.sqrt(2 * rho + 1) - 1)) * past_losses.max()
