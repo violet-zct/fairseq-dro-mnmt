@@ -153,6 +153,7 @@ if __name__ == '__main__':
     best_q = compute_best_response(torch.from_numpy(losses), rho, torch.from_numpy(p_train))
 
     # debug primal dual
+    rho = 1.0
     q = p_train
     # fixme: for the current implementation, it's super sensitive to step_size,
     #  e.g. step_size < 1e-5, can lead to the assertion of line 126 break.
