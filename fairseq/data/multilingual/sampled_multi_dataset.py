@@ -169,6 +169,12 @@ class SampledMultiDataset(FairseqDataset):
             # Ad-hoc FIX!
             if self.remapped_lang_ids is not None:
                 ret = ret[self.remapped_lang_ids]
+        else:
+            ret = ratios.cpu()
+            ret = ret.numpy()
+            # Ad-hoc FIX!
+            if self.remapped_lang_ids is not None:
+                ret = ret[self.remapped_lang_ids]
         return ret
 
     def random_choice_in_dataset(self, rng, dataset, choice_size):
