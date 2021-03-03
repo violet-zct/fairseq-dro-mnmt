@@ -44,7 +44,7 @@ def project_to_cs_ball(v, rho, p_train):
     n = len(v)
 
     def cs_div(p):
-        return 0.5 * np.mean((p / p_train - 1)**2)
+        return 0.5 * np.sum((p - p_train)**2)
 
     # first, check if a simplex projection is within the chi-square ball
     target_simplex = lambda eta: np.sum(np.maximum(v - eta, 0)) - 1.0

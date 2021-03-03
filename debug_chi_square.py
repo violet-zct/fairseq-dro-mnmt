@@ -93,7 +93,7 @@ def project_to_cs_ball(v, rho, p_train):
     n = len(v)
 
     def cs_div(p):
-        return 0.5 * np.mean((p / p_train - 1)**2)
+        return 0.5 * np.sum((p - p_train)**2)
 
     # first, check if a simplex projection is within the chi-square ball
     target_simplex = lambda eta: np.sum(np.maximum(v - eta, 0)) - 1.0
@@ -157,7 +157,7 @@ if __name__ == '__main__':
     q = p_train
     # fixme: for the current implementation, it's super sensitive to step_size,
     #  e.g. step_size < 1e-5, can lead to the assertion of line 126 break.
-    step_size = 1e-4
+    step_size = 1e-2
     new_q = compute_primal_dual_q(q, losses, rho, step_size, -1)
     loss = (new_q * losses).sum()
 
