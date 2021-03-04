@@ -193,7 +193,6 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             net_output = model(**sample['net_input'])
             if self.training:
                 self.update_steps += 1
-                net_output = model(**sample['net_input'])
                 loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=reduce)
                 sample_size = sample['ntokens']
             else:
