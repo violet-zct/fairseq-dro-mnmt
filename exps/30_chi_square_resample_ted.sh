@@ -69,7 +69,7 @@ else
 fi
 
 model=transformer_iwslt_de_en
-exp_name=30_chi_square_resample_ted8_${ename}
+exp_name=33_rho_0.05_min_0.5_chi_square_resample_ted8_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
@@ -88,7 +88,7 @@ python train.py ${DATA}\
     --arch ${model} --valid-subset cap.valid \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_resample' --label-smoothing 0.1 \
-    --rho 0.1 --group-level ${glevel} --ema 0.1 \
+    --rho 0.05 --group-level ${glevel} --ema 0.1 \
     --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
