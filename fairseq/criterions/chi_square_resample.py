@@ -78,7 +78,7 @@ def bisection(eta_min, eta_max, f, tol=1e-6, max_iter=1000):
 @register_criterion('chi_square_resample')
 class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, group_level, rho, baselines,
-                 warmup_epochs, ema, dro_K):
+                 warmup_epochs, ema, min_prob):
         super().__init__(task)
 
         self.args = self.task.args
@@ -89,6 +89,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.baselines = baselines
         self.resample = True
         self.tol = 1e-4
+        self.min_prob = min_prob
 
         self.device = torch.cuda.current_device()
         self.temp_idx = 0
@@ -126,6 +127,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--ema', default=0.1, type=float)
         parser.add_argument('--dro-K', default=-1, type=float)
         parser.add_argument('--valid-baseline', default=0, type=int)
+        parser.add_argument('--min-prob', default=0.2, type=float)
         # fmt: on
 
     def initialize(self):
@@ -147,10 +149,15 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         rho = self.rho
         p_train = self.p_train
 
+        if hasattr(self, 'min_prob'):
+            min_prob = self.min_prob
+        else:
+            min_prob = 0.2
+
         def p(eta):
             pp = p_train * torch.relu(past_losses - eta)
             q = pp / pp.sum()
-            cq = torch.clamp(q / p_train, min=0.2)
+            cq = torch.clamp(q / p_train, min=min_prob)
             return cq * p_train / (cq * p_train).sum()
 
         def bisection_target(eta):
