@@ -3,7 +3,7 @@
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
-#SBATCH --comment="TACL 3.10"
+#SBATCH --comment="TACL 3.20"
 #SBATCH --job-name=29_chi_square_primal_dual_ted
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -89,7 +89,7 @@ python train.py ${DATA}\
     --arch ${model} --valid-subset cap.valid \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_primal_dual' --label-smoothing 0.1 \
-    --step-size 1e-4 --group-level ${glevel} --rho 0.1 --clip -1 \
+    --step-size 1e-3 --group-level ${glevel} --rho 0.1 \
     --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \

@@ -3,8 +3,8 @@
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
-#SBATCH --comment="TACL 3.10"
-#SBATCH --job-name=31.chi.square.resample.opus
+#SBATCH --comment="TACL 3.20"
+#SBATCH --job-name=32.chi.square.resample.opus
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -47,7 +47,7 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=34_rho_0.1_min_0.2_chi_square_resample_opus10_${ename}
+exp_name=32_rho_0.1_min_0.2_chi_square_resample_opus10_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}

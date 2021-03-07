@@ -3,7 +3,7 @@
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
-#SBATCH --comment="TACL 3.10"
+#SBATCH --comment="TACL 3.20"
 #SBATCH --job-name=30.chi.square.resample.ted
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
