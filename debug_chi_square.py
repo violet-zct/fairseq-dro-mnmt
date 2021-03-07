@@ -96,7 +96,7 @@ def project_to_cs_ball(v, rho, p_train):
         return 0.5 * (np.square(p / p_train - 1) * p_train).sum()
 
     # first, check if a simplex projection is within the chi-square ball
-    target_simplex = lambda eta: np.sum(p_train * np.maximum(v - eta, 0)) - 1.0
+    target_simplex = lambda eta: np.sum(np.maximum(v - eta, 0)) - 1.0
     eta_min_simplex = v.min() - 1 / n
     eta_max_simplex = v.max()
     eta_simplex = optimize.brentq(
