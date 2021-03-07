@@ -56,36 +56,46 @@ def bisection(eta_min, eta_max, f, tol=1e-6, max_iter=1000):
     print(eta_min, eta_max)
     return 0.5 * (eta_min + eta_max)
 
+def compute_best_response(v, size, p_train, reg=0, tol=1e-4, max_iter=1000):
+    m = v.shape[0]
+        
+    if m <= 1 + 2 * size:
+        out = (v == v.max()).float()
+        out /= out.sum()
+        return out
 
-def compute_best_response(baselined_losses, rho, p_train, tol=1e-4):
-    # losses and p_train are tensors
-    def p(eta):
-        pp = torch.relu(baselined_losses - eta)
-        q = pp * p_train / (pp * p_train).sum()
-        # fixme: originally, we should return q; can I add the following
-        #  constraint to prevent that some groups are assigned 0 mass in q;
-        #  if so, what is the best form instead of this hard clipping?
-        cq = torch.clamp(q/p_train, min=0.1)
-        return cq * p_train / (cq * p_train).sum()
+    if reg == 0:
+        def p(eta):
+            pp = p_train * torch.relu(v - eta)
+            return pp / pp.sum()
 
-    def bisection_target(eta):
-        pp = p(eta)
-        w = pp - p_train
-        return 0.5 * torch.sum(w ** 2) - rho
+        def bisection_target(eta):
+            pp = p(eta)
+            return 0.5 * (p_train * ((pp / p_train - 1) ** 2)).sum() - size
 
-    eta_min = -(1.0 / (np.sqrt(2 * rho + 1) - 1)) * baselined_losses.max()
-    eta_max = baselined_losses.max()
+        eta_min = -(1.0 / (np.sqrt(2 * size + 1) - 1)) * v.max()
+        eta_max = v.max()
+    else:
+        def p(eta):
+            pp = p_train * torch.relu(v - eta)
+            
+            opt_lam = torch.sqrt((p_train * (torch.relu(v - eta) ** 2)).sum())
+            opt_lam = max(
+                reg, opt_lam / np.sqrt(1 + 2 * size)
+            )
+
+            return pp / opt_lam
+
+        def bisection_target(eta):
+            return 1 - p(eta).sum()
+
+        eta_min = v.min() - 1
+        eta_max = v.max()
+
     eta_star = bisection(
         eta_min, eta_max, bisection_target,
-        tol=tol, max_iter=1000)
-
-    q = p(eta_star)
-    print("eta_star: ", eta_star)
-    print(baselined_losses)
-    print(p_train)
-    print(q)
-    input()
-    return q
+        tol=tol, max_iter=max_iter)
+    return p(eta_star)
 
 
 def project_to_cs_ball(v, rho, p_train):
