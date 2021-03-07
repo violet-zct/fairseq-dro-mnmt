@@ -155,8 +155,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         def bisection_target(eta):
             pp = p(eta)
-            w = pp - p_train
-            return 0.5 * torch.sum(w ** 2) - rho
+            return 0.5 * (np.square(pp / p_train - 1) * p_train).sum()
 
         eta_min = -(1.0 / (np.sqrt(2 * rho + 1) - 1)) * past_losses.max()
         eta_max = past_losses.max()
