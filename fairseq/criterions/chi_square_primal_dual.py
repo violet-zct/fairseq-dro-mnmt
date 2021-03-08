@@ -299,7 +299,8 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         if self.update_steps % 100 == 0:
             logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.h_fun])))
 
-        q = reduce_group_losses.new_tensor(self.h_fun, requires_grad=False)
+        # as Daniel suggested, we should use h_fun before update (297), but we use the new q for now
+        q = reduce_group_losses.new_tensor(self.h_fun / self.p_train, requires_grad=False)
         loss = (q * group_losses).sum()
         return loss
 
