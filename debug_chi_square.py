@@ -56,6 +56,7 @@ def bisection(eta_min, eta_max, f, tol=1e-6, max_iter=1000):
     print(eta_min, eta_max)
     return 0.5 * (eta_min + eta_max)
 
+
 def compute_best_response(v, size, p_train, reg=0, tol=1e-4, max_iter=1000):
     m = v.shape[0]
         
@@ -67,7 +68,9 @@ def compute_best_response(v, size, p_train, reg=0, tol=1e-4, max_iter=1000):
     if reg == 0:
         def p(eta):
             pp = p_train * torch.relu(v - eta)
-            return pp / pp.sum()
+            q = pp / pp.sum()
+            cq = torch.clamp(q / p_train, min=0.2)
+            return cq * p_train / (cq * p_train).sum()
 
         def bisection_target(eta):
             pp = p(eta)
@@ -146,12 +149,13 @@ def compute_primal_dual_q(q_last, reduce_group_losses, rho=1.0, step_size=0.01, 
         q_update = np.minimum(q_update, clip)
     q = q_last + q_update
     q = project_to_cs_ball(q, rho, p_train)
-    print(q)
+    # print(q)
     return q
 
 
 if __name__ == '__main__':
     # debug best response
+    # def compute_best_response(v, size, p_train, reg=0, tol=1e-4, max_iter=1000):
     p_train = np.array([0.016749707678881984, 0.24883687424058096, 0.12823659011863794, 0.24883687424058096, 0.09388764567221664, 0.00672033746261537, 0.008906120565944633, 0.05648945416885125, 0.1876013543693391, 0.00373504148235112])
     rho = 0.1
     # losses[i] is the average losses of group i in a batch
@@ -160,17 +164,19 @@ if __name__ == '__main__':
     print(np.argsort(p_train))
     print(np.argsort(losses))
     best_q = compute_best_response(torch.from_numpy(losses), rho, torch.from_numpy(p_train))
+    print("p: ", p_train)
+    print("q: ", best_q.numpy())
 
     # debug primal dual
     # rho roughly checking 0.1, 1, 10
     rho = 0.1
     q = p_train
-    # fixme: for the current implementation, it's super sensitive to step_size,
-    #  e.g. step_size < 1e-5, can lead to the assertion of line 126 break.
-    step_size = 1e-2
-    new_q = compute_primal_dual_q(q, losses, rho, step_size, -1)
-    loss = (new_q * losses).sum()
 
+    for _ in range(1000):
+        step_size = 1e-2
+        q = compute_primal_dual_q(q, losses, rho, step_size, -1)
+        #loss = (new_q * losses).sum()
+    print(q)
 
 
 
