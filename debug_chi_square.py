@@ -148,8 +148,8 @@ def compute_primal_dual_q(q_last, reduce_group_losses, rho=1.0, step_size=0.01, 
     if clip is not None:
         q_update = np.minimum(q_update, clip)
     q = q_last + q_update
-    q = project_to_cs_ball(q, rho, p_train)
     # print(q)
+    q = project_to_cs_ball(q, rho, p_train)
     return q
 
 
@@ -160,23 +160,27 @@ if __name__ == '__main__':
     rho = 0.1
     # losses[i] is the average losses of group i in a batch
     losses = np.array([7.150322, 5.925216, 6.436857, 5.886299, 6.113926, 7.217082, 6.935157, 6.830746, 5.37761,  7.416435])
-
-    print(np.argsort(p_train))
-    print(np.argsort(losses))
+    # losses = np.array([2.915552, 3.078025, 3.135855, 3.118232, 2.828697, 3.115064, 3.074514, 3.129607, 2.574514, 3.229607])
+    # print(np.argsort(p_train))
+    # print(np.argsort(losses))
     best_q = compute_best_response(torch.from_numpy(losses), rho, torch.from_numpy(p_train))
-    print("p: ", p_train)
-    print("q: ", best_q.numpy())
+    print("p train: ")
+    print(" ".join(["{:.6f}".format(ii) for ii in p_train]))
+    print("best response q: ")
+    print(" ".join(["{:.6f}".format(ii) for ii in best_q.numpy()]))
 
     # debug primal dual
     # rho roughly checking 0.1, 1, 10
     rho = 0.1
+    q = np.ones(len(p_train)) / len(p_train)
     q = p_train
-
-    for _ in range(1000):
-        step_size = 1e-2
-        q = compute_primal_dual_q(q, losses, rho, step_size, -1)
+    K = 1000
+    for _ in range(K):
+        step_size = 1e-4
+        q = compute_primal_dual_q(q, losses, rho, step_size)
         #loss = (new_q * losses).sum()
-    print(q)
+    print("primal dual after {} steps:".format(K))
+    print(" ".join(["{:.6f}".format(ii) for ii in q]))
 
 
 
