@@ -2,7 +2,7 @@ import os
 
 
 def opt(root, langs, dataset):
-    data_dir = os.path.join(root, "data")
+    data_dir = os.path.join(root)
     langs = langs.split(",")
 
     eng_toks = []

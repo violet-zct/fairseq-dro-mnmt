@@ -178,7 +178,7 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             one_vec = torch.ones(ind_loss.size(0), device='cuda')  # B
             group_counts = zero_vec.scatter_add(0, index, one_vec)
 
-        return nll_loss, group_losses, group_counts
+        return nll_loss, group_losses, group_counts, index, ind_loss
 
     def simple_loss(self, model, net_output, sample, reduce=True):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
@@ -242,7 +242,7 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
             return loss, sample_size, logging_output
 
-        nll_loss, group_losses, group_counts = self.compute_loss(model, sample)
+        nll_loss, group_losses, group_counts, group_index, ind_losses = self.compute_loss(model, sample)
         nsentences = sample['target'].size(0)
 
         if not self.training:
@@ -256,7 +256,7 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             loss = group_losses.sum()
         else:
             self.update_steps += 1
-            sample_size = 1
+            sample_size = sample['ntokens']
 
             reduce_group_losses = group_losses.detach().clone()
             token_group_losses = group_losses / (group_counts + 1e-8)
@@ -266,7 +266,8 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
             group_denom = group_counts + 1e-8
             reduce_group_losses = reduce_group_losses / group_denom
-            loss = self.compute_robust_loss(reduce_group_losses, token_group_losses)
+            w = self.compute_robust_loss(reduce_group_losses, token_group_losses)
+            loss = (w[group_index] * ind_losses).sum()
 
         nll_loss = nll_loss.sum()
         logging_output = {
@@ -301,8 +302,9 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         # as Daniel suggested, we should use h_fun before update (297), but we use the new q for now
         q = reduce_group_losses.new_tensor(self.h_fun / self.p_train, requires_grad=False)
-        loss = (q * group_losses).sum()
-        return loss
+        return q
+        #loss = (q * group_losses).sum()
+        #return loss
 
     @staticmethod
     def reduce_metrics(logging_outputs) -> None:
