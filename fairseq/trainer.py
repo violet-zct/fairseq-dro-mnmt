@@ -356,6 +356,8 @@ class Trainer(object):
                 data_selector=data_selector,
             )
         if hasattr(self.criterion, 'resample'):
+            if epoch > 1:
+                self.criterion.set_p_train(self.task.data_manager.data_ratios)
             sample_ratios = self.criterion.update_mw(epoch)
             return self.task.get_batch_iterator(
                 dataset=self.task.dataset(self.args.train_subset),

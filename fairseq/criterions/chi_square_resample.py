@@ -136,12 +136,15 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             self.loss_baselines = torch.Tensor(self.task.data_manager.outer_baseline).to(self.device)
         else:
             self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
-        self.register_buffer('h_fun', torch.ones(self.n_groups))
         self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('count_cat', torch.ones(self.n_groups))
 
+    def set_p_train(self, data_ratios):
+        logger.info(self.sum_losses)
+        self.p_train = torch.Tensor(data_ratios).to(self.device)
+
     def update_mw(self, epoch):
-        if epoch == 1 or self.p_train is None:
+        if epoch == 1:
             return None
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
         past_losses = self.sum_losses
