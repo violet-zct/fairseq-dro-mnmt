@@ -143,7 +143,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def set_p_train(self, data_ratios):
         if self.p_train is not None:
             return
-        self.sum_losses.copy_(self.sum_losses_meory)
+        self.sum_losses.copy_(self.sum_losses_memory)
         logger.info(self.sum_losses)
         self.p_train = torch.Tensor(data_ratios).to(self.device)
 
