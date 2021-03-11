@@ -78,7 +78,7 @@ def bisection(eta_min, eta_max, f, tol=1e-6, max_iter=1000):
 @register_criterion('chi_square_resample')
 class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, group_level, rho, baselines,
-                 warmup_epochs, ema, min_prob):
+                 warmup_epochs, ema, min_prob, clamp_q_to_min):
         super().__init__(task)
 
         self.args = self.task.args
@@ -112,6 +112,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             raise ValueError
         self.initialize()
 
+        self.clamp_q_to_min = clamp_q_to_min
         self.p_train = None
 
     @staticmethod
@@ -128,6 +129,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--dro-K', default=-1, type=float)
         parser.add_argument('--valid-baseline', default=0, type=int)
         parser.add_argument('--min-prob', default=0.2, type=float)
+        parser.add_argument('--clamp-q-to-min', default=0, type=int)
         # fmt: on
 
     def initialize(self):
@@ -177,6 +179,9 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             tol=self.tol, max_iter=1000)
 
         q = p(eta_star)
+        if hasattr(self, 'clamp_q_to_min') and self.clamp_q_to_min:
+            q = torch.clamp(q, min=torch.min(self.p_train).item())
+            q = q / q.sum()
 
         self.temp_idx += 1
         if self.logging:
