@@ -19,8 +19,8 @@ def opt(root, langs, dataset):
         temp_num_sents = 0
         with open(fengl, encoding="utf-8") as fen, open(flang, encoding="utf-8") as flan:
             for leng, llang in zip(fen, flan):
-                len_eng, len_lang = leng.strip().split(), len_lang.strip().split()
-                if len(len_eng) < 512 and len(len_lang) < 512:
+                len_eng, len_lang = len(leng.strip().split()), len(llang.strip().split())
+                if len_eng < 512 and len_lang < 512:
                     temp_num_eng_toks += len_eng
                     temp_num_lang_toks += len_lang
                     temp_num_sents += 1
