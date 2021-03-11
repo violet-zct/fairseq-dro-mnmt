@@ -150,7 +150,7 @@ class Trainer(object):
     def criterion(self):
         if self._wrapped_criterion is None:
             if (
-                utils.has_parameters(self._criterion)
+                utils.has_parameters_only(self._criterion)
                 and self.data_parallel_world_size > 1
                 and not self.args.use_bmuf
                 and not self.tpu
