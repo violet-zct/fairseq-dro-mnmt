@@ -7,7 +7,7 @@
 #SBATCH --job-name=test.o2m
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:8
+#SBATCH --gres=gpu:1
 #SBATCH --mem=200g
 #SBATCH -C volta32gb
 #SBATCH --cpus-per-task=10
