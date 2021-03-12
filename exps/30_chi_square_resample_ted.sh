@@ -88,8 +88,8 @@ python train.py ${DATA}\
     --arch ${model} --valid-subset cap.valid \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_resample' --label-smoothing 0.1 \
-    --rho 0.1 --min-prob 0.2 --group-level ${glevel} --ema 0.1 \
-    --max-update 300000 --layernorm-embedding \
+    --rho 0.05 --min-prob 0.2 --group-level ${glevel} --ema 0.1 \
+    --max-update 150000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
     --no-epoch-checkpoints \
