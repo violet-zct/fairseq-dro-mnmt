@@ -58,7 +58,7 @@ for lang in ${langs//,/ }; do
           --encoder-langtok ${etok} \
           --source-lang ${gsrc} --target-lang ${gtgt} \
           --quiet --beam 5 | tee ${SAVE}/test_${lang}_en_last.log
-    scp ${SAVE}/test_${lang}_en.log tir:${send_dir}/
+    scp ${SAVE}/test_${lang}_en_last.log tir:${send_dir}/
 
 done
 
