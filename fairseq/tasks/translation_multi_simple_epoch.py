@@ -428,6 +428,8 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
 
             if max(totals) > 0:
                 # log counts as numpy arrays -- log_scalar will sum them correctly
+                counts = [c.item() if torch.is_tensor(c) else c for c in counts]
+                totals = [c.item() if torch.is_tensor(c) else c for c in totals]
                 metrics.log_scalar('_bleu_counts', np.array(counts))
                 metrics.log_scalar('_bleu_totals', np.array(totals))
                 metrics.log_scalar('_bleu_sys_len', sum_logs('_bleu_sys_len'))
