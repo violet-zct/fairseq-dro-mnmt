@@ -28,7 +28,8 @@ from fairseq.data import iterators
 from fairseq.logging import meters, metrics, progress_bar
 from fairseq.model_parallel.megatron_trainer import MegatronTrainer
 from fairseq.trainer import Trainer
-
+import signal
+import socket
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -37,6 +38,22 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 logger = logging.getLogger("fairseq_cli.train")
+
+
+# define the handler function
+# note that this is not executed here, but rather
+# when the associated signal is sent
+def sig_handler(signum, frame):
+    print("caught signal", signum)
+    print(socket.gethostname(), "USR1 signal caught.")
+    # do other stuff to cleanup here
+    print('requeuing job ' + os.environ['SLURM_JOB_ID'])
+    os.system('scontrol requeue ' + os.environ['SLURM_JOB_ID'])
+    sys.exit(-1)
+
+
+def term_handler(signum, frame):
+    print("bypassing sigterm", flush=True)
 
 
 def main(args):
@@ -360,4 +377,8 @@ def cli_main(modify_parser=None):
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGUSR1, sig_handler)
+    signal.signal(signal.SIGTERM, term_handler)
+    print('signal installed', flush=True)
+
     cli_main()

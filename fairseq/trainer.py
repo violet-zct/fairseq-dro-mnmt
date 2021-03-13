@@ -150,7 +150,7 @@ class Trainer(object):
     def criterion(self):
         if self._wrapped_criterion is None:
             if (
-                utils.has_parameters(self._criterion)
+                utils.has_parameters_only(self._criterion)
                 and self.data_parallel_world_size > 1
                 and not self.args.use_bmuf
                 and not self.tpu
@@ -356,6 +356,8 @@ class Trainer(object):
                 data_selector=data_selector,
             )
         if hasattr(self.criterion, 'resample'):
+            if epoch > 1:
+                self.criterion.set_p_train(self.task.data_manager.data_ratios)
             sample_ratios = self.criterion.update_mw(epoch)
             return self.task.get_batch_iterator(
                 dataset=self.task.dataset(self.args.train_subset),

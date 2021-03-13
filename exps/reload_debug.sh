@@ -1,22 +1,41 @@
 #! /bin/bash
 #SBATCH --output=slurm_logs/slurm-%A-%a.out
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
-##SBATCH --partition=learnfair
-#SBATCH --partition=priority
-#SBATCH --comment="TACL 3.20"
-#SBATCH --job-name=32.chi.square.resample.opus
+#SBATCH --partition=learnfair
+##SBATCH --partition=priority
+##SBATCH --comment="TACL 3.20"
+#SBATCH --job-name=debug.35
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
-#SBATCH --mem=200g
+#SBATCH --mem=100g
 #SBATCH -C volta32gb
 #SBATCH --cpus-per-task=10
-##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
-##SBATCH --open-mode=append
+#SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
+#SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-1
+#SBATCH --array=0
 
 source activate mnmt2
+
+trap_handler () {
+   echo "Caught signal: " $1
+   # SIGTERM must be bypassed
+   if [ "$1" = "TERM" ]; then
+       echo "bypass sigterm"
+   else
+     # Submit a new job to the queue
+     echo "Requeuing " $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+     # SLURM_JOB_ID is a unique representation of the job, equivalent
+     # to above
+     scontrol requeue $SLURM_JOB_ID
+   fi
+}
+
+
+# Install signal handler
+trap 'trap_handler USR1' USR1
+trap 'trap_handler TERM' TERM
 
 savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
@@ -47,10 +66,9 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=32_rho_0.1_min_0.2_chi_square_resample_opus10_${ename}
+exp_name=35_debug_opus10_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
-rm -rf ${SAVE}
 mkdir -p ${SAVE}
 
 cp $0 ${SAVE}/run.sh

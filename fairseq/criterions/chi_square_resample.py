@@ -78,7 +78,7 @@ def bisection(eta_min, eta_max, f, tol=1e-6, max_iter=1000):
 @register_criterion('chi_square_resample')
 class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, group_level, rho, baselines,
-                 warmup_epochs, ema, min_prob):
+                 warmup_epochs, ema, min_prob, clamp_q_to_min):
         super().__init__(task)
 
         self.args = self.task.args
@@ -112,6 +112,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             raise ValueError
         self.initialize()
 
+        self.clamp_q_to_min = clamp_q_to_min
         self.p_train = None
 
     @staticmethod
@@ -128,6 +129,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--dro-K', default=-1, type=float)
         parser.add_argument('--valid-baseline', default=0, type=int)
         parser.add_argument('--min-prob', default=0.2, type=float)
+        parser.add_argument('--clamp-q-to-min', default=0, type=int)
         # fmt: on
 
     def initialize(self):
@@ -136,12 +138,18 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             self.loss_baselines = torch.Tensor(self.task.data_manager.outer_baseline).to(self.device)
         else:
             self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
-        self.register_buffer('h_fun', torch.ones(self.n_groups))
+        # self.register_buffer('sum_losses_memory', torch.zeros(self.n_groups))
         self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('count_cat', torch.ones(self.n_groups))
 
+    def set_p_train(self, data_ratios):
+        if self.p_train is not None:
+            return
+        logger.info("reloaded sum_losses = {}".format(self.sum_losses))
+        self.p_train = torch.Tensor(data_ratios).to(self.device)
+
     def update_mw(self, epoch):
-        if epoch == 1 or self.p_train is None:
+        if epoch == 1:
             return None
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
         past_losses = self.sum_losses
@@ -162,7 +170,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         def bisection_target(eta):
             pp = p(eta)
-            return 0.5 * (torch.square(pp / p_train - 1) * p_train).sum() - rho
+            return 0.5 * ((pp / p_train - 1) ** 2 * p_train).sum() - rho
 
         eta_min = -(1.0 / (np.sqrt(2 * rho + 1) - 1)) * past_losses.max()
         eta_max = past_losses.max()
@@ -171,6 +179,9 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             tol=self.tol, max_iter=1000)
 
         q = p(eta_star)
+        if hasattr(self, 'clamp_q_to_min') and self.clamp_q_to_min:
+            q = torch.clamp(q, min=torch.min(self.p_train).item())
+            q = q / q.sum()
 
         self.temp_idx += 1
         if self.logging:
@@ -179,7 +190,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             sum_weights = q[0:self.n_groups].sum().item()
             logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item() / sum_weights) for xx in q[0:self.n_groups]])))
         self.sum_losses.zero_()
-        self.count_cat.fill_(1.)
+        # self.count_cat.fill_(1.)
 
         if epoch <= self.warmup_epochs:
             return None

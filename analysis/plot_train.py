@@ -10,14 +10,19 @@ root = "/Users/chuntinz/Documents/research/fairseq-dro-mnmt/analysis/"
 opt_dir = os.path.join(root, log)
 if not os.path.exists(opt_dir):
     os.mkdir(opt_dir)
-    os.system("scp tir:/home/chuntinz/tir5/logs/{}/*log.txt {}/".format(log, opt_dir))
+    # os.system("scp tir:/home/chuntinz/tir5/logs/{}/log.txt {}/".format(log, opt_dir))
+    os.system("scp psc:/jet/home/chuntinz/work/fairseq-dro-mnmt/saved_models/{}/*log.txt {}/".format(log, opt_dir))
+
+if "opus" in log:
+    lang_num = 10
+else:
+    lang_num = 8
 
 langs = []
 lang_train_size = dict()
 lang_ema_losses = dict()
 lang_ema_weights = dict()
 lang_idx = 0
-sum_train = 0
 train_losses = []
 train_ppl = []
 valid_ppl = []
@@ -44,7 +49,6 @@ with open(os.path.join(opt_dir, "log.txt").format(root, log)) as fin:
             lang = line.strip().split(" ")[-3].split("-")[lang_idx]
             size = float(line.strip().split(" ")[-2].strip())
             lang_train_size[lang] = size
-            sum_train += size
 
         if "INFO | train_inner | epoch" in line:
             fields = line.strip().split()
@@ -67,6 +71,16 @@ with open(os.path.join(opt_dir, "log.txt").format(root, log)) as fin:
                     valid_ppl.append(float(fields[1].strip()))
                     break
 
+        if " EMA past losses: " in line:
+            losses = line.strip().split(" EMA past losses: ")[-1].split()
+            for idx, loss in enumerate(losses):
+                lang_ema_losses[idx2lang[idx]].append(float(loss.strip()))
+
+        if " Group loss weights: " in line:
+            weights = line.strip().split("Group loss weights:")[-1].split()
+            for idx, weight in enumerate(weights):
+                lang_ema_weights[idx2lang[idx]].append(float(weight.strip()))
+
         if " EMA past losses: tensor" in line:
             losses = line.strip().split("([")[-1].rstrip("],").split(",")
             for idx, loss in enumerate(losses):
@@ -76,10 +90,14 @@ with open(os.path.join(opt_dir, "log.txt").format(root, log)) as fin:
             weights = line.strip().split("([")[-1].rstrip("],").split(",")
             for idx, weight in enumerate(weights):
                 lang_ema_weights[idx2lang[idx]].append(float(weight.strip()))
+            # if lang_num == 10:
+            #     line = fin.readline()
+            #     lang_ema_weights['yi'].append(float(line.split("],")[0].strip()))
 
-print(idx2lang)
-legends = ["{}={:.3f}".format(lang, lang_train_size[lang]/sum_train) for lang in langs]
-
+print(lang_train_size)
+sum_train = sum(list(lang_train_size.values()))
+legends = ["{}={:.5f}".format(lang, lang_train_size[lang]/sum_train) for lang in langs]
+print(legends)
 labelsize = 14
 legendsize = 14
 mpl.rcParams['xtick.labelsize'] = labelsize
@@ -88,11 +106,10 @@ mpl.rcParams['font.size'] = labelsize
 plt.style.use('seaborn-deep')
 colormap = plt.cm.gist_ncar
 
-
 def plot_ax_ema(ax, y, title):
     plt.gca().set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, len(langs)))))
     for lang in langs:
-        ax.plot(np.arange(len(y[lang])), y[lang])
+        ax.plot(np.arange(len(y[lang])), y[lang], alpha=0.6)
     ax.legend(legends, loc='best', fontsize=10)
     ax.set(title=title, xlabel="steps", ylabel=title)
 
@@ -127,7 +144,7 @@ legendsize = 10
 mpl.rcParams['xtick.labelsize'] = labelsize
 mpl.rcParams['ytick.labelsize'] = labelsize
 mpl.rcParams['font.size'] = labelsize
-row = 4
+row = lang_num // 2
 fig, ax = plt.subplots(len(langs) // row, row)
 fig.set_size_inches(30, 10)
 colors = plt.cm.jet(np.linspace(0, 1, len(langs)))
@@ -136,16 +153,32 @@ for lang in langs:
     max_value.extend(lang_ema_weights[lang])
 max_value = max(max_value) + 0.2
 
+normalizer = []
+for ii in range(len(lang_ema_weights[langs[0]])):
+    normalizer.append(sum([lang_ema_weights[lang][ii] for lang in langs]))
+normalizer = np.array(normalizer)
+
+tau = 5
+ratios = [lang_train_size[lang]/sum_train for lang in langs]
+temp_norm = sum(r ** tau for r in ratios)
 for idx, lang in enumerate(langs):
     i, j = idx // row, idx % row
-    # print(len(lang_ema_weights[lang]))
-    ax[i][j].plot(np.arange(len(lang_ema_weights[lang])), lang_ema_weights[lang], 'o', markersize=1, color=colors[idx])
+    data_ratio = float(legends[idx].split("=")[-1])
+    # ax[i][j].plot(np.arange(len(lang_ema_weights[lang])),
+    #               np.ones(len(lang_ema_weights[lang]))* (data_ratio**tau / temp_norm),
+    #               linestyle='dotted', markersize=1, color=colors[idx], alpha=0.75)
+    ax[i][j].plot(np.arange(len(lang_ema_weights[lang])),
+                  np.ones(len(lang_ema_weights[lang]))*(data_ratio),
+                  linestyle='dashed', markersize=1, color=colors[idx], alpha=0.5)
+
+    ax[i][j].plot(np.arange(len(lang_ema_weights[lang])), np.array(lang_ema_weights[lang])/normalizer, 'o', markersize=1, color=colors[idx])
     # print(legends[idx])
     # ax[i][j].legend(legends[idx], loc='best', fontsize=10)
     ax[i][j].set_ylim([0, max_value])
     ax[i][j].set(title=legends[idx], xlabel="steps", ylabel="ema_weights")
 fig.savefig(os.path.join(opt_dir, "{}_ema_weights.pdf".format(log)), bbox_inches='tight')
 
+exit(0)
 if not os.path.exists(os.path.join(opt_dir, "inner_log.txt")):
     exit(0)
 
@@ -153,7 +186,7 @@ if not os.path.exists(os.path.join(opt_dir, "inner_log.txt")):
 bins = [0.1, 0.4, 0.5, 0.7, 1.0]
 def buckets(freqs):
     sizes = [int(len(freqs)*b) for b in bins]
-    sorted_freqs = np.argsort(freqs)
+    sorted_freqs = np.argsort(freqs)[::-1]
     bucket_vocab = dict()
     for idx, actual_idx in enumerate(sorted_freqs):
         for ii, b in enumerate(sizes):
@@ -169,7 +202,7 @@ weights = dict()
 alpha = 0.5
 
 weights = None
-bucket_scores = defaultdict(defaultdict(list))
+bucket_scores = defaultdict(lambda: defaultdict(list))
 with open(os.path.join(opt_dir, "inner_log.txt"), "r", encoding="utf-8") as fin:
     for line in fin:
         if line.startswith("Cutoff"):
@@ -202,8 +235,8 @@ if len(plot_langs) == 1:
     fig.set_size_inches(8, 5)
     row = 1
 else:
-    assert len(plot_langs) == 4
-    row = 4
+    assert len(plot_langs) == lang_num
+    row = lang_num // 2
     fig, ax = plt.subplots(len(plot_langs) // row, row)
     fig.set_size_inches(30, 10)
 

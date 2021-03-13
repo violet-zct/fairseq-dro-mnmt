@@ -52,8 +52,14 @@ with open(os.path.join(opt_dir, "log.txt").format(root, log)) as fin:
                 if first == "ppl":
                     valid_ppl.append(float(fields[1].strip()))
                 if first.startswith("fg_ppl"):
-                    lang = idx2lang[int(first[6])]
+                    lang = idx2lang[int(first[6:])]
                     lang_valid_ppl[lang].append(float(fields[1].strip()))
+
+new_langs = []
+for lang in langs:
+    if len(lang_valid_ppl[lang]) > 0:
+        new_langs.append(lang)
+langs = new_langs
 
 K = 20
 fig, ax = plt.subplots(1, 1)

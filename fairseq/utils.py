@@ -477,6 +477,21 @@ def model_eval(model):
 
 
 def has_parameters(module):
+    has = False
+    try:
+        next(module.parameters())
+        has = True
+    except StopIteration:
+        pass
+    try:
+        next(module.buffers())
+        has = True
+    except StopIteration:
+        pass
+    return has
+
+
+def has_parameters_only(module):
     try:
         next(module.parameters())
         return True
