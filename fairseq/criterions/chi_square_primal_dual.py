@@ -56,6 +56,11 @@ def project_to_cs_ball(v, rho, p_train):
     if cs_div(p_candidate) <= rho:
         return p_candidate
 
+    # if the simplex projection is not in the chi-square ball,
+    # compute best response (the rest is wrong)
+
+    return compute_best_response(torch.FloatTensor(v), rho, torch.FloatTensor(p_train), reg=0).data.numpy()
+
     # second, compute a chi-square best response
     def target_cs(eta, return_p=False):
         p = p_train * np.maximum(v - eta, 0)

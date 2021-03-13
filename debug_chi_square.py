@@ -157,7 +157,7 @@ if __name__ == '__main__':
     # debug best response
     # def compute_best_response(v, size, p_train, reg=0, tol=1e-4, max_iter=1000):
     p_train = np.array([0.016749707678881984, 0.24883687424058096, 0.12823659011863794, 0.24883687424058096, 0.09388764567221664, 0.00672033746261537, 0.008906120565944633, 0.05648945416885125, 0.1876013543693391, 0.00373504148235112])
-    rho = 0.1
+    rho = 1.0
     # losses[i] is the average losses of group i in a batch
     losses = np.array([7.150322, 5.925216, 6.436857, 5.886299, 6.113926, 7.217082, 6.935157, 6.830746, 5.37761,  7.416435])
     # losses = np.array([2.915552, 3.078025, 3.135855, 3.118232, 2.828697, 3.115064, 3.074514, 3.129607, 2.574514, 3.229607])
@@ -171,13 +171,20 @@ if __name__ == '__main__':
 
     # debug primal dual
     # rho roughly checking 0.1, 1, 10
-    rho = 0.1
+    m = len(p_train)
     q = np.ones(len(p_train)) / len(p_train)
     q = p_train
-    K = 1000
-    for _ in range(K):
-        step_size = 1e-4
-        q = compute_primal_dual_q(q, losses, rho, step_size)
+    K = 30000
+    for k in range(K):
+        idx = np.random.choice(np.arange(m), p=q)
+        stoc_losses = np.zeros_like(losses)
+        stoc_losses[idx] = losses[idx]
+        step_size = 1
+        q = compute_primal_dual_q(q, stoc_losses, rho, step_size)
+
+        if k % 2000 == 0:
+            print(q)
+            
         #loss = (new_q * losses).sum()
     print("primal dual after {} steps:".format(K))
     print(" ".join(["{:.6f}".format(ii) for ii in q]))
