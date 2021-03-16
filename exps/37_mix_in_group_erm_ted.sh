@@ -100,7 +100,7 @@ if [ ${log} = 1 ]; then
 fi
 
 python -u train.py ${DATA} \
-	  --task translation_multi_simple_epoch \
+	  --task translation_multi_simple_epoch --ddp-backend=no_c10d \
 	  --aug-option "in_group" --mix-beta-type "fixed" --beta-dist-alpha 0.2 \
 	  --arch ${model} --valid-subset cap.valid \
 	  --sampling-method "temperature" --sampling-temperature 1 \

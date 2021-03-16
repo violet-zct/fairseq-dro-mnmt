@@ -241,7 +241,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         return index
 
     def compute_loss(self, model, sample):
-        if 'lambda_' in sample and sample['lambda_'] > 0:
+        if 'lambda_' in sample and sample['lambda_'] is not None:
             net_output = model.mix(sample['lambda_'],
                                    sample["net_input_a"]["src_tokens"],
                                    sample["net_input_a"]["src_lengths"],

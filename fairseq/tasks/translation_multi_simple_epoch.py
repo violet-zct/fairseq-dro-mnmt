@@ -262,7 +262,7 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
                 group_idx = sample["src_lang_id"]
             else:
                 group_idx = sample["tgt_lang_id"]
-            uniq_groups = group_idx.new_tensor(torch.unique(group_idx, sorted=True))
+            uniq_groups = torch.unique(group_idx, sorted=True)
 
             inds = torch.arange(len(group_idx)).to(group_idx.device)
             shuffled_inds = torch.randperm(len(group_idx)).to(group_idx.device)
@@ -277,7 +277,7 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
             inds_a = inds_b = None
 
         if inds_a is not None or inds_b is not None:
-            sample = {
+            new_sample = {
                 'id': sample['id'] if inds_a is None else sample['id'][inds_a],
                 'nsentences': sample["nsentences"],
                 'ntokens': sample["ntokens"],
@@ -286,15 +286,20 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
                 'target_a': sample['target'] if inds_a is None else sample['target'][inds_a],
                 'target_b': sample['target'][inds_b],
             }
+            if 'src_lang_id' in sample:
+                new_sample['src_lang_id'] = sample['src_lang_id'][inds_a] if inds_a is not None else sample['src_lang_id']
+            if 'tgt_lang_id' in sample:
+                new_sample['tgt_lang_id'] = sample['tgt_lang_id'][inds_a] if inds_a is not None else sample['tgt_lang_id']
 
             if self.args.mix_beta_type == "fixed":
-                dist = Beta(self.args.alpha, self.args.alpha)
+                dist = Beta(self.args.beta_dist_alpha, self.args.beta_dist_alpha)
                 bsz = len(sample['id'])
                 lambda_ = dist.sample(sample_shape=[bsz]).to(sample['id'].device)
                 lambda_ = torch.max(lambda_, 1 - lambda_)
                 if self.args.fp16:
                     lambda_ = lambda_.half()
-                sample['lambda_'] = lambda_
+                new_sample['lambda_'] = lambda_
+            sample = new_sample
         else:
             sample['lambda_'] = None
 

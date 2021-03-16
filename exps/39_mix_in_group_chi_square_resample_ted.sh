@@ -101,7 +101,7 @@ fi
 
 python train.py ${DATA}\
     --warmup-epochs 1 \
-    --task translation_multi_simple_epoch \
+    --task translation_multi_simple_epoch --ddp-backend=no_c10d \
     --aug-option "in_group" --mix-beta-type "fixed" --beta-dist-alpha 0.2 \
     --arch ${model} --valid-subset cap.valid \
     --encoder-langtok ${etok} --enable-lang-ids \

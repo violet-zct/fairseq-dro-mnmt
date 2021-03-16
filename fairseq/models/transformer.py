@@ -949,7 +949,7 @@ class TransformerDecoder(FairseqIncrementalDecoder):
         if alignment_layer is None:
             alignment_layer = self.num_layers - 1
 
-        if processed_input is not None:
+        if processed_input is None:
             # embed positions
             positions = (
                 self.embed_positions(
