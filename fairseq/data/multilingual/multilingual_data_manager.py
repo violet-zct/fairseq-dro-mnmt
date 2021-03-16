@@ -91,12 +91,13 @@ class MultilingualDatasetManager(object):
         self._num_shards_dict = {}
 
         self.uniq_token_counts = [-1] * len(self.tgt_langs)
-        
-        with open(os.path.join(args.data, "uniq.token.counts")) as fin:
-            for line in fin:
-                key, value = line.strip().split()
-                if key in self.tgt_langs:
-                    self.uniq_token_counts[_lang_id(self.tgt_lang_dict, key)] = float(value)
+
+        if os.path.exists(os.path.join(args.data, "uniq.token.counts")):
+            with open(os.path.join(args.data, "uniq.token.counts")) as fin:
+                for line in fin:
+                    key, value = line.strip().split()
+                    if key in self.tgt_langs:
+                        self.uniq_token_counts[_lang_id(self.tgt_lang_dict, key)] = float(value)
 
         if hasattr(args, 'group_level') or hasattr(args, 'outer_group_level'):
             self.target_group = args.group_level if hasattr(args, 'group_level') else args.outer_group_level
