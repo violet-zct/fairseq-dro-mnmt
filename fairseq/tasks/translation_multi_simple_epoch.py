@@ -278,13 +278,13 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
 
         if inds_a is not None or inds_b is not None:
             sample = {
-                'id': sample['id'] if inds_a is None else reorder_dict(sample['id'], inds_a),
+                'id': sample['id'] if inds_a is None else sample['id'][inds_a],
                 'nsentences': sample["nsentences"],
                 'ntokens': sample["ntokens"],
                 'net_input_a': sample['net_input'] if inds_a is None else reorder_dict(sample['net_input'], inds_a),
                 'net_input_b': reorder_dict(sample['net_input'], inds_b),
-                'target_a': sample['target'] if inds_a is None else reorder_dict(sample['target'], inds_a),
-                'target_b': reorder_dict(sample['target'], inds_b),
+                'target_a': sample['target'] if inds_a is None else sample['target'][inds_a],
+                'target_b': sample['target'][inds_b],
             }
 
             if self.args.mix_beta_type == "fixed":

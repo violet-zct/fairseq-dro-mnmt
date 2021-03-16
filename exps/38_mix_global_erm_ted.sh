@@ -39,7 +39,7 @@ trap 'trap_handler TERM' TERM
 
 savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
-
+log=1
 SAVE_ROOT=${savedir}/saved_models
 
 if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
