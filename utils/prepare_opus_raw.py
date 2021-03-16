@@ -3,7 +3,7 @@ import os
 import sys
 
 opt_dir = "/home/chuntinz/tir5/data/mnmt_data/opus10"
-langs = ["yi", "mr", "oc", "be", "ta", "ka", "gl", "ur", "bg", "is"]
+langs = ["yi", "mr", "oc", "be", "ta", "ka", "gl", "hi", "bg", "is"]
 input_dir = "/home/chuntinz/tir5/data/opus-100-corpus/v1.0/supervised"
 
 for lang in langs:

@@ -294,7 +294,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             logger.info("Fixed P train = {}".format(self.p_train))
 
         nll_loss, ind_loss, group_losses, group_counts = self.compute_loss(model, sample)
-        nsentences = sample['target'].size(0)
+        nsentences = sample['id'].size(0)
         sample_size = sample['ntokens']
 
         if not self.training:
