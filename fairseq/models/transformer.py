@@ -247,6 +247,44 @@ class TransformerModel(FairseqEncoderDecoderModel):
             no_encoder_attn=getattr(args, "no_cross_attention", False),
         )
 
+    def mix(
+        self,
+        lambda_,
+        src_tokens_a,
+        src_lengths_a,
+        src_tokens_b,
+        src_lengths_b,
+        prev_output_tokens_a,
+        prev_output_tokens_b,
+        return_all_hiddens: bool = True,
+        features_only: bool = False,
+        alignment_layer: Optional[int] = None,
+        alignment_heads: Optional[int] = None,
+    ):
+        """
+        Run the forward pass for an encoder-decoder model.
+        Copied from the base class, but without ``**kwargs``,
+        which are not supported by TorchScript.
+        """
+
+        encoder_out = self.encoder.mix(
+            lambda_,
+            src_tokens_a,
+            src_tokens_b,
+            return_all_hiddens=return_all_hiddens,
+        )
+
+        decoder_out = self.decoder.mix(
+        lambda_,
+        prev_output_tokens_a,
+        prev_output_tokens_b,
+        encoder_out=encoder_out,
+        features_only=features_only,
+        alignment_layer=alignment_layer,
+        alignment_heads=alignment_heads,
+        )
+        return decoder_out
+
     # TorchScript doesn't support optional arguments with variable length (**kwargs).
     # Current workaround is to add union of all arguments in child classes.
     def forward(
@@ -372,6 +410,69 @@ class TransformerEncoder(FairseqEncoder):
         if self.quant_noise is not None:
             x = self.quant_noise(x)
         return x, embed
+
+    def mix(
+        self,
+        lambda_,
+        src_tokens_a,
+        src_tokens_b,
+        return_all_hiddens: bool = False,
+    ):
+        """
+        Args:
+            src_tokens (LongTensor): tokens in the source language of shape
+                `(batch, src_len)`
+            src_lengths (torch.LongTensor): lengths of each source sentence of
+                shape `(batch)`
+            return_all_hiddens (bool, optional): also return all of the
+                intermediate hidden states (default: False).
+        Returns:
+            namedtuple:
+                - **encoder_out** (Tensor): the last encoder layer's output of
+                  shape `(src_len, batch, embed_dim)`
+                - **encoder_padding_mask** (ByteTensor): the positions of
+                  padding elements of shape `(batch, src_len)`
+                - **encoder_embedding** (Tensor): the (scaled) embedding lookup
+                  of shape `(batch, src_len, embed_dim)`
+                - **encoder_states** (List[Tensor]): all intermediate
+                  hidden states of shape `(src_len, batch, embed_dim)`.
+                  Only populated if *return_all_hiddens* is True.
+        """
+        xa, encoder_embedding_a = self.forward_embedding(src_tokens_a)
+        xb, encoder_embedding_b = self.forward_embedding(src_tokens_b)
+
+        assert xa.size(0) == lambda_.size(0)
+        x = xa * lambda_.view(-1, 1, 1) + xb * (1-lambda_).view(-1, 1, 1)
+        assert encoder_embedding_a.size(0) == lambda_.size(0)
+        encoder_embedding = encoder_embedding_a * lambda_.view(-1, 1, 1) + \
+                encoder_embedding_b * (1 - lambda_).view(-1, 1, 1)
+
+        # B x T x C -> T x B x C
+        x = x.transpose(0, 1)
+
+        # compute padding mask
+        encoder_padding_mask = src_tokens_a.eq(self.padding_idx)
+
+        encoder_states = [] if return_all_hiddens else None
+
+        # encoder layers
+        for layer in self.layers:
+            x = layer(x, encoder_padding_mask)
+            if return_all_hiddens:
+                assert encoder_states is not None
+                encoder_states.append(x)
+
+        if self.layer_norm is not None:
+            x = self.layer_norm(x)
+
+        return EncoderOut(
+            encoder_out=x,  # T x B x C
+            encoder_padding_mask=encoder_padding_mask,  # B x T
+            encoder_embedding=encoder_embedding,  # B x T x C
+            encoder_states=encoder_states,  # List[T x B x C]
+            src_tokens=None,
+            src_lengths=None,
+        )
 
     def forward(self, src_tokens, src_lengths, return_all_hiddens: bool = False):
         """
@@ -635,6 +736,45 @@ class TransformerDecoder(FairseqIncrementalDecoder):
     def build_decoder_layer(self, args, no_encoder_attn=False):
         return TransformerDecoderLayer(args, no_encoder_attn)
 
+    def mix(
+        self,
+        lambda_,
+        prev_output_tokens_a,
+        prev_output_tokens_b,
+        encoder_out: Optional[EncoderOut] = None,
+        incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]] = None,
+        features_only: bool = False,
+        alignment_layer: Optional[int] = None,
+        alignment_heads: Optional[int] = None,
+    ):
+        """
+        Args:
+            prev_output_tokens (LongTensor): previous decoder outputs of shape
+                `(batch, tgt_len)`, for teacher forcing
+            encoder_out (optional): output from the encoder, used for
+                encoder-side attention
+            incremental_state (dict): dictionary used for storing state during
+                :ref:`Incremental decoding`
+            features_only (bool, optional): only return features without
+                applying output layer (default: False).
+        Returns:
+            tuple:
+                - the decoder's output of shape `(batch, tgt_len, vocab)`
+                - a dictionary with any model-specific outputs
+        """
+        x, extra = self.extract_features_mix(
+            lambda_,
+            prev_output_tokens_a,
+            prev_output_tokens_b,
+            encoder_out=encoder_out,
+            incremental_state=incremental_state,
+            alignment_layer=alignment_layer,
+            alignment_heads=alignment_heads,
+        )
+        if not features_only:
+            x = self.output_layer(x)
+        return x, extra
+
     def forward(
         self,
         prev_output_tokens,
@@ -673,6 +813,86 @@ class TransformerDecoder(FairseqIncrementalDecoder):
             x = self.output_layer(x)
         return x, extra
 
+    def extract_features_mix(
+        self,
+        lambda_,
+        prev_output_tokens_a,
+        prev_output_tokens_b,
+        encoder_out: Optional[EncoderOut] = None,
+        incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]] = None,
+        full_context_alignment: bool = False,
+        alignment_layer: Optional[int] = None,
+        alignment_heads: Optional[int] = None,
+    ):
+        """
+        Similar to *forward* but only return features.
+        Includes several features from "Jointly Learning to Align and
+        Translate with Transformer Models" (Garg et al., EMNLP 2019).
+        Args:
+            full_context_alignment (bool, optional): don't apply
+                auto-regressive mask to self-attention (default: False).
+            alignment_layer (int, optional): return mean alignment over
+                heads at this layer (default: last layer).
+            alignment_heads (int, optional): only average alignment over
+                this many heads (default: all heads).
+        Returns:
+            tuple:
+                - the decoder's features of shape `(batch, tgt_len, embed_dim)`
+                - a dictionary with any model-specific outputs
+        """
+        if alignment_layer is None:
+            alignment_layer = self.num_layers - 1
+
+        def get_embedding(prev_output_tokens):
+            # embed positions
+            positions = (
+                self.embed_positions(
+                    prev_output_tokens, incremental_state=incremental_state
+                )
+                if self.embed_positions is not None
+                else None
+            )
+
+            if incremental_state is not None:
+                prev_output_tokens = prev_output_tokens[:, -1:]
+                if positions is not None:
+                    positions = positions[:, -1:]
+
+            # embed tokens and positions
+            x = self.embed_scale * self.embed_tokens(prev_output_tokens)
+
+            if self.quant_noise is not None:
+                x = self.quant_noise(x)
+
+            if self.project_in_dim is not None:
+                x = self.project_in_dim(x)
+
+            if positions is not None:
+                x += positions
+
+            if self.layernorm_embedding is not None:
+                x = self.layernorm_embedding(x)
+
+            x = self.dropout_module(x)
+            return x
+
+        xa = get_embedding(prev_output_tokens_a)
+        xb = get_embedding(prev_output_tokens_b)
+
+        assert xa.size(0) == lambda_.size(0)
+        x = xa * lambda_.view(-1, 1, 1) + xb * (1-lambda_).view(-1, 1, 1)
+        assert xa.size(0) == lambda_.size(0)
+
+        return self.extract_features_scriptable(
+            prev_output_tokens_a,  # placeholder
+            encoder_out,
+            incremental_state,
+            full_context_alignment,
+            alignment_layer,
+            alignment_heads,
+            processed_input=x,
+        )
+
     def extract_features(
         self,
         prev_output_tokens,
@@ -705,6 +925,7 @@ class TransformerDecoder(FairseqIncrementalDecoder):
         full_context_alignment: bool = False,
         alignment_layer: Optional[int] = None,
         alignment_heads: Optional[int] = None,
+        processed_input = None,
     ):
         """
         Similar to *forward* but only return features.
@@ -728,36 +949,39 @@ class TransformerDecoder(FairseqIncrementalDecoder):
         if alignment_layer is None:
             alignment_layer = self.num_layers - 1
 
-        # embed positions
-        positions = (
-            self.embed_positions(
-                prev_output_tokens, incremental_state=incremental_state
+        if processed_input is not None:
+            # embed positions
+            positions = (
+                self.embed_positions(
+                    prev_output_tokens, incremental_state=incremental_state
+                )
+                if self.embed_positions is not None
+                else None
             )
-            if self.embed_positions is not None
-            else None
-        )
 
-        if incremental_state is not None:
-            prev_output_tokens = prev_output_tokens[:, -1:]
+            if incremental_state is not None:
+                prev_output_tokens = prev_output_tokens[:, -1:]
+                if positions is not None:
+                    positions = positions[:, -1:]
+
+            # embed tokens and positions
+            x = self.embed_scale * self.embed_tokens(prev_output_tokens)
+
+            if self.quant_noise is not None:
+                x = self.quant_noise(x)
+
+            if self.project_in_dim is not None:
+                x = self.project_in_dim(x)
+
             if positions is not None:
-                positions = positions[:, -1:]
+                x += positions
 
-        # embed tokens and positions
-        x = self.embed_scale * self.embed_tokens(prev_output_tokens)
+            if self.layernorm_embedding is not None:
+                x = self.layernorm_embedding(x)
 
-        if self.quant_noise is not None:
-            x = self.quant_noise(x)
-
-        if self.project_in_dim is not None:
-            x = self.project_in_dim(x)
-
-        if positions is not None:
-            x += positions
-
-        if self.layernorm_embedding is not None:
-            x = self.layernorm_embedding(x)
-
-        x = self.dropout_module(x)
+            x = self.dropout_module(x)
+        else:
+            x = processed_input
 
         # B x T x C -> T x B x C
         x = x.transpose(0, 1)

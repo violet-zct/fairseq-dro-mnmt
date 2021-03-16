@@ -74,10 +74,24 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         2) the sample size, which is used as the denominator for the gradient
         3) logging outputs to display while training
         """
-        net_output = model(**sample['net_input'])
+        if 'lambda_' in sample and sample['lambda_'] > 0:
+            net_output = model.mix(sample['lambda_'],
+                sample["net_input_a"]["src_tokens"],
+                sample["net_input_a"]["src_lengths"],
+                sample["net_input_b"]["src_tokens"],
+                sample["net_input_b"]["src_lengths"],
+                sample["net_input_a"]["prev_output_tokens"],
+                sample["net_input_b"]["prev_output_tokens"])
+        else:
+            net_output = model(**sample['net_input'])
+
         if self.training:
-            loss, nll_loss = self.compute_loss(model, net_output, sample, reduce=reduce)
-            sample_size = sample['target'].size(0) if self.sentence_avg else sample['ntokens']
+            if 'lambda_' in sample and sample['lambda_'] > 0:
+                loss, nll_loss = self.compute_mixed_loss(model, net_output, sample, sample['lambda_'])
+                sample_size = sample['target_a'].size(0) if self.sentence_avg else sample['ntokens']
+            else:
+                loss, nll_loss = self.compute_loss(model, net_output, sample, reduce=reduce)
+                sample_size = sample['target'].size(0) if self.sentence_avg else sample['ntokens']
         else:
             loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=False)
             loss = loss.sum()
@@ -94,7 +108,7 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             'loss': loss.data,
             'nll_loss': nll_loss.data,
             'ntokens': sample['ntokens'],
-            'nsentences': sample['target'].size(0),
+            'nsentences': len(sample['id']),
             'sample_size': sample_size,
         }
         if not self.training:
@@ -111,6 +125,31 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             lprobs, target, self.eps, ignore_index=self.padding_idx, reduce=reduce,
         )
         return loss, nll_loss
+
+    def compute_mixed_loss(self, model, net_output, sample, lambda_):
+        lprobs = model.get_normalized_probs(net_output, log_probs=True)
+        lprobs = lprobs.view(-1, lprobs.size(-1))
+        loss_a, nll_loss_a = label_smoothed_nll_loss(
+            lprobs, sample["target_a"].view(-1, 1), self.eps, ignore_index=self.padding_idx, reduce=False,
+        )
+        loss_b, nll_loss_b = label_smoothed_nll_loss(
+            lprobs, sample["target_b"].view(-1, 1), self.eps, ignore_index=self.padding_idx, reduce=False,
+        )
+
+        bsz, slen = sample["target_a"].size()
+        assert bsz == len(sample["id"])
+        loss_a = loss_a.reshape(bsz, slen)
+        nll_loss_a = nll_loss_a.reshape(bsz, slen)
+        loss_b = loss_b.reshape(bsz, slen)
+        nll_loss_b = nll_loss_b.reshape(bsz, slen)
+        assert lambda_.size() == (bsz,)
+
+        loss = loss_a * lambda_.view(-1, 1) + loss_b * (1 - lambda_).view(-1, 1)
+        nll_loss = nll_loss_a * lambda_.view(-1, 1) + nll_loss_b * (1 - lambda_).view(-1, 1)
+        valid_indices = (sample["target_a"] != self.padding_idx).float()
+        loss = loss * valid_indices
+        nll_loss = nll_loss * valid_indices
+        return loss.sum(), nll_loss.sum()
 
     def compute_loss(self, model, net_output, sample, reduce=True):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)

@@ -17,6 +17,7 @@ from fairseq.data import (
     encoders,
 )
 
+from torch.distributions.beta import Beta
 from fairseq.tasks import register_task, LegacyFairseqTask
 from fairseq.data.multilingual.sampling_method import SamplingMethod
 from fairseq.data.multilingual.multilingual_data_manager import MultilingualDatasetManager
@@ -72,6 +73,12 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
                             help='comma-separated list of language pairs (in training order): en-de,en-fr,de-fr')
         parser.add_argument('--keep-inference-langtok', action='store_true',
                             help='keep language tokens in inference output (e.g. for analysis or debugging)')
+
+        # options for mixed data augmentation
+        parser.add_argument('--aug-option', default="none", type=str,
+                            choices=['in_group', 'global', 'none'])
+        parser.add_argument('--mix-beta-type', default='fixed', type=str, choices=['fixed', 'gen_strength'])
+        parser.add_argument('--beta-dist-alpha', default=0.2, type=float)
 
         # options for reporting BLEU during validation
         parser.add_argument('--eval-bleu', action='store_true',
@@ -220,6 +227,84 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
             gen_args = json.loads(getattr(args, 'eval_bleu_args', '{}') or '{}')
             self.sequence_generator = self.build_generator([model], Namespace(**gen_args))
         return model
+
+    def train_step(
+        self, sample, model, criterion, optimizer, update_num, ignore_grad=False
+    ):
+        """
+        Do forward and backward, and return the loss as computed by *criterion*
+        for the given *model* and *sample*.
+
+        Args:
+            sample (dict): the mini-batch. The format is defined by the
+                :class:`~fairseq.data.FairseqDataset`.
+            model (~fairseq.models.BaseFairseqModel): the model
+            criterion (~fairseq.criterions.FairseqCriterion): the criterion
+            optimizer (~fairseq.optim.FairseqOptimizer): the optimizer
+            update_num (int): the current update
+            ignore_grad (bool): multiply loss by 0 if this is set to True
+
+        Returns:
+            tuple:
+                - the loss
+                - the sample size, which is used as the denominator for the
+                  gradient
+                - logging outputs to display while training
+        """
+        model.train()
+        model.set_num_updates(update_num)
+
+        def reorder_dict(x, ordered_indices):
+            return {key: value[ordered_indices] for key, value in x.items()}
+
+        if self.args.aug_option == "in_group":
+            if self.args.group_level == "source_lang":
+                group_idx = sample["src_lang_id"]
+            else:
+                group_idx = sample["tgt_lang_id"]
+            uniq_groups = group_idx.new_tensor(torch.unique(group_idx, sorted=True))
+
+            inds = torch.arange(len(group_idx)).to(group_idx.device)
+            shuffled_inds = torch.randperm(len(group_idx)).to(group_idx.device)
+            shuffled_group_idx = group_idx[shuffled_inds]
+            inds_a = torch.cat([inds[group_idx == gid] for gid in uniq_groups])
+            inds_b = torch.cat([shuffled_inds[shuffled_group_idx == gid] for gid in uniq_groups])
+
+        elif self.args.aug_option == "global":
+            inds_b = torch.randperm(len(sample['id'])).to(sample['id'].device)
+            inds_a = None
+        else:
+            inds_a = inds_b = None
+
+        if inds_a is not None or inds_b is not None:
+            sample = {
+                'id': sample['id'] if inds_a is None else reorder_dict(sample['id'], inds_a),
+                'nsentences': sample["nsentences"],
+                'ntokens': sample["ntokens"],
+                'net_input_a': sample['net_input'] if inds_a is None else reorder_dict(sample['net_input'], inds_a),
+                'net_input_b': reorder_dict(sample['net_input'], inds_b),
+                'target_a': sample['target'] if inds_a is None else reorder_dict(sample['target'], inds_a),
+                'target_b': reorder_dict(sample['target'], inds_b),
+            }
+
+            if self.args.mix_beta_type == "fixed":
+                dist = Beta(self.args.alpha, self.args.alpha)
+                bsz = len(sample['id'])
+                lambda_ = dist.sample(sample_shape=[bsz]).to(sample['id'].device)
+                lambda_ = torch.max(lambda_, 1 - lambda_)
+                if self.args.fp16:
+                    lambda_ = lambda_.half()
+                sample['lambda_'] = lambda_
+        else:
+            sample['lambda_'] = None
+
+        with torch.autograd.profiler.record_function("forward"):
+            loss, sample_size, logging_output = criterion(model, sample)
+        if ignore_grad:
+            loss *= 0
+        with torch.autograd.profiler.record_function("backward"):
+            optimizer.backward(loss)
+        return loss, sample_size, logging_output
 
     def valid_step(self, sample, model, criterion):
         loss, sample_size, logging_output = super().valid_step(sample, model, criterion)

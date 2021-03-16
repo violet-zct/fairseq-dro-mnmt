@@ -105,9 +105,6 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             self.n_groups = len(task.data_manager.src_langs)
         elif group_level == "target_lang":
             self.n_groups = len(task.data_manager.tgt_langs)
-        elif group_level == "token":
-            self.n_groups = len(task.target_dictionary)
-            self.logging = False
         else:
             raise ValueError
         self.initialize()
@@ -121,7 +118,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         # fmt: off
         parser.add_argument('--label-smoothing', default=0., type=float, metavar='D',
                             help='epsilon for label smoothing, 0 means no label smoothing')
-        parser.add_argument('--group-level', type=str, choices=['source_lang', 'target_lang', 'token'])
+        parser.add_argument('--group-level', type=str, choices=['source_lang', 'target_lang'])
         parser.add_argument('--rho', default=0.1, type=float)
         parser.add_argument('--baselines', default=None, type=str, help='baseline loss values.')
         parser.add_argument('--warmup-epochs', default=1, type=int)
@@ -203,12 +200,35 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         target = model.get_targets(sample, net_output).view(-1)
 
         if self.eps > 0.0:
-            losses = label_smoothed_nll_loss(
+            loss, nll_loss = label_smoothed_nll_loss(
                 lprobs, target, self.eps, ignore_index=self.padding_idx, reduce=False,
             )
+            return loss, nll_loss
         else:
-            losses = F.nll_loss(lprobs, target, ignore_index=self.padding_idx, reduction='none')
-        return losses
+            loss = F.nll_loss(lprobs, target, ignore_index=self.padding_idx, reduction='none')
+            return loss, loss
+
+    def individual_mix_losses(self, model, net_output, sample, lambda_):
+        lprobs = model.get_normalized_probs(net_output, log_probs=True)
+        lprobs = lprobs.view(-1, lprobs.size(-1))
+        loss_a, nll_loss_a = label_smoothed_nll_loss(
+            lprobs, sample["target_a"].view(-1, 1), self.eps, ignore_index=self.padding_idx, reduce=False,
+        )
+        loss_b, nll_loss_b = label_smoothed_nll_loss(
+            lprobs, sample["target_b"].view(-1, 1), self.eps, ignore_index=self.padding_idx, reduce=False,
+        )
+
+        bsz, slen = sample["target_a"].size()
+        assert bsz == len(sample["id"])
+        loss_a = loss_a.reshape(bsz, slen)
+        nll_loss_a = nll_loss_a.reshape(bsz, slen)
+        loss_b = loss_b.reshape(bsz, slen)
+        nll_loss_b = nll_loss_b.reshape(bsz, slen)
+        assert lambda_.size() == (bsz,)
+
+        loss = loss_a * lambda_.view(-1, 1) + loss_b * (1 - lambda_).view(-1, 1)
+        nll_loss = nll_loss_a * lambda_.view(-1, 1) + nll_loss_b * (1 - lambda_).view(-1, 1)
+        return loss, nll_loss
 
     def retrieve_group_labels(self, sample):
         if self.group_level == "source_lang":
@@ -221,30 +241,30 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         return index
 
     def compute_loss(self, model, sample):
-        net_output = model(**sample['net_input'])
-        mask = (sample['target'] != self.padding_idx).float()
-        token_losses = self.individual_losses(model, net_output, sample)
-        if isinstance(token_losses, tuple):
-            nll_loss = token_losses[1].reshape_as(sample['target']).sum(1)
-            token_losses = token_losses[0]
+        if 'lambda_' in sample and sample['lambda_'] > 0:
+            net_output = model.mix(sample['lambda_'],
+                                   sample["net_input_a"]["src_tokens"],
+                                   sample["net_input_a"]["src_lengths"],
+                                   sample["net_input_b"]["src_tokens"],
+                                   sample["net_input_b"]["src_lengths"],
+                                   sample["net_input_a"]["prev_output_tokens"],
+                                   sample["net_input_b"]["prev_output_tokens"])
+            token_loss, nll_loss = self.individual_mix_losses(model, net_output, sample, sample['lambda_'])
+            target_kw = 'target_a'
         else:
-            nll_loss = (token_losses.reshape_as(sample['target']) * mask).sum(1)
+            net_output = model(**sample['net_input'])
+            target_kw = 'target'
+            token_loss, nll_loss = self.individual_losses(model, net_output, sample)
 
-        if self.group_level == "token":
-            ind_loss = (token_losses.reshape_as(sample['target']) * mask).view(-1)
-        else:
-            ind_loss = (token_losses.reshape_as(sample['target']) * mask).sum(1)
+        mask = (sample[target_kw] != self.padding_idx).float()
+        ind_loss = (token_loss.reshape_as(sample[target_kw]) * mask).sum(1)
+        nll_loss = (nll_loss.reshape_as(sample[target_kw]) * mask).sum(1)
 
         with torch.no_grad():
             index = self.retrieve_group_labels(sample)
             zero_vec = torch.zeros(self.n_groups, device='cuda')  # G
             group_losses = zero_vec.scatter_add(0, index, ind_loss)
-
-            if self.group_level != "token":
-                group_counts = zero_vec.scatter_add(0, index, mask.sum(1))
-            else:
-                one_vec = torch.ones(ind_loss.size(0), device='cuda')  # B
-                group_counts = zero_vec.scatter_add(0, index, one_vec)
+            group_counts = zero_vec.scatter_add(0, index, mask.sum(1))
 
         return nll_loss, ind_loss, group_losses, group_counts
 
@@ -284,7 +304,6 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
                 fg_group_count = group_counts.detach().clone()
                 fg_loss_vec = group_losses
-            # loss = group_losses.sum()
         else:
             self.update_steps += 1
 
