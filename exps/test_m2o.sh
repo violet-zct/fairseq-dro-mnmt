@@ -35,7 +35,7 @@ ibfile="xxen_inner_baselines"
 
 model=transformer_wmt_en_de
 
-for exp_name in 32_rho_0.1_min_0.2_chi_square_resample_opus10_${ename} 33_rho_0.05_min_0.2_chi_square_resample_opus10_${ename} 34_rho_0.05_min_0.5_chi_square_resample_opus10_${ename}; do
+for exp_name in 42_rho_0.05_min_0.2_chi_square_resample_opus10_${ename} 41_new_erm_temp_5_opus10_${ename}; do
 SAVE=${SAVE_ROOT}/${exp_name}
 send_dir=/home/chuntinz/tir5/logs/${exp_name}
 
@@ -59,5 +59,17 @@ for lang in ${langs//,/ }; do
           --quiet --beam 5 | tee ${SAVE}/test_${lang}_en_last.log
     scp ${SAVE}/test_${lang}_en_last.log tir:${send_dir}/
 
+    python fairseq_cli/generate.py ${DATA} \
+          --task translation_multi_simple_epoch  \
+          --gen-subset test --skip-invalid-size-inputs-valid-test \
+          --path ${SAVE}/checkpoint_best.pt \
+          --batch-size 300 \
+          --lenpen 1.0 \
+          --remove-bpe sentencepiece --scoring sacrebleu \
+          --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
+          --encoder-langtok ${etok} \
+          --source-lang ${gsrc} --target-lang ${gtgt} \
+          --quiet --beam 5 | tee ${SAVE}/test_${lang}_en.log
+    scp ${SAVE}/test_${lang}_en.log tir:${send_dir}/
 done
 done
