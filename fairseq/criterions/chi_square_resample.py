@@ -143,7 +143,9 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         if self.p_train is not None:
             return
         logger.info("reloaded sum_losses = {}".format(self.sum_losses))
+        logger.info("reloaded valid losses = {}".format(self.valid_losses))
         self.p_train = torch.Tensor(data_ratios).to(self.device)
+        self.generalization_errors = self.sum_losses - self.valid_losses
 
     def set_valid_baselines(self, baselines):
         self.valid_losses.copy_(baselines)

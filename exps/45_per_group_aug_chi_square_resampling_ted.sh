@@ -106,7 +106,7 @@ fi
 python train.py ${DATA}\
     --warmup-epochs 1 \
     --task translation_multi_simple_epoch --ddp-backend=no_c10d --save-interval-updates 160000 \
-    --aug-option ${aug} --mix-beta-type "gen_strength" --beta-dist-alpha 0.4 \
+    --aug-option ${aug} --mix-beta-type "gen_strength" --beta-dist-alpha 0.3 \
     --arch ${model} --valid-subset cap.valid \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_resample' --label-smoothing 0.1 --resample 1 \

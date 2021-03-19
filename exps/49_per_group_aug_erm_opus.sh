@@ -64,7 +64,7 @@ fi
 python -u train.py ${DATA}\
 	  --task translation_multi_simple_epoch --ddp-backend=no_c10d \
 	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
-	  --aug-option ${aug} --mix-beta-type "gen_strength" --beta-dist-alpha 0.4 \
+	  --aug-option ${aug} --mix-beta-type "gen_strength" --beta-dist-alpha 0.3 \
 	  --sampling-method "temperature" --sampling-temperature 5 \
 	  --encoder-langtok ${etok} --group-level ${glevel} \
 	  --max-update 300000 --layernorm-embedding \

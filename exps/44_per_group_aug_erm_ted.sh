@@ -105,7 +105,7 @@ fi
 
 python -u train.py ${DATA} \
 	  --task translation_multi_simple_epoch --ddp-backend=no_c10d \
-	  --aug-option ${aug} --mix-beta-type "gen_strength" --beta-dist-alpha 0.4 \
+	  --aug-option ${aug} --mix-beta-type "gen_strength" --beta-dist-alpha 0.3 \
 	  --arch ${model} --valid-subset cap.valid \
 	  --sampling-method "temperature" --sampling-temperature 1 \
 	  --encoder-langtok ${etok} --group-level ${glevel} \

@@ -68,7 +68,7 @@ else
 fi
 
 model=transformer_medium
-exp_name=50_per_group_aug_0.1_chi_square_resample_opus10_${ename}
+exp_name=50_ch_0_per_group_aug_0.1_chi_square_resample_opus10_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -84,10 +84,10 @@ python train.py ${DATA} \
     --warmup-epochs 1 \
     --task translation_multi_simple_epoch --ddp-backend=no_c10d --save-interval-updates 160000 \
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
-    --aug-option ${aug} --mix-beta-type "gen_strength" --beta-dist-alpha 0.4 \
+    --aug-option ${aug} --mix-beta-type "gen_strength" --beta-dist-alpha 0.3 \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_resample' --label-smoothing 0.1 \
-    --rho 0.05 --min-prob 0.2 --group-level ${glevel} --ema 0.1 \
+    --rho 0.05 --min-prob 0.2 --group-level ${glevel} --ema 0.1 --clear-history 0 \
     --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \

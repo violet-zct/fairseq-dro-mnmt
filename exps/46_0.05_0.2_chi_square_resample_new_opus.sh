@@ -66,7 +66,7 @@ else
 fi
 
 model=transformer_medium
-exp_name=42_ch_0_rho_0.05_min_0.2_chi_square_resample_opus10_${ename}
+exp_name=46_ch_0_rho_0.05_min_0.2_chi_square_resample_opus10_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
