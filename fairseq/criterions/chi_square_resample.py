@@ -78,7 +78,7 @@ def bisection(eta_min, eta_max, f, tol=1e-6, max_iter=1000):
 @register_criterion('chi_square_resample')
 class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, group_level, rho, baselines,
-                 warmup_epochs, ema, min_prob, clamp_q_to_min):
+                 warmup_epochs, ema, min_prob, clamp_q_to_min, resample):
         super().__init__(task)
 
         self.args = self.task.args
@@ -87,7 +87,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.group_level = group_level
         self.rho = rho
         self.baselines = baselines
-        self.resample = True
+        self.resample = resample
         self.tol = 1e-4
         self.min_prob = min_prob
 
@@ -96,10 +96,10 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.print_steps = 100
 
         self.update_steps = 0
+        self.epochs = 0
         self.warmup_epochs = warmup_epochs
         self.EMA_alpha = ema
 
-        self.valid_baseline = self.args.valid_baseline
         self.logging = True
         if group_level == "source_lang":
             self.n_groups = len(task.data_manager.src_langs)
@@ -112,6 +112,8 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.clamp_q_to_min = clamp_q_to_min
         self.p_train = None
 
+        self.generalization_errors = None
+
     @staticmethod
     def add_args(parser):
         """Add criterion-specific arguments to the parser."""
@@ -120,22 +122,20 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                             help='epsilon for label smoothing, 0 means no label smoothing')
         parser.add_argument('--group-level', type=str, choices=['source_lang', 'target_lang'])
         parser.add_argument('--rho', default=0.1, type=float)
-        parser.add_argument('--baselines', default=None, type=str, help='baseline loss values.')
+        parser.add_argument('--baselines', default=None, type=str, help='baseline loss values.')  # DELETE
         parser.add_argument('--warmup-epochs', default=1, type=int)
         parser.add_argument('--ema', default=0.1, type=float)
-        parser.add_argument('--dro-K', default=-1, type=float)
-        parser.add_argument('--valid-baseline', default=0, type=int)
+        parser.add_argument('--dro-K', default=-1, type=float)  # DELETE
         parser.add_argument('--min-prob', default=0.2, type=float)
         parser.add_argument('--clamp-q-to-min', default=0, type=int)
+
+        parser.add_argument('--clear-history', default=1, type=int)
+        parser.add_argument('--resample', default=1, type=int, help="resample=0 is ERM")
         # fmt: on
 
     def initialize(self):
         logger.info("Group num = {}".format(self.n_groups))
-        if self.task.data_manager.outer_baseline is not None:
-            self.loss_baselines = torch.Tensor(self.task.data_manager.outer_baseline).to(self.device)
-        else:
-            self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
-        # self.register_buffer('sum_losses_memory', torch.zeros(self.n_groups))
+        self.register_buffer('valid_losses', torch.zeros(self.n_groups))
         self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('count_cat', torch.ones(self.n_groups))
 
@@ -145,12 +145,27 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         logger.info("reloaded sum_losses = {}".format(self.sum_losses))
         self.p_train = torch.Tensor(data_ratios).to(self.device)
 
+    def set_valid_baselines(self, baselines):
+        self.valid_losses.copy_(baselines)
+        self.generalization_errors = self.sum_losses - self.valid_losses
+
+    def get_generalization_errors(self):
+        return self.generalization_errors
+        # the following snippet supports frequently updating this error
+        # if self.epochs > 1:
+        #     # already validated
+        #     logger.info("sum_losses = {}".format(self.sum_losses))
+        #     logger.info("valid losses = {}".format(self.valid_losses))
+        #     return self.sum_losses - self.valid_losses
+        # else:
+        #     return None
+
     def update_mw(self, epoch):
+        self.epochs = epoch
         if epoch == 1:
             return None
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
         past_losses = self.sum_losses
-        # baselined_losses = past_losses - self.loss_baselines
         rho = self.rho
         p_train = self.p_train
 
@@ -186,7 +201,9 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             logger.info("EMA group fractions: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.p_train[0:self.n_groups]])))
             sum_weights = q[0:self.n_groups].sum().item()
             logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item() / sum_weights) for xx in q[0:self.n_groups]])))
-        self.sum_losses.zero_()
+
+        if self.args.clear_history:
+            self.sum_losses.zero_()
         # self.count_cat.fill_(1.)
 
         if epoch <= self.warmup_epochs:
@@ -277,9 +294,6 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         )
         return loss, nll_loss
 
-    def set_valid_baselines(self, baselines):
-        self.loss_baselines = baselines
-
     def forward(self, model, sample, reduce=True):
         """Compute the loss for the given sample.
 
@@ -338,8 +352,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             for ii in range(self.n_groups):
                 logging_output["fg_gnll{}".format(ii)] = fg_group_nll[ii].data
                 logging_output["fg_gcount{}".format(ii)] = fg_group_count[ii].data
-                if hasattr(self, 'valid_baseline')and self.valid_baseline:
-                    logging_output["fg_gloss{}".format(ii)] = fg_loss_vec[ii].data
+                logging_output["fg_gloss{}".format(ii)] = fg_loss_vec[ii].data
 
         return loss, sample_size, logging_output
 

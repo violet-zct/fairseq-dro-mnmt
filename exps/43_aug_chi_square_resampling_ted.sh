@@ -1,10 +1,10 @@
 #! /bin/bash
 #SBATCH --output=slurm_logs/slurm-%A-%a.out
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
-##SBATCH --partition=learnfair
-#SBATCH --partition=priority
-#SBATCH --comment="TACL 3.27"
-#SBATCH --job-name=39
+#SBATCH --partition=learnfair
+##SBATCH --partition=priority
+##SBATCH --comment="TACL 3.27"
+#SBATCH --job-name=43
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -52,6 +52,7 @@ if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
     glevel="target_lang"
     obfile="enxx_outer_baselines"
     ibfile="enxx_inner_baselines"
+    aug="in_group"
 elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
     langs="aze,bel,glg,slk,tur,rus,por,ces"
     lang_pairs="aze-en,bel-en,glg-en,slk-en,tur-en,rus-en,por-en,ces-en"
@@ -62,6 +63,7 @@ elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
     glevel="source_lang"
     obfile="xxen_outer_baselines"
     ibfile="xxen_inner_baselines"
+    aug="global"
 elif [ $SLURM_ARRAY_TASK_ID = 2 ]; then
     langs="bos,mar,hin,mkd,ell,bul,fra,kor"
     lang_pairs="en-bos,en-mar,en-hin,en-mkd,en-ell,en-bul,en-fra,en-kor"
@@ -72,6 +74,7 @@ elif [ $SLURM_ARRAY_TASK_ID = 2 ]; then
     glevel="target_lang"
     obfile="enxx_outer_baselines"
     ibfile="enxx_inner_baselines"
+    aug="in_group"
 elif [ $SLURM_ARRAY_TASK_ID = 3 ]; then
     langs="bos,mar,hin,mkd,ell,bul,fra,kor"
     lang_pairs="bos-en,mar-en,hin-en,mkd-en,ell-en,bul-en,fra-en,kor-en"
@@ -82,12 +85,13 @@ elif [ $SLURM_ARRAY_TASK_ID = 3 ]; then
     glevel="source_lang"
     obfile="xxen_outer_baselines"
     ibfile="xxen_inner_baselines"
+    aug="global"
 else
     exit
 fi
 
 model=transformer_iwslt_de_en
-exp_name=39_mix_in_group_chi_square_resample_ted8_${ename}
+exp_name=43_aug_0.1_chi_square_resample_ted8_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -101,13 +105,13 @@ fi
 
 python train.py ${DATA}\
     --warmup-epochs 1 \
-    --task translation_multi_simple_epoch --ddp-backend=no_c10d \
-    --aug-option "in_group" --mix-beta-type "fixed" --beta-dist-alpha 0.2 \
+    --task translation_multi_simple_epoch --ddp-backend=no_c10d --save-interval-updates 160000 \
+    --aug-option ${aug} --mix-beta-type "fixed" --beta-dist-alpha 0.1 \
     --arch ${model} --valid-subset cap.valid \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_resample' --label-smoothing 0.1 \
     --rho 0.05 --min-prob 0.2 --group-level ${glevel} --ema 0.1 \
-    --max-update 200000 --layernorm-embedding \
+    --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
     --no-epoch-checkpoints \
@@ -133,39 +137,29 @@ for lang in ${langs//,/ }; do
         gsrc="en"
         gtgt=${lang}
     fi
-    python fairseq_cli/generate.py ${DATA} \
-          --task translation_multi_simple_epoch  \
-          --gen-subset test \
-          --path ${SAVE}/checkpoint_best.pt \
-          --batch-size 300 \
-          --lenpen 1.0 \
-          --remove-bpe sentencepiece --scoring sacrebleu \
-          --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
-          --encoder-langtok ${etok} \
-          --source-lang ${gsrc} --target-lang ${gtgt} \
-          --quiet --beam 5 | tee -a ${SAVE}/log.txt ${SAVE}/test_${lang}_en.log
-    scp ${SAVE}/test_${lang}_en.log tir:${send_dir}/
-done
 
-for lang in ${langs//,/ }; do
-    if [ $gtgt = "en" ]; then
-        gsrc=${lang}
-    else
-        gsrc="en"
-        gtgt=${lang}
-    fi
-    python fairseq_cli/generate.py ${DATA} \
+    for cpt in ${SAVE}/checkpoint*; do
+        if [[ $cpt == *"last"* ]]; then
+          cpt_name=test_${lang}_en_last.log
+        elif [[ $cpt == *"best"* ]]; then
+          cpt_name=test_${lang}_en.log
+        else
+          cpt_name=test_${lang}_en_160k.log
+        fi
+
+        python fairseq_cli/generate.py ${DATA} \
           --task translation_multi_simple_epoch  \
           --gen-subset test \
-          --path ${SAVE}/checkpoint_last.pt \
+          --path ${cpt} \
           --batch-size 300 \
           --lenpen 1.0 \
           --remove-bpe sentencepiece --scoring sacrebleu \
           --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
           --encoder-langtok ${etok} \
           --source-lang ${gsrc} --target-lang ${gtgt} \
-          --quiet --beam 5 | tee -a ${SAVE}/log.txt ${SAVE}/test_${lang}_en_last.log
-    scp ${SAVE}/test_${lang}_en_last.log tir:${send_dir}/
+          --quiet --beam 5 | tee ${SAVE}/${cpt_name}
+        scp ${SAVE}/${cpt_name} tir:${send_dir}/
+    done
 done
 
 scp ${SAVE}/log.txt tir:${send_dir}/

@@ -1,10 +1,10 @@
 #! /bin/bash
 #SBATCH --output=slurm_logs/slurm-%A-%a.out
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
-##SBATCH --partition=learnfair
-#SBATCH --partition=priority
-#SBATCH --comment="TACL 3.27"
-#SBATCH --job-name=37
+#SBATCH --partition=learnfair
+##SBATCH --partition=priority
+##SBATCH --comment="TACL 3.27"
+#SBATCH --job-name=42
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -52,6 +52,7 @@ if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
     glevel="target_lang"
     obfile="enxx_outer_baselines"
     ibfile="enxx_inner_baselines"
+    aug="in_group"
 elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
     langs="aze,bel,glg,slk,tur,rus,por,ces"
     lang_pairs="aze-en,bel-en,glg-en,slk-en,tur-en,rus-en,por-en,ces-en"
@@ -62,6 +63,7 @@ elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
     glevel="source_lang"
     obfile="xxen_outer_baselines"
     ibfile="xxen_inner_baselines"
+    aug="global"
 elif [ $SLURM_ARRAY_TASK_ID = 2 ]; then
     langs="bos,mar,hin,mkd,ell,bul,fra,kor"
     lang_pairs="en-bos,en-mar,en-hin,en-mkd,en-ell,en-bul,en-fra,en-kor"
@@ -72,6 +74,7 @@ elif [ $SLURM_ARRAY_TASK_ID = 2 ]; then
     glevel="target_lang"
     obfile="enxx_outer_baselines"
     ibfile="enxx_inner_baselines"
+    aug="in_group"
 elif [ $SLURM_ARRAY_TASK_ID = 3 ]; then
     langs="bos,mar,hin,mkd,ell,bul,fra,kor"
     lang_pairs="bos-en,mar-en,hin-en,mkd-en,ell-en,bul-en,fra-en,kor-en"
@@ -82,12 +85,13 @@ elif [ $SLURM_ARRAY_TASK_ID = 3 ]; then
     glevel="source_lang"
     obfile="xxen_outer_baselines"
     ibfile="xxen_inner_baselines"
+    aug="global"
 else
     exit
 fi
 
 model=transformer_iwslt_de_en
-exp_name=37_mix_in_group_erm_ted8_${ename}
+exp_name=42_aug_0.1_erm_ted8_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -101,13 +105,13 @@ fi
 
 python -u train.py ${DATA} \
 	  --task translation_multi_simple_epoch --ddp-backend=no_c10d \
-	  --aug-option "in_group" --mix-beta-type "fixed" --beta-dist-alpha 0.2 \
+	  --aug-option ${aug} --mix-beta-type "fixed" --beta-dist-alpha 0.1 \
 	  --arch ${model} --valid-subset cap.valid \
 	  --sampling-method "temperature" --sampling-temperature 1 \
 	  --encoder-langtok ${etok} --group-level ${glevel} \
-	  --max-update 200000 --layernorm-embedding \
-      --lang-pairs ${lang_pairs} \
-      --lang-dict ${DATA}/langs.list \
+	  --max-update 300000 --layernorm-embedding \
+    --lang-pairs ${lang_pairs} \
+    --lang-dict ${DATA}/langs.list \
 	  --no-epoch-checkpoints \
 	  --share-decoder-input-output-embed \
 	  --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 0.0 \
@@ -116,9 +120,9 @@ python -u train.py ${DATA} \
 	  --criterion 'logged_label_smoothed_cross_entropy' --label-smoothing 0.1 \
 	  --max-tokens 8192 \
 	  --seed 222 \
-  	  --max-source-positions 512 --max-target-positions 512 \
-  	  --save-dir ${SAVE} \
-      --encoder-normalize-before --decoder-normalize-before \
+  	--max-source-positions 512 --max-target-positions 512 \
+    --save-dir ${SAVE} \
+    --encoder-normalize-before --decoder-normalize-before \
 	  --log-interval 100 --log-format simple | tee -a ${SAVE}/log.txt
 
 date
@@ -141,7 +145,7 @@ for lang in ${langs//,/ }; do
           --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
           --encoder-langtok ${etok} \
           --source-lang ${gsrc} --target-lang ${gtgt} \
-          --quiet --beam 5 | tee -a ${SAVE}/log.txt ${SAVE}/test_${lang}_en.log
+          --quiet --beam 5 | tee ${SAVE}/test_${lang}_en.log
     scp ${SAVE}/test_${lang}_en.log tir:${send_dir}/
 done
 
@@ -162,7 +166,7 @@ for lang in ${langs//,/ }; do
           --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
           --encoder-langtok ${etok} \
           --source-lang ${gsrc} --target-lang ${gtgt} \
-          --quiet --beam 5 | tee -a ${SAVE}/log.txt ${SAVE}/test_${lang}_en_last.log
+          --quiet --beam 5 | tee ${SAVE}/test_${lang}_en_last.log
     scp ${SAVE}/test_${lang}_en_last.log tir:${send_dir}/
 done
 

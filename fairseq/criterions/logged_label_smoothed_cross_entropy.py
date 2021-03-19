@@ -110,6 +110,8 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             'ntokens': sample['ntokens'],
             'nsentences': len(sample['id']),
             'sample_size': sample_size,
+            'n_groups': self.n_groups,
+            'gpu_count': 1,
         }
         if not self.training:
             for ii in range(self.n_groups):
@@ -168,12 +170,16 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         ntokens = sum(log.get('ntokens', 0) for log in logging_outputs)
         sample_size = sum(log.get('sample_size', 0) for log in logging_outputs)
 
+        gpu_counts = utils.item(sum(log.get('gpu_count', 0) for log in logging_outputs))
+        ngroups = sum(log.get('n_groups', 0) for log in logging_outputs) / gpu_counts
+        ngroups = int(ngroups.item()) if torch.is_tensor(ngroups) else int(ngroups)
+
         metrics.log_scalar('loss', loss_sum / sample_size / math.log(2), sample_size, round=3)
         metrics.log_scalar('nll_loss', nll_loss_sum / ntokens / math.log(2), ntokens, round=3)
         metrics.log_derived('ppl', lambda meters: utils.get_perplexity(meters['nll_loss'].avg))
 
         if len(logging_outputs) > 0 and 'fg_gnll0' in logging_outputs[0]:
-            for ii in range(8):
+            for ii in range(ngroups):
                 g_nll = sum(log.get('fg_gnll{}'.format(ii), 0) for log in logging_outputs)
                 g_tokens = sum(log.get('fg_gcount{}'.format(ii), 0) for log in logging_outputs)
                 division_g_ntokens = g_tokens if g_tokens > 0 else 1

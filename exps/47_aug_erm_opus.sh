@@ -4,7 +4,7 @@
 #SBATCH --partition=learnfair
 ##SBATCH --partition=priority
 ##SBATCH --comment="TACL 1.10"
-#SBATCH --job-name=46
+#SBATCH --job-name=47
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -48,8 +48,8 @@ else
     exit
 fi
 
-model=transformer_wmt_en_de
-exp_name=46_aug_0.1_erm_opus10_${ename}
+model=transformer_medium
+exp_name=47_aug_0.1_opus10_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -62,7 +62,7 @@ if [ ${log} = 1 ]; then
 fi
 
 python -u train.py ${DATA}\
-	  --task translation_multi_simple_epoch --ddp-backend=no_c10d \
+	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
 	  --aug-option ${aug} --mix-beta-type "fixed" --beta-dist-alpha 0.1 \
 	  --sampling-method "temperature" --sampling-temperature 5 \

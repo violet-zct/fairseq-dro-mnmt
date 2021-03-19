@@ -257,6 +257,10 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
         def reorder_dict(x, ordered_indices):
             return {key: value[ordered_indices] for key, value in x.items()}
 
+        def get_reg_strength(gen_errors):
+            # self.args.beta_dist_alpha = max_strength, 0.4
+            return torch.sigmoid(gen_errors) * self.args.beta_dist_alpha
+
         if self.args.aug_option == "in_group":
             if self.args.group_level == "source_lang":
                 group_idx = sample["src_lang_id"]
@@ -291,14 +295,27 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
             if 'tgt_lang_id' in sample:
                 new_sample['tgt_lang_id'] = sample['tgt_lang_id'][inds_a] if inds_a is not None else sample['tgt_lang_id']
 
+            bsz = len(sample['id'])
+            device = sample['id'].device
             if self.args.mix_beta_type == "fixed":
                 dist = Beta(self.args.beta_dist_alpha, self.args.beta_dist_alpha)
-                bsz = len(sample['id'])
-                lambda_ = dist.sample(sample_shape=[bsz]).to(sample['id'].device)
-                lambda_ = torch.max(lambda_, 1 - lambda_)
-                if self.args.fp16:
-                    lambda_ = lambda_.half()
-                new_sample['lambda_'] = lambda_
+                lambda_ = dist.sample(sample_shape=[bsz]).to(device)
+            else:
+                lang_ids = new_sample['src_lang_id'] if self.args.group_level == "source_lang" else new_sample['tgt_lang_id']
+                uniq_groups = torch.unique(lang_ids, sorted=True)
+                gen_error = criterion.get_generalization_errors()
+                lambda_ = torch.ones(bsz).to(device)
+                if gen_error is not None:
+                    alphas = get_reg_strength(gen_error)
+                    for gid in uniq_groups:
+                        dist = Beta(alphas[gid], alphas[gid])
+                        valid_ids = (lang_ids == gid)
+                        lambda_[valid_ids] = dist.sample(sample_shape=[sum(valid_ids.long())]).to(device)
+
+            lambda_ = torch.max(lambda_, 1 - lambda_)
+            if self.args.fp16:
+                lambda_ = lambda_.half()
+            new_sample['lambda_'] = lambda_
             sample = new_sample
         else:
             sample['lambda_'] = None

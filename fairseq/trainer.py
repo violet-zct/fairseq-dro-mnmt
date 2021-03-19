@@ -355,7 +355,7 @@ class Trainer(object):
                 combine=combine,
                 data_selector=data_selector,
             )
-        if hasattr(self.criterion, 'resample'):
+        if hasattr(self.criterion, 'resample') and self.criterion.resample:
             if epoch > 1:
                 self.criterion.set_p_train(self.task.data_manager.data_ratios)
             sample_ratios = self.criterion.update_mw(epoch)

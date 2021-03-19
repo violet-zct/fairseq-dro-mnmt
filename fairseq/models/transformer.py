@@ -1193,6 +1193,20 @@ def transformer_iwslt_de_en(args):
     base_architecture(args)
 
 
+@register_model_architecture("transformer", "transformer_medium")
+def transformer_medium(args):
+    args.encoder_embed_dim = getattr(args, "encoder_embed_dim", 768)
+    args.encoder_ffn_embed_dim = getattr(args, "encoder_ffn_embed_dim", 3072)
+    args.encoder_attention_heads = getattr(args, "encoder_attention_heads", 8)
+    args.encoder_layers = getattr(args, "encoder_layers", 8)
+    args.decoder_embed_dim = getattr(args, "decoder_embed_dim", 768)
+    args.decoder_ffn_embed_dim = getattr(args, "decoder_ffn_embed_dim", 3072)
+    args.decoder_attention_heads = getattr(args, "decoder_attention_heads", 8)
+    args.decoder_layers = getattr(args, "decoder_layers", 8)
+    args.dropout = getattr(args, "dropout", 0.3)
+    base_architecture(args)
+
+
 @register_model_architecture("transformer", "transformer_wmt_en_de")
 def transformer_wmt_en_de(args):
     base_architecture(args)
