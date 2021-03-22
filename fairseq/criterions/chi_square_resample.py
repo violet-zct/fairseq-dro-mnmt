@@ -133,6 +133,9 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--resample', default=1, type=int, help="resample=0 is ERM")
         # fmt: on
 
+    def _print(self, x):
+        return " ".join(["{:.6f}".format(xx.item()) for xx in x])
+
     def initialize(self):
         logger.info("Group num = {}".format(self.n_groups))
         self.register_buffer('valid_losses', torch.zeros(self.n_groups))
@@ -142,14 +145,15 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def set_p_train(self, data_ratios):
         if self.p_train is not None:
             return
-        logger.info("reloaded sum_losses = {}".format(self.sum_losses))
-        logger.info("reloaded valid losses = {}".format(self.valid_losses))
+        logger.info("reloaded sum_losses = {}".format(self._print(self.sum_losses)))
+        logger.info("reloaded valid losses = {}".format(self._print(self.valid_losses)))
         self.p_train = torch.Tensor(data_ratios).to(self.device)
         self.generalization_errors = self.sum_losses - self.valid_losses
 
     def set_valid_baselines(self, baselines):
         self.valid_losses.copy_(baselines)
-        self.generalization_errors = self.sum_losses - self.valid_losses
+        self.generalization_errors = self.valid_losses - self.sum_losses
+        logger.info("gen error (valid-train) = {}".format(self._print(self.generalization_errors)))
 
     def get_generalization_errors(self):
         return self.generalization_errors
