@@ -62,7 +62,7 @@ if [ ${log} = 1 ]; then
 fi
 
 python -u train.py ${DATA}\
-	  --task translation_multi_simple_epoch \
+	  --task translation_multi_simple_epoch --ddp-backend=no_c10d \
 	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
 	  --aug-option ${aug} --mix-beta-type "fixed" --beta-dist-alpha 0.1 \
 	  --sampling-method "temperature" --sampling-temperature 5 \
