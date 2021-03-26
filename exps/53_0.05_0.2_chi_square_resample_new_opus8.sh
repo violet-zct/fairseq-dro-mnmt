@@ -39,7 +39,7 @@ trap 'trap_handler TERM' TERM
 
 savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
-DATA=${datadir}/opus10/data-bin
+DATA=${datadir}/opus8/data-bin
 langs="oc,be,ta,ka,gl,hi,bg,is"
 log=1
 
