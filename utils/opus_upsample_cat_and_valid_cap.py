@@ -14,7 +14,7 @@ rawdir = os.path.join(root, "raw")
 # en-yi,en-mr,en-oc,en-be,en-ta,en-ka,en-gl,en-ur,en-bg,en-is
 # yi-en,mr-en,oc-en,be-en,ta-en,ka-en,gl-en,ur-en,bg-en,is-en
 langs = "yi,mr,oc,be,ta,ka,gl,hi,bg,is"
-opt_root = "/home/chuntinz/tir5/data/mnmt_data/my_opus10"
+opt_root = "/home/chuntinz/tir5/data/mnmt_data/my_opus8"
 opt_root = os.path.join(opt_root, "data")
 langs = langs.split(",")
 

@@ -3,7 +3,9 @@
 root="/home/chuntinz/tir5/data/mnmt_data/my_opus10/raw"
 langs="yi,mr,oc,be,ta,ka,gl,hi,bg,is"
 
-opt_root="/home/chuntinz/tir5/data/mnmt_data/my_opus10"
+langs="oc,be,ta,ka,gl,hi,bg,is"
+opt_root="/home/chuntinz/tir5/data/mnmt_data/my_opus8"
+
 opt_data=${opt_root}/data
 opt_bin=${opt_root}/data-bin
 
