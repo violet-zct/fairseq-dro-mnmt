@@ -21,11 +21,11 @@ source activate mnmt2
 savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
 DATA=${datadir}/opus10/data-bin
-langs="yi,mr,oc,be,ta,hi,gl,ur,bg,is"
+langs="yi,mr,oc,be,ta,hi,gl,ka,bg,is"
 
 SAVE_ROOT=${savedir}/saved_models
 
-lang_pairs="yi-en,mr-en,oc-en,be-en,ta-en,hi-en,gl-en,ur-en,bg-en,is-en"
+lang_pairs="yi-en,mr-en,oc-en,be-en,ta-en,hi-en,gl-en,ka-en,bg-en,is-en"
 ename="m2o"
 gtgt="en"
 etok="src"
