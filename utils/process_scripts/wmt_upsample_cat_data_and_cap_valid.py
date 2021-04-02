@@ -6,7 +6,6 @@ np.random.seed(1)
 temperature = 5.
 cap_valid = 1500
 
-target = sys.argv[1]
 root = "/jet/home/chuntinz/work/data"
 rawdir = os.path.join(root, "wmt")
 
