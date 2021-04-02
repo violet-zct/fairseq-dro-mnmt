@@ -1,13 +1,5 @@
 #!/bin/bash
 
-# process tmx files
-sed -n 's:.*<seg>\(.*\)</seg>.*:\1:p' < en-tr.tmx > output
+workdir=/jet/home/chuntinz/work/data/wmt/20_enkm
 
-# odd numbered lines
-sed -n 'n;p' < output > wmt18.en-tr.en
-
-# even numbered lines
-sed -n 'p;n' < output > wmt18.en-tr.tr
-
-# clean
-rm output
+python filter_noise_by_lang_ids.py ${workdir} wmt20

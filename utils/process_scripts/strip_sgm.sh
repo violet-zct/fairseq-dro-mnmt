@@ -1,13 +1,9 @@
 #!/bin/bash
 
-# process tmx files
-sed -n 's:.*<seg>\(.*\)</seg>.*:\1:p' < en-tr.tmx > output
-
-# odd numbered lines
-sed -n 'n;p' < output > wmt18.en-tr.en
-
-# even numbered lines
-sed -n 'p;n' < output > wmt18.en-tr.tr
-
-
 # process sgm files
+cat $1 | grep "seg id" | sed 's/<seg id="[0-9]\+">//g' | sed 's/<\/seg>//g' > $2
+
+
+# process tsv
+grep '\S' input | cut -f1 > output1
+grep '\S' input | cut -f2 > output2

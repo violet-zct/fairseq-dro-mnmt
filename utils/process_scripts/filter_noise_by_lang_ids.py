@@ -46,7 +46,7 @@ i = 0
 keep = 0
 
 with open(os.path.join(dirname, "{}.en-{}.{}.cleanlang".format(prefix, lang, lang)), "w", encoding="utf-8") as fxx, \
-        open(os.path.join(dirname, "{}.en-{}.cleanlang".format(prefix, lang)), "w", encoding="utf-8") as fen:
+        open(os.path.join(dirname, "{}.en-{}.en.cleanlang".format(prefix, lang)), "w", encoding="utf-8") as fen:
     for xx, en in data:
         if check_overlap(xx, en):
             continue
