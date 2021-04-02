@@ -14,5 +14,5 @@ python subsample_data.py ${workdir} \
   ${workdir}/para.cs.dedup ${workdir}/para.en.dedup 1000000 "1M"
 
 
-cat euro.cs news.cs para.cs.dedup.1M > train.en-cs.cs
-cat euro.en news.en para.en.dedup.1M > train.en-cs.en
+cat ${workdir}/euro.cs ${workdir}/news.cs ${workdir}/para.cs.dedup.1M > ${workdir}train.en-cs.cs
+cat ${workdir}/euro.en ${workdir}/news.en ${workdir}/para.en.dedup.1M > ${workdir}train.en-cs.en
