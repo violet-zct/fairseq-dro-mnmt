@@ -26,8 +26,8 @@ with open(path1, "r", encoding="utf-8") as f1, open(path2, "r", encoding="utf-8"
 
 selected = np.random.permutation(np.arange(len(data)))[:K]
 
-with open(os.path.join(root, src_out_file), encoding="utf-8") as fxx, \
-     open(os.path.join(root, tgt_out_file), encoding="utf-8") as fen:
+with open(os.path.join(root, src_out_file), "w", encoding="utf-8") as fxx, \
+     open(os.path.join(root, tgt_out_file), "w", encoding="utf-8") as fen:
     for idx in selected:
         fxx.write(data[idx][0] + "\n")
         fen.write(data[idx][1] + "\n")
