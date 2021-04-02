@@ -4,33 +4,31 @@ import sys
 
 np.random.seed(1)
 temperature = 5.
-cap_valid = 800
+cap_valid = 1500
 
 target = sys.argv[1]
-root = "/private/home/chuntinz/work/data/mnmt_data/ted/"
-rawdir = os.path.join(root, "raw")
+root = "/jet/home/chuntinz/work/data"
+rawdir = os.path.join(root, "wmt")
 
-if target == "ted_all":
-    langs = "ara,aze,bel,ben,bos,bul,ces,cmn,dan,deu,ell,epo,est,eus,fas,fin,fra,glg,heb,hin,hrv,hun,hye,ind,ita,jpn,kat,kaz,kor,kur,lit,mar,mkd,mon,msa,mya,nld,nob,pol,por,ron,rus,slk,slv,spa,sqi,srp,swe,tam,tha,tur,ukr,urd,vie,XXfr_ca,XXpt_pt,XXzh,XXzh_tw"
-elif target == "ted8_diverse":
-    langs = "bos,mar,hin,mkd,ell,bul,fra,kor"
-elif target == "ted8_related":
-    langs = "aze,bel,glg,slk,tur,rus,por,ces"
+langs = "fr,km,cs,tr"
 
-opt_root = "/checkpoint/chuntinz/data/mnmt_data/ted/{}".format(target)
-opt_root = os.path.join(opt_root, "data")
+opt_root = rawdir
 langs = langs.split(",")
 
 
 def read_data(dirname, lang, split):
     bad = 0
-    path1 = os.path.join(dirname, "{}.{}".format(split, lang))
-    path2 = os.path.join(dirname, "{}.{}".format(split, "en"))
+    path1 = os.path.join(dirname, "{}.en-{}.{}".format(split, lang, lang))
+    path2 = os.path.join(dirname, "{}.en-{}.{}".format(split, lang, "en"))
     data = []
     with open(path1, "r", encoding="utf-8") as f1, open(path2, "r", encoding="utf-8") as f2:
         for xx, en in zip(f1, f2):
             if xx.strip() == "" or en.strip() == "":
                 bad += 1
+                continue
+            lenxx = len(xx.strip().split())
+            lenen = len(en.strip().split())
+            if split == "valid" and (lenen > 250 or lenxx > 250 or lenxx*1.0/lenen > 2.0 or lenen*1.0/lenxx > 2.0):
                 continue
             data.append((xx.strip(), en.strip()))
     print("split = {}, lang = {}, bad = {}".format(split, lang, bad))
@@ -74,12 +72,12 @@ def upsample_and_write(data, data_sizes, sample_ratios):
             counts[i] += 1
     indices = [np.random.choice(d, c, replace=(c > d)) for c, d in zip(counts, data_sizes)]
 
-    op1 = os.path.join(opt_root, "raw.combine.xx")
+    op1 = os.path.join(opt_root, "data", "raw.combine.xx")
     with open(op1, "w", encoding="utf-8") as fout:
         for ii, lang in enumerate(langs):
             for idx in indices[ii]:
                 fout.write(data[lang][0][idx][0] + "\n")
-    op2 = os.path.join(opt_root, "raw.combine.en")
+    op2 = os.path.join(opt_root, "data", "raw.combine.en")
     with open(op2, "w", encoding="utf-8") as fout:
         for lang in langs:
             for xx, en in data[lang][0]:
@@ -87,21 +85,15 @@ def upsample_and_write(data, data_sizes, sample_ratios):
 
 
 lang_pack = {}
+lang_dirs = {}
 for dirname in os.listdir(rawdir):
-    if not dirname.endswith("en"):
+    if not dirname[3:5] == "en":
         continue
-
-    fields = dirname.split("_")
-    if len(fields) == 2:
-        lang, xx = fields
-    else:
-        lang = "_".join(fields[:2])
-        xx = fields[-1]
-    assert xx == "en"
+    lang = dirname[-2:]
 
     if lang not in langs:
         continue
-
+    lang_dirs[lang] = dirname
     inputdirname = os.path.join(rawdir, dirname)
     train_data = read_data(inputdirname, lang, "train")
     valid_data = read_data(inputdirname, lang, "valid")
@@ -119,11 +111,8 @@ for lang in langs:
     else:
         indices = np.random.choice(valid_size, size=cap_valid, replace=False)
 
-    optdir = os.path.join(opt_root, "{}_en".format(lang))
-    if not os.path.exists(optdir):
-        os.mkdir(optdir)
-    with open(os.path.join(optdir, "cap.raw.valid.{}".format(lang)), "w", encoding="utf-8") as fxx, \
-        open(os.path.join(optdir, "cap.raw.valid.en"), "w", encoding="utf-8") as fen:
+    with open(os.path.join(opt_root, lang_dirs[lang], "cap.valid.{}".format(lang)), "w", encoding="utf-8") as fxx, \
+        open(os.path.join(opt_root, lang_dirs[lang], "cap.valid.en"), "w", encoding="utf-8") as fen:
         for idx in indices:
             fxx.write(lang_pack[lang][1][idx][0] + "\n")
             fen.write(lang_pack[lang][1][idx][1] + "\n")

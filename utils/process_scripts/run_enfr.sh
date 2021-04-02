@@ -6,6 +6,7 @@ for lang in en fr; do
   bash clean.sh ${workdir}/train.tags.en-fr.${lang} ${lang}
 done
 
+lang=fr
 python deduplicate.py \
   --src-file ${workdir}/train.tags.en-fr.${lang}.clean \
   --tgt-file ${workdir}/train.tags.en-fr.en.clean \
