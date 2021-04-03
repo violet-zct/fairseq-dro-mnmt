@@ -45,8 +45,8 @@ for lang in ${langs//,/ }; do
     langdir="19_encs"
   elif [ ${lang} = "tr" ]; then
     langdir="18_entr"
-  elif [ ${lang} = "km" ]; then
-    langdir="20_enkm"
+  elif [ ${lang} = "ta" ]; then
+    langdir="20_enta"
   else
     echo "wrong lang id!"
     exit
