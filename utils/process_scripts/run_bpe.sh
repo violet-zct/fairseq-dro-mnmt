@@ -17,7 +17,7 @@ mkdir -p ${opt_data}
 SPM_TRAIN=scripts/spm_train.py
 SPM_ENCODE=scripts/spm_encode.py
 BPE_SIZE=32000
-EN_BPE_SIZE=30000
+EN_BPE_SIZE=25000
 
 SCRIPTS=/jet/home/chuntinz/work/data/wmt/mosesdecoder/scripts
 CLEAN=$SCRIPTS/training/clean-corpus-n.perl  # clean corpus by min/max lengths and ratios;
@@ -77,11 +77,19 @@ for lang in ${langs//,/ }; do
     done
 
   perl ${CLEAN} -ratio 1.5 ${opt_root}/${langdir}/spm.train.en-${lang} ${lid} en ${opt_data}/${lang}_en/spm.train 1 250
+
+  if [ ${lang} = "fr" ]; then
+    head -1800000 ${opt_data}/${lang}_en/spm.train.en > ${opt_data}/${lang}_en/temp.en
+    head -1800000 ${opt_data}/${lang}_en/spm.train.fr > ${opt_data}/${lang}_en/temp.fr
+  elif [ ${lang} = "cs" ]; then
+    head -2000000 ${opt_data}/${lang}_en/spm.train.en > ${opt_data}/${lang}_en/temp.en
+    head -2000000 ${opt_data}/${lang}_en/spm.train.cs > ${opt_data}/${lang}_en/temp.cs
+  fi
 done
 
 for lang in ${langs//,/ }; do
-  cat ${opt_data}/${lang}_en/spm.train.en-${lang}.${lang} >> ${opt_data}/combine.spm.train.xx
-  cat ${opt_data}/${lang}_en/spm.train.en-${lang}.en >> ${opt_data}/combine.spm.train.en
+  cat ${opt_data}/${lang}_en/spm.train.${lang} >> ${opt_data}/combine.spm.train.xx
+  cat ${opt_data}/${lang}_en/spm.train.en >> ${opt_data}/combine.spm.train.en
 done
 
 python preprocess.py \
