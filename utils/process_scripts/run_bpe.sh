@@ -5,7 +5,7 @@
 # fr: clean + dedup + subsample 1.8M
 # tr: original
 
-langs="fr,tr,cs,km"
+langs="fr,tr,cs,ta"
 opt_root=/jet/home/chuntinz/work/data/wmt
 opt_data=${opt_root}/data
 opt_bin=${opt_root}/data-bin
@@ -81,10 +81,15 @@ for lang in ${langs//,/ }; do
   if [ ${lang} = "fr" ]; then
     head -1800000 ${opt_data}/${lang}_en/spm.train.en > ${opt_data}/${lang}_en/temp.en
     head -1800000 ${opt_data}/${lang}_en/spm.train.fr > ${opt_data}/${lang}_en/temp.fr
+    mv ${opt_data}/${lang}_en/temp.en ${opt_data}/${lang}_en/spm.train.en
+    mv ${opt_data}/${lang}_en/temp.fr ${opt_data}/${lang}_en/spm.train.fr
   elif [ ${lang} = "cs" ]; then
     head -2000000 ${opt_data}/${lang}_en/spm.train.en > ${opt_data}/${lang}_en/temp.en
     head -2000000 ${opt_data}/${lang}_en/spm.train.cs > ${opt_data}/${lang}_en/temp.cs
+    mv ${opt_data}/${lang}_en/temp.en ${opt_data}/${lang}_en/spm.train.en
+    mv ${opt_data}/${lang}_en/temp.cs ${opt_data}/${lang}_en/spm.train.cs
   fi
+
 done
 
 for lang in ${langs//,/ }; do
