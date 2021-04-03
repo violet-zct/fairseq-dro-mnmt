@@ -17,7 +17,7 @@ python subsample_data.py ${workdir} \
   ${workdir}/para.cs.dedup ${workdir}/para.en.dedup 3500000 "3.5M"
 
 mv ${workdir}/para.en.dedup.3.5M ${workdir}/temp.en
-mv ${workdir}/para.cs.dedup.3.5M ${workdir}/temp.fr
+mv ${workdir}/para.cs.dedup.3.5M ${workdir}/temp.cs
 
 perl ${CLEAN} -ratio 1.5 ${workdir}/temp ${lang} en ${workdir}/para.subset 1 250
 
