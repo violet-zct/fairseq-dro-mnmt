@@ -17,7 +17,7 @@ mkdir -p ${opt_data}
 SPM_TRAIN=scripts/spm_train.py
 SPM_ENCODE=scripts/spm_encode.py
 BPE_SIZE=32000
-EN_BPE_SIZE=25000
+EN_BPE_SIZE=24000
 
 SCRIPTS=/jet/home/chuntinz/work/data/wmt/mosesdecoder/scripts
 CLEAN=$SCRIPTS/training/clean-corpus-n.perl  # clean corpus by min/max lengths and ratios;
