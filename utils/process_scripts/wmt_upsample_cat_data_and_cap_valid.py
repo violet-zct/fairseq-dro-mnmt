@@ -8,7 +8,7 @@ cap_valid = 1500
 
 root = "/jet/home/chuntinz/work/data"
 rawdir = os.path.join(root, "wmt4")
-
+data_dir = "data_de_v2"
 langs = "fr,ta,de,tr"
 
 opt_root = rawdir
@@ -71,12 +71,12 @@ def upsample_and_write(data, data_sizes, sample_ratios):
             counts[i] += 1
     indices = [np.random.choice(d, c, replace=(c > d)) for c, d in zip(counts, data_sizes)]
 
-    op1 = os.path.join(opt_root, "data", "raw.combine.xx")
+    op1 = os.path.join(opt_root, data_dir, "raw.combine.xx")
     with open(op1, "w", encoding="utf-8") as fout:
         for ii, lang in enumerate(langs):
             for idx in indices[ii]:
                 fout.write(data[lang][0][idx][0] + "\n")
-    op2 = os.path.join(opt_root, "data", "raw.combine.en")
+    op2 = os.path.join(opt_root, data_dir, "raw.combine.en")
     with open(op2, "w", encoding="utf-8") as fout:
         for lang in langs:
             for xx, en in data[lang][0]:

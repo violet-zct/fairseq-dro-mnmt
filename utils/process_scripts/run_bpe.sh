@@ -13,6 +13,7 @@ opt_bin=${opt_root}/data-bin-v2
 rm -rf ${opt_bin}
 rm -rf ${opt_data}
 mkdir -p ${opt_data}
+mkdir -p ${opt_data}
 
 SPM_TRAIN=scripts/spm_train.py
 SPM_ENCODE=scripts/spm_encode.py
