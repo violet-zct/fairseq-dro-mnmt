@@ -7,7 +7,7 @@ temperature = 5.
 cap_valid = 1500
 
 root = "/jet/home/chuntinz/work/data"
-rawdir = os.path.join(root, "wmt")
+rawdir = os.path.join(root, "wmt4")
 
 langs = "fr,ta,de,tr"
 

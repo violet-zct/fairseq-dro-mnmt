@@ -3,7 +3,7 @@
 SCRIPTS=/jet/home/chuntinz/work/data/wmt/mosesdecoder/scripts
 CLEAN=$SCRIPTS/training/clean-corpus-n.perl  # clean corpus by min/max lengths and ratios; used after bpe
 
-workdir=/jet/home/chuntinz/work/data/wmt/19_encs
+workdir=/jet/home/chuntinz/work/data/wmt4/19_encs
 
 lang=cs
 python deduplicate.py \

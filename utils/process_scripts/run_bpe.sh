@@ -6,7 +6,7 @@
 # tr: original
 
 langs="fr,tr,de,ta"
-opt_root=/jet/home/chuntinz/work/data/wmt
+opt_root=/jet/home/chuntinz/work/data/wmt4
 opt_data=${opt_root}/data_de_v2
 opt_bin=${opt_root}/data-bin-v2
 
