@@ -5,10 +5,10 @@
 # fr: clean + dedup + subsample 1.8M
 # tr: original
 
-langs="fr,tr,cs,ta"
+langs="fr,tr,de,ta"
 opt_root=/jet/home/chuntinz/work/data/wmt
-opt_data=${opt_root}/data
-opt_bin=${opt_root}/data-bin
+opt_data=${opt_root}/data_de_v2
+opt_bin=${opt_root}/data-bin-v2
 
 rm -rf ${opt_bin}
 rm -rf ${opt_data}
@@ -16,7 +16,7 @@ mkdir -p ${opt_data}
 
 SPM_TRAIN=scripts/spm_train.py
 SPM_ENCODE=scripts/spm_encode.py
-BPE_SIZE=32000
+BPE_SIZE=34000
 EN_BPE_SIZE=24000
 
 SCRIPTS=/jet/home/chuntinz/work/data/wmt/mosesdecoder/scripts
@@ -41,8 +41,8 @@ for lang in ${langs//,/ }; do
 
   if [ ${lang} = "fr" ]; then
     langdir="14_enfr"
-  elif [ ${lang} = "cs" ]; then
-    langdir="19_encs"
+  elif [ ${lang} = "de" ]; then
+    langdir="14_ende"
   elif [ ${lang} = "tr" ]; then
     langdir="18_entr"
   elif [ ${lang} = "ta" ]; then
@@ -76,18 +76,16 @@ for lang in ${langs//,/ }; do
       --outputs ${opt_data}/${lang}_en/spm.cap.valid.${lid}
     done
 
-  perl ${CLEAN} -ratio 1.5 ${opt_root}/${langdir}/spm.train.en-${lang} ${lid} en ${opt_data}/${lang}_en/spm.train 1 250
+  perl ${CLEAN} -ratio 1.5 ${opt_root}/${langdir}/spm.train.en-${lang} ${lid} en ${opt_data}/${lang}_en/spm.train 5 250
 
   if [ ${lang} = "fr" ]; then
-    head -1800000 ${opt_data}/${lang}_en/spm.train.en > ${opt_data}/${lang}_en/temp.en
-    head -1800000 ${opt_data}/${lang}_en/spm.train.fr > ${opt_data}/${lang}_en/temp.fr
-    mv ${opt_data}/${lang}_en/temp.en ${opt_data}/${lang}_en/spm.train.en
-    mv ${opt_data}/${lang}_en/temp.fr ${opt_data}/${lang}_en/spm.train.fr
-  elif [ ${lang} = "cs" ]; then
-    head -2000000 ${opt_data}/${lang}_en/spm.train.en > ${opt_data}/${lang}_en/temp.en
-    head -2000000 ${opt_data}/${lang}_en/spm.train.cs > ${opt_data}/${lang}_en/temp.cs
-    mv ${opt_data}/${lang}_en/temp.en ${opt_data}/${lang}_en/spm.train.en
-    mv ${opt_data}/${lang}_en/temp.cs ${opt_data}/${lang}_en/spm.train.cs
+    python utils/process_scripts/subsample_data.py ${opt_data}/${lang}_en spm.train.en spm.train.fr 2000000 subset
+    mv ${opt_data}/${lang}_en/spm.train.en.subset ${opt_data}/${lang}_en/spm.train.en
+    mv ${opt_data}/${lang}_en/spm.train.fr.subset ${opt_data}/${lang}_en/spm.train.fr
+  elif [ ${lang} = "de" ]; then
+    python utils/process_scripts/subsample_data.py ${opt_data}/${lang}_en spm.train.en spm.train.de 2500000 subset
+    mv ${opt_data}/${lang}_en/spm.train.en.subset ${opt_data}/${lang}_en/spm.train.en
+    mv ${opt_data}/${lang}_en/spm.train.de.subset ${opt_data}/${lang}_en/spm.train.de
   fi
 
 done

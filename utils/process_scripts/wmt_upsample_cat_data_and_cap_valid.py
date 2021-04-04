@@ -9,7 +9,7 @@ cap_valid = 1500
 root = "/jet/home/chuntinz/work/data"
 rawdir = os.path.join(root, "wmt")
 
-langs = "fr,ta,cs,tr"
+langs = "fr,ta,de,tr"
 
 opt_root = rawdir
 langs = langs.split(",")
