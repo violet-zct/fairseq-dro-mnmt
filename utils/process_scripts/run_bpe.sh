@@ -19,7 +19,7 @@ SPM_ENCODE=scripts/spm_encode.py
 BPE_SIZE=34000
 EN_BPE_SIZE=24000
 
-SCRIPTS=/jet/home/chuntinz/work/data/wmt/mosesdecoder/scripts
+SCRIPTS=/jet/home/chuntinz/work/data/wmt4/mosesdecoder/scripts
 CLEAN=$SCRIPTS/training/clean-corpus-n.perl  # clean corpus by min/max lengths and ratios;
 
 python utils/process_scripts/wmt_upsample_cat_data_and_cap_valid.py
