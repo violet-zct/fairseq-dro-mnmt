@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPTS=/jet/home/chuntinz/work/data/wmt/mosesdecoder/scripts
+SCRIPTS=/jet/home/chuntinz/work/data/wmt4/mosesdecoder/scripts
 NORM_PUNC=$SCRIPTS/tokenizer/normalize-punctuation.perl
 REM_NON_PRINT_CHAR=$SCRIPTS/tokenizer/remove-non-printing-char.perl
 
