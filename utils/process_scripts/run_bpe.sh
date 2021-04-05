@@ -63,7 +63,7 @@ for lang in ${langs//,/ }; do
     python ${SPM_ENCODE} \
       --model ${opt_data}/spm.${model}.${size}.model \
       --inputs ${opt_root}/${langdir}/train.en-${lang}.${lid} \
-      --outputs ${opt_root}/${langdir}/spm.train.en-${lang}.${lid}.v2
+      --outputs ${opt_root}/${langdir}/spm.train.en-${lang}.v2.${lid}
 
     for split in test valid; do
       python ${SPM_ENCODE} \
