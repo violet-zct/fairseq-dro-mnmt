@@ -77,7 +77,7 @@ for lang in ${langs//,/ }; do
       --outputs ${opt_data}/${lang}_en/spm.cap.valid.${lid}
     done
 
-  perl ${CLEAN} -ratio 1.5 ${opt_root}/${langdir}/spm.train.en-${lang} ${lid} en ${opt_data}/${lang}_en/spm.train 4 250
+  perl ${CLEAN} -ratio 1.5 ${opt_root}/${langdir}/spm.train.en-${lang} ${lid} en ${opt_data}/${lang}_en/spm.train 2 250
 
   if [ ${lang} = "fr" ]; then
     python utils/process_scripts/subsample_data.py ${opt_data}/${lang}_en spm.train.en spm.train.fr 1800000 subset
