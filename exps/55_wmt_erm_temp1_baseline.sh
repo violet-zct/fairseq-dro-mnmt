@@ -1,9 +1,9 @@
 #! /bin/bash
 #SBATCH --output=slurm_logs/slurm-%A-%a.out
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
-#SBATCH --partition=learnfair
-##SBATCH --partition=priority
-##SBATCH --comment="TACL 1.10"
+##SBATCH --partition=learnfair
+#SBATCH --partition=priority
+#SBATCH --comment="TACL 4.20"
 #SBATCH --job-name=55
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-3
+#SBATCH --array=0-1
 
 source activate mnmt2
 
@@ -25,10 +25,8 @@ langs="cs,fr,ta,tr"
 log=1
 
 SAVE_ROOT=${savedir}/saved_models
-temps=(5 100)
-direction=$(($SLURM_ARRAY_TASK_ID / 2))
-tempid=$(($SLURM_ARRAY_TASK_ID % 2))
-temp=${temps[$tempid]}
+direction=$SLURM_ARRAY_TASK_ID
+temp=1
 
 if [ $direction = 0 ]; then
     lang_pairs="en-cs,en-fr,en-ta,en-tr"
@@ -125,6 +123,8 @@ for lang in ${langs//,/ }; do
     scp ${SAVE}/test_${lang}_en_last.log tir:${send_dir}/
 done
 
+scp ${SAVE}/checkpoint_last.pt tir:${send_dir}/
 scp ${SAVE}/log.txt tir:${send_dir}/
+
 scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.out tir:${send_dir}/
 scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.err tir:${send_dir}/

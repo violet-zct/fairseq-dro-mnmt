@@ -4,7 +4,7 @@
 #SBATCH --partition=learnfair
 ##SBATCH --partition=priority
 ##SBATCH --comment="TACL 1.10"
-#SBATCH --job-name=55
+#SBATCH --job-name=57
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -20,8 +20,8 @@ source activate mnmt2
 
 savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
-DATA=${datadir}/wmt4/data-bin
-langs="cs,fr,ta,tr"
+DATA=${datadir}/wmt4/data-bin-v2
+langs="de,fr,ta,tr"
 log=1
 
 SAVE_ROOT=${savedir}/saved_models
@@ -31,13 +31,13 @@ tempid=$(($SLURM_ARRAY_TASK_ID % 2))
 temp=${temps[$tempid]}
 
 if [ $direction = 0 ]; then
-    lang_pairs="en-cs,en-fr,en-ta,en-tr"
+    lang_pairs="en-de,en-fr,en-ta,en-tr"
     ename="o2m"
     gtgt="xx"
     etok="tgt"
     glevel="target_lang"
 elif [ $direction = 1 ]; then
-    lang_pairs="cs-en,fr-en,ta-en,tr-en"
+    lang_pairs="de-en,fr-en,ta-en,tr-en"
     ename="m2o"
     gtgt="en"
     etok="src"
@@ -47,7 +47,7 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=55_erm_temp_${temp}_wmt4_${ename}
+exp_name=57_erm_temp_${temp}_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}

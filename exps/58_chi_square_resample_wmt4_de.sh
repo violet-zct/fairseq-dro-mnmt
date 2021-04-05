@@ -4,7 +4,7 @@
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
 #SBATCH --comment="TACL 4.20"
-#SBATCH --job-name=56
+#SBATCH --job-name=58
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -39,20 +39,20 @@ trap 'trap_handler TERM' TERM
 
 savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
-DATA=${datadir}/wmt4/data-bin
-langs="cs,fr,ta,tr"
+DATA=${datadir}/wmt4/data-bin-v2
+langs="de,fr,ta,tr"
 log=1
 
 SAVE_ROOT=${savedir}/saved_models
 
 if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
-    lang_pairs="en-cs,en-fr,en-ta,en-tr"
+    lang_pairs="en-de,en-fr,en-ta,en-tr"
     ename="o2m"
     gtgt="xx"
     etok="tgt"
     glevel="target_lang"
 elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
-    lang_pairs="cs-en,fr-en,ta-en,tr-en"
+    lang_pairs="de-en,fr-en,ta-en,tr-en"
     ename="m2o"
     gtgt="en"
     etok="src"
