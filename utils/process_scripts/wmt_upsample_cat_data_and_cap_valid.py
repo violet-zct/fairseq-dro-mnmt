@@ -8,8 +8,8 @@ cap_valid = 1500
 
 root = "/jet/home/chuntinz/work/data"
 rawdir = os.path.join(root, "wmt4")
-data_dir = "data_de_v2"
-langs = "fr,ta,de,tr"
+data_dir = sys.argv[1]
+langs = sys.argv[2]
 
 opt_root = rawdir
 langs = langs.split(",")

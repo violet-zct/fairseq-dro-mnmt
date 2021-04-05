@@ -6,8 +6,8 @@ rawdir = "/jet/home/chuntinz/work/data/wmt4"
 
 def read_data(dirname, lang, split):
     bad = 0
-    path1 = os.path.join(dirname, "{}.{}-en.{}".format(split, lang, lang))
-    path2 = os.path.join(dirname, "{}.{}-en.{}".format(split, lang, "en"))
+    path1 = os.path.join(dirname, "{}.en-{}.{}".format(split, lang, lang))
+    path2 = os.path.join(dirname, "{}.en-{}.{}".format(split, lang, "en"))
     data = []
     with open(path1, "r", encoding="utf-8") as f1, open(path2, "r", encoding="utf-8") as f2:
         for xx, en in zip(f1, f2):
@@ -26,8 +26,8 @@ def write_data(data, dirname, split, lang):
         for xx, en in data:
             f1.write(xx + "\n")
             f2.write(en + "\n")
-    os.rename(p1, os.path.join(dirname, "{}.{}-en.{}".format(split, lang, lang)))
-    os.rename(p2, os.path.join(dirname, "{}.{}-en.{}".format(split, lang, "en")))
+    os.rename(p1, os.path.join(dirname, "{}.en-{}.{}".format(split, lang, lang)))
+    os.rename(p2, os.path.join(dirname, "{}.en-{}.{}".format(split, lang, "en")))
 
 
 for dirname in os.listdir(rawdir):
