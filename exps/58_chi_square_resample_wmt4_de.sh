@@ -62,7 +62,7 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=56_ema_0.1_ch_0_rho_0.05_min_0.2_chi_square_resample_wmt4_${ename}
+exp_name=58_ema_0.1_ch_0_rho_0.05_min_0.2_chi_square_resample_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
