@@ -62,7 +62,7 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=58_ema_0.1_ch_0_rho_0.05_min_0.2_chi_square_resample_wmt4_de_${ename}
+exp_name=58_ema_0.1_ch_0_rho_0.1_min_0.2_chi_square_resample_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -80,7 +80,7 @@ python train.py ${DATA}\
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_resample' --label-smoothing 0.1 \
-    --rho 0.05 --min-prob 0.2 --group-level ${glevel} --ema 0.1 --clear-history 0 \
+    --rho 0.1 --min-prob 0.2 --group-level ${glevel} --ema 0.1 --clear-history 0 \
     --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
