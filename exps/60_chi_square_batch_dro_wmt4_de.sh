@@ -62,7 +62,7 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=62_rho_0.1_chi_square_batch_wmt4_de_${ename}
+exp_name=62_rho_1_chi_square_batch_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -79,7 +79,7 @@ python train.py ${DATA}\
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_batch_dro' --label-smoothing 0.1 \
-    --rho 0.1 --group-level ${glevel} \
+    --rho 1 --group-level ${glevel} \
     --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
