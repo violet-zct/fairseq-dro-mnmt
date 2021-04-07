@@ -132,7 +132,7 @@ class ChiSquareBatchDROCriterion(FairseqCriterion):
                 avg_group_losses = fg_group_losses / (fg_group_count + 1e-8)
                 # for each group: average group weight = \sum instance_q / #sample of G_i
                 avg_group_weight = fg_group_weights / (fg_group_count + 1e-8)
-            sample_size = 1
+            sample_size = 1 / self.data_parallel_world_size
         else:
             loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=False)
             loss = loss.sum()
