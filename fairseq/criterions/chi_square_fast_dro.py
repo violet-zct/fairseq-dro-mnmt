@@ -49,7 +49,8 @@ class ChiSquareBatchDROCriterion(FairseqCriterion):
             raise ValueError
 
         self.robust_loss = RobustLoss(rho, reg=0, geometry='chi-square')
-        self.ata_parallel_world_size = task.args.distributed_world_size
+        self.data_parallel_world_size = task.args.distributed_world_size
+        self.rank = task.args.distributed_rank
 
     @staticmethod
     def add_args(parser):
@@ -113,7 +114,10 @@ class ChiSquareBatchDROCriterion(FairseqCriterion):
                                            for ii, bs in enumerate(batch_list) if bs != 0])
 
             best_response = self.robust_loss(gather_ind_losses)
-            loss = torch.dot(best_response, gather_ind_losses)
+
+            start_idx = 0 if self.rank == 0 else sum(batch_list[:self.rank])
+            end_idx = sum(batch_list[:self.rank+1])
+            loss = torch.dot(best_response[start_idx: end_idx], ind_losses)
 
             with torch.no_grad():
                 fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
