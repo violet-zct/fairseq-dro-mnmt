@@ -10,6 +10,8 @@ from fairseq.criterions import FairseqCriterion, register_criterion
 import torch
 from fairseq.criterions.fast_dro.robust_losses import RobustLoss
 
+import logging
+logger = logging.getLogger(__name__)
 
 def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=True):
     if target.dim() == lprobs.dim() - 1:
@@ -95,17 +97,18 @@ class ChiSquareBatchDROCriterion(FairseqCriterion):
             torch.distributed.all_gather(batch_list, batch_size)
 
             # expand
+            expand_ind_losses = ind_losses
             batch_list = torch.cat(batch_list)
             max_batch = torch.max(batch_list)
             if batch_size < max_batch:
                 diff = max_batch - batch_size
                 data_labels = torch.cat([data_labels, data_labels.new_zeros(diff)])
-                ind_losses = torch.cat([ind_losses, ind_losses.new_zeros(diff)])
+                expand_ind_losses = torch.cat([ind_losses, ind_losses.new_zeros(diff)])
 
             gather_data_labels = [data_labels.new_zeros(max_batch) for bs in batch_list if bs != 0]
             gather_ind_losses = [ind_losses.new_zeros(max_batch) for bs in batch_list if bs != 0]
             torch.distributed.all_gather(gather_data_labels, data_labels)
-            torch.distributed.all_gather(gather_ind_losses, ind_losses)
+            torch.distributed.all_gather(gather_ind_losses, expand_ind_losses)
 
             # compact
             gather_data_labels = torch.cat([gather_data_labels[ii][:bs]
