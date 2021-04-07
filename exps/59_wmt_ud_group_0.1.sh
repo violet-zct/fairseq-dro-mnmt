@@ -2,7 +2,7 @@
 #SBATCH --output=slurm_logs/slurm-%A-%a.out
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 #SBATCH --partition=learnfair
-#SBATCH --job-name=mt-22_opus
+#SBATCH --job-name=59
 #SBATCH --comment="ACL 2021 deadline Jan 26th."
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -48,7 +48,7 @@ seed=${seeds[$split]}
 SAVE_ROOT=/private/home/ghazvini/chunting/fairseq-dro-mnmt/saved_models
 DATA=/private/home/ghazvini/chunting/data/marjan_data/mnmt_data/wmt14_ende
 model=transformer_wmt_en_de
-exp_name=22_opus_run${split}
+exp_name=59_opus_run${split}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -73,7 +73,7 @@ python -u train.py ${DATA} \
     --warmup-updates 1000 --warmup-init-lr 0.01 --dropout 0.1 \
     --apollo-beta 0.9 --apollo-eps 1e-4 --save-dir ${SAVE} \
     --keep-last-epochs 10 --keep-interval-updates 1 --update-freq 1 --save-interval-updates 5000 \
-    --log-format simple --log-interval 100 --num-workers 0 | tee ${SAVE}/${exp_name}_log.txt
+    --log-format simple --log-interval 100 --num-workers 0 | tee -a ${SAVE}/log.txt
 
 date
 echo "end" | tee ${SAVE}/END
