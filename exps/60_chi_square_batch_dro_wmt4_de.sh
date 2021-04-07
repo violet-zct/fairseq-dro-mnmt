@@ -75,7 +75,6 @@ if [ ${log} = 1 ]; then
 fi
 
 python train.py ${DATA}\
-    --warmup-epochs 1 \
     --task translation_multi_simple_epoch \
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --encoder-langtok ${etok} --enable-lang-ids \
