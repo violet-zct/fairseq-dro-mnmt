@@ -8,6 +8,7 @@
 #SBATCH --mem=10g
 #SBATCH --time=0
 #SBATCH --array=0-3
+#SBATCH --exclude=compute-0-31,compute-1-7
 
 source activate hal
 models=(57_erm_temp_1_wmt4_de_m2o 57_erm_temp_100_wmt4_de_m2o 57_erm_temp_1_wmt4_de_o2m 57_erm_temp_100_wmt4_de_o2m)
