@@ -45,8 +45,8 @@ fi
 
 python -u fairseq_cli/compute_baseline_loss.py ${DATA}\
 	  --task translation_multi_simple_epoch \
-	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
-	  --sampling-method "temperature" --sampling-temperature ${temp} \
+	  --arch ${model} --valid-subset train --skip-invalid-size-inputs-valid-test \
+	  --sampling-method "temperature" --sampling-temperature 1 \
 	  --encoder-langtok ${etok} --group-level ${glevel} \
 	  --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
