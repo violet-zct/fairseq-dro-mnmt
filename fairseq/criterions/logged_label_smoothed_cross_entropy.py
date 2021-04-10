@@ -94,14 +94,17 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 sample_size = sample['target'].size(0) if self.sentence_avg else sample['ntokens']
         else:
             loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=False)
+            mask = (sample['target'] != self.padding_idx).float()
+            ind_loss = (loss.reshape_as(sample['target']) * mask).sum(1)
             loss = loss.sum()
             nll_loss = nll_loss.reshape_as(sample['target']).sum(1)
-            mask = (sample['target'] != self.padding_idx).float()
+
             sample_size = sample['ntokens']
             fg_labels = self.retrieve_group_labels(sample)
             fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
             fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
             fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1))
+            fg_group_loss = fg_zero_vec.scatter_add(0, fg_labels, ind_loss)
             nll_loss = nll_loss.sum()
 
         logging_output = {
@@ -116,6 +119,7 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         if not self.training:
             for ii in range(self.n_groups):
                 logging_output["fg_gnll{}".format(ii)] = fg_group_nll[ii].data
+                logging_output["fg_loss{}".format(ii)] = fg_group_loss[ii].data
                 logging_output["fg_gcount{}".format(ii)] = fg_group_count[ii].data
         return loss, sample_size, logging_output
 
@@ -183,7 +187,10 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 g_nll = sum(log.get('fg_gnll{}'.format(ii), 0) for log in logging_outputs)
                 g_tokens = sum(log.get('fg_gcount{}'.format(ii), 0) for log in logging_outputs)
                 division_g_ntokens = g_tokens if g_tokens > 0 else 1
+
+                g_loss = sum(log.get('fg_loss{}'.format(ii), 0) for log in logging_outputs)
                 metrics.log_scalar('fg_gnll{}'.format(ii), g_nll / division_g_ntokens / math.log(2), g_tokens, round=3)
+                metrics.log_scalar('fg_gloss{}'.format(ii), g_loss / division_g_ntokens, g_tokens, round=3)
                 metrics.log_derived_with_key('fg_ppl{}'.format(ii), lambda value: utils.get_perplexity(value),
                                              "fg_gnll{}".format(ii))
 
