@@ -34,11 +34,32 @@ else
   exit
 fi
 
-python -u valid.py ${DATA}\
+#python -u valid.py ${DATA}\
+#	  --task translation_multi_simple_epoch \
+#	  --path ${SAVE}/checkpoint_last.pt \
+#	  --valid-subset train \
+#	  --encoder-langtok ${etok} \
+#    --lang-pairs ${lang_pairs} \
+#    --lang-dict ${DATA}/langs.list \
+#	  --max-tokens 4096 --log-interval 100 --log-format simple | tee ${SAVE}/valid_log.txt
+
+python -u fairseq_cli/compute_baseline_loss.py ${DATA}\
 	  --task translation_multi_simple_epoch \
-	  --path ${SAVE}/checkpoint_last.pt \
-	  --valid-subset train \
-	  --encoder-langtok ${etok} \
+	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
+	  --sampling-method "temperature" --sampling-temperature ${temp} \
+	  --encoder-langtok ${etok} --group-level ${glevel} \
+	  --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
-	  --max-tokens 4096 --log-interval 100 | tee ${SAVE}/valid_log.txt
+	  --no-epoch-checkpoints \
+	  --share-decoder-input-output-embed \
+	  --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 1e-4 \
+	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'inverse_sqrt' \
+	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 5e-4 --min-lr -1 \
+	  --criterion 'logged_label_smoothed_cross_entropy' --label-smoothing 0.1 \
+	  --max-tokens 4096 \
+	  --seed 222 \
+  	--max-source-positions 512 --max-target-positions 512 \
+  	--save-dir ${SAVE} \
+    --encoder-normalize-before --decoder-normalize-before \
+	  --log-interval 100 --log-format simple | tee ${SAVE}/valid_log.txt
