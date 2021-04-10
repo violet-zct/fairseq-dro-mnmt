@@ -9,7 +9,7 @@
 #SBATCH --time=0
 #SBATCH --array=0-3
 
-source activate mnmt
+source activate hal
 models=(57_erm_temp_1_wmt4_de_m2o 57_erm_temp_100_wmt4_de_m2o 57_erm_temp_1_wmt4_de_o2m 57_erm_temp_100_wmt4_de_o2m)
 model=${models[${SLURM_ARRAY_TASK_ID}]}
 
