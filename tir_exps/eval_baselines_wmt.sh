@@ -33,6 +33,7 @@ elif [[ "${model}" == *o2m ]]; then
 else
   exit
 fi
+arch=transformer_wmt_en_de
 
 #python -u valid.py ${DATA}\
 #	  --task translation_multi_simple_epoch \
@@ -45,7 +46,7 @@ fi
 
 python -u fairseq_cli/compute_baseline_loss.py ${DATA}\
 	  --task translation_multi_simple_epoch \
-	  --arch ${model} --valid-subset train --skip-invalid-size-inputs-valid-test \
+	  --arch ${arch} --valid-subset train --skip-invalid-size-inputs-valid-test \
 	  --sampling-method "temperature" --sampling-temperature 1 \
 	  --encoder-langtok ${etok} --group-level ${glevel} \
 	  --max-update 300000 --layernorm-embedding \
@@ -57,7 +58,7 @@ python -u fairseq_cli/compute_baseline_loss.py ${DATA}\
 	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'inverse_sqrt' \
 	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 5e-4 --min-lr -1 \
 	  --criterion 'logged_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-	  --max-tokens 4096 \
+	  --max-tokens 11192 \
 	  --seed 222 \
   	--max-source-positions 512 --max-target-positions 512 \
   	--save-dir ${SAVE} \

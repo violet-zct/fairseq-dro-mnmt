@@ -169,6 +169,7 @@ def validate(args, trainer, task, epoch_itr, subsets):
                 count += 1
                 if count % 50 == 0:
                     logger.info("Processed {} batches!".format(count))
+                    progress.print(agg.get_smoothed_values(), tag=subset, step=trainer.get_num_updates())
 
         # log validation stats
         stats = get_valid_stats(args, trainer, agg.get_smoothed_values())
