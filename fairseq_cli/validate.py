@@ -99,11 +99,12 @@ def main(args, override_args=None):
         )
 
         log_outputs = []
-        for i, sample in enumerate(progress):
-            sample = utils.move_to_cuda(sample) if use_cuda else sample
-            _loss, _sample_size, log_output = task.valid_step(sample, model, criterion)
-            progress.log(log_output, step=i)
-            log_outputs.append(log_output)
+        with metrics.aggregate(new_root=True) as agg:
+            for i, sample in enumerate(progress):
+                sample = utils.move_to_cuda(sample) if use_cuda else sample
+                _loss, _sample_size, log_output = task.valid_step(sample, model, criterion)
+                progress.log(log_output, step=i)
+                log_outputs.append(log_output)
 
         if args.distributed_world_size > 1:
             log_outputs = distributed_utils.all_gather_list(
@@ -111,10 +112,8 @@ def main(args, override_args=None):
                 max_size=getattr(args, 'all_gather_list_size', 16384),
             )
             log_outputs = list(chain.from_iterable(log_outputs))
-
-        with metrics.aggregate() as agg:
-            task.reduce_metrics(log_outputs, criterion)
-            log_output = agg.get_smoothed_values()
+            
+        progress.print(agg.get_smoothed_values(), tag=subset, step=i)
 
         progress.print(log_output, tag=subset, step=i)
 
