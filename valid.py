@@ -7,7 +7,7 @@
 Legacy entry point. Use fairseq_cli/train.py or fairseq-train instead.
 """
 
-from fairseq_cli.compute_baseline_loss import cli_main
+from fairseq_cli.validate import cli_main
 
 
 if __name__ == '__main__':
