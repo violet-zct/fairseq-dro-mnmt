@@ -46,11 +46,11 @@ arch=transformer_wmt_en_de
 #	  --max-tokens 4096 --log-interval 100 --log-format simple | tee ${SAVE}/valid_log.txt
 
 python -u fairseq_cli/compute_baseline_loss.py ${DATA}\
-	  --task translation_multi_simple_epoch \
+	  --task translation_multi_simple_epoch --restore-file checkpoint_best.pt \
 	  --arch ${arch} --valid-subset train --skip-invalid-size-inputs-valid-test \
 	  --sampling-method "temperature" --sampling-temperature 1 \
 	  --encoder-langtok ${etok} --group-level ${glevel} \
-	  --max-update 300000 --layernorm-embedding \
+	  --max-update 100 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
 	  --no-epoch-checkpoints \
