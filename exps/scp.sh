@@ -19,9 +19,9 @@
 #done
 
 for exp_name in 55_erm_temp_1_wmt4_o2m 55_erm_temp_5_wmt4_o2m 55_erm_temp_100_wmt4_o2m 55_erm_temp_1_wmt4_m2o 55_erm_temp_5_wmt4_m2o 55_erm_temp_100_wmt4_m2o; do
-  scp saved_models/${exp_name}/checkpoint_best.pt /home/chuntinz/tir5/logs/${exp_name}/
+  scp saved_models/${exp_name}/checkpoint_best.pt tir:/home/chuntinz/tir5/logs/${exp_name}/
 done
 
 for exp_name in 57_erm_temp_1_wmt4_de_m2o 57_erm_temp_5_wmt4_de_m2o 57_erm_temp_100_wmt4_de_m2o 57_erm_temp_1_wmt4_de_o2m 57_erm_temp_5_wmt4_de_o2m 57_erm_temp_100_wmt4_de_o2m; do
-  scp saved_models/${exp_name}/checkpoint_best.pt /home/chuntinz/tir5/logs/${exp_name}/
+  scp saved_models/${exp_name}/checkpoint_best.pt tir:/home/chuntinz/tir5/logs/${exp_name}/
 done
