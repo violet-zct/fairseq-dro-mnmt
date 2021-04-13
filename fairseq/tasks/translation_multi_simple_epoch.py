@@ -26,6 +26,7 @@ import numpy as np
 from fairseq import metrics, utils
 from argparse import Namespace
 import json
+import os
 EVAL_BLEU_ORDER = 4
 
 
@@ -166,6 +167,14 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
             self.training,
             epoch=epoch, combine=combine, shard_epoch=shard_epoch, **kwargs
         )
+
+        if split == 'train' and hasattr(self.args, 'compute_train_dynamics') and self.args.compute_train_dynamics:
+            opt_path = os.path.join(self.args.save_dir, 'info.opt')
+            if not os.path.exists(opt_path):
+                with open(opt_path, "w") as fout:
+                    for ii in range(len(self.datasets[split])):
+                        ds_idx, _ = self.datasets[split][ii]
+                        fout.write("{}\n".format(self.datasets[split].keys[ds_idx]))
 
     def build_dataset_for_inference(self, src_tokens, src_lengths, constraints=None):
         if constraints is not None:
@@ -341,6 +350,13 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
                 logging_output['_bleu_counts_' + str(i)] = bleu.counts[i]
                 logging_output['_bleu_totals_' + str(i)] = bleu.totals[i]
         return loss, sample_size, logging_output
+
+    def train_dynamic_step(self, sample, model, criterion):
+        model.eval()
+        with torch.no_grad():
+            loss, logging_output, sample_size, sample_ids, average_p, median_p, avg_entropy = \
+                criterion(model, sample, train_dynamic=True)
+        return loss, sample_size, logging_output, sample_ids, average_p, median_p, avg_entropy
 
     def inference_step(self, generator, models, sample, prefix_tokens=None, constraints=None):
         with torch.no_grad():
@@ -519,6 +535,9 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
             num_workers=num_workers,
             epoch=epoch,
         )
+
+        if dataset == self.datasets['valid'] or self.args.sampling_method == 'concat':
+            self.dataset_to_epoch_iter[dataset] = epoch_iter
         return epoch_iter
 
     def reduce_metrics(self, logging_outputs, criterion):

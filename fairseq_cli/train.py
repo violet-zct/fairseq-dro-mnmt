@@ -140,6 +140,10 @@ def main(args):
     while lr > args.min_lr and epoch_itr.next_epoch_idx <= max_epoch:
         # train for one epoch
         valid_losses, should_stop = train(args, trainer, task, epoch_itr)
+
+        if hasattr(args, 'compute_train_dynamics') and args.compute_train_dynamics:
+            on_the_fly_train_dynamics(args, trainer, epoch_itr)
+
         if should_stop:
             break
 
@@ -363,6 +367,58 @@ def get_valid_stats(args, trainer, stats):
             checkpoint_utils.save_checkpoint.best, stats[args.best_checkpoint_metric]
         )
     return stats
+
+
+def on_the_fly_train_dynamics(args, trainer, epoch_itr):
+    cur_subset = 'train'
+    data_size = trainer.task.datasets[cur_subset]
+    train_avg_probs = torch.zeros(data_size, device='cuda')
+    train_med_probs = torch.zeros(data_size, device='cuda')
+    train_avg_ent = torch.zeros(data_size, device='cuda')
+    sanity_ids = torch.zeros(data_size, device='cuda')
+    # make sure the sampling method is 'concat'
+    itr = trainer.get_valid_iterator(cur_subset).next_epoch_itr(shuffle=False)
+    progress = progress_bar.progress_bar(
+        itr,
+        log_format=args.log_format,
+        log_interval=10000,
+        epoch=epoch_itr.epoch,
+        prefix=f"summarize on train subset",
+        tensorboard_logdir=(
+            args.tensorboard_logdir if distributed_utils.is_master(args) else None
+        ),
+        default_log_format=("tqdm" if not args.no_progress_bar else "simple"),
+    )
+    # create a new root metrics aggregator so validation metrics
+    # don't pollute other aggregators (e.g., train meters)
+    with metrics.aggregate(new_root=True) as agg:
+        for i, sample in enumerate(progress):
+            log_output, sample_ids, average_p, median_p, avg_ent = trainer.compute_train_dynamics_step(sample)
+            sanity_ids[sample_ids] = 1
+            train_avg_probs[sample_ids] = average_p
+            train_med_probs[sample_ids] = median_p
+            train_avg_ent[sample_ids] = avg_ent
+
+            if i % 10000 == 0:
+                # log stats
+                stats = agg.get_smoothed_values()
+                progress.print(stats, tag=cur_subset, step=i)
+    torch.distributed.all_reduce(sanity_ids)
+    diff = (sanity_ids - torch.ones(data_size)).sum().item()
+    assert diff == 0, "diff={}".format(diff)
+    torch.distributed.all_reduce(train_avg_probs)
+    torch.distributed.all_reduce(train_med_probs)
+    torch.distributed.all_reduce(train_avg_ent)
+
+    def _write_to_file(tensor, fname):
+        tensor = tensor.cpu().numpy()
+        fout = "{}_{}.npy".format(fname, epoch_itr.epoch)
+        np.save(fout, tensor)
+
+    _write_to_file(train_avg_probs, "avg_probs")
+    _write_to_file(train_med_probs, "med_probs")
+    _write_to_file(train_avg_ent, "avg_ent")
+    logger.info("saved three files to the disk for epoch = {}".format(epoch_itr.epoch))
 
 
 def cli_main(modify_parser=None):
