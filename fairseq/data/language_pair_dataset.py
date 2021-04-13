@@ -116,6 +116,10 @@ def collate(
         tgt_lang_id = torch.LongTensor([s['tgt_lang_id'] for s in samples])
         tgt_lang_id = tgt_lang_id.index_select(0, sort_order)
         batch['tgt_lang_id'] = tgt_lang_id
+    if samples[0].get('concat_ds_id', None) is not None:
+        concat_ids = torch.LongTensor([s['concat_ds_id'] for s in samples])
+        concat_ids = concat_ids.index_select(0, sort_order)
+        batch['concat_ds_id'] = concat_ids
 
     if samples[0].get('alignment', None) is not None:
         bsz, tgt_sz = batch['target'].shape
