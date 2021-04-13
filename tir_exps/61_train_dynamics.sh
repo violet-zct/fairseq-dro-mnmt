@@ -23,10 +23,10 @@ datadir=/home/chuntinz/tir5/data/mnmt_data
 
 SAVE_ROOT=${savedir}/saved_models
 
-langs="aze,bel,glg,slk,tur,rus,por,ces"
-lang_pairs="en-aze,en-bel,en-glg,en-slk,en-tur,en-rus,en-por,en-ces"
-DATA=${datadir}/ted/ted8_related/data-bin
-ename="related_o2m"
+langs="bos,mar,hin,mkd,ell,bul,fra,kor"
+lang_pairs="en-bos,en-mar,en-hin,en-mkd,en-ell,en-bul,en-fra,en-kor"
+DATA=${datadir}/ted/ted8_diverse/data-bin
+ename="diverse_o2m"
 gtgt="xx"
 etok="tgt"
 glevel="target_lang"
