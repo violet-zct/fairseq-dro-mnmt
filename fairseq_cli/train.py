@@ -351,7 +351,8 @@ def validate(args, trainer, task, epoch_itr, subsets):
                 key = "fg_gloss{}".format(ii)
                 baselines[ii] = stats[key]
                 stats.pop(key, None)
-            criterion.set_valid_baselines(baselines)
+            if hasattr(criterion, 'set_valid_baselines'):
+                criterion.set_valid_baselines(baselines)
 
         progress.print(stats, tag=subset, step=trainer.get_num_updates())
         valid_losses.append(stats[args.best_checkpoint_metric])
