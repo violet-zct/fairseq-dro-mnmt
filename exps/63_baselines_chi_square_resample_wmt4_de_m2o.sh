@@ -4,11 +4,11 @@
 #SBATCH --partition=learnfair
 ##SBATCH --partition=priority
 ##SBATCH --comment="TACL 4.20"
-#SBATCH --job-name=58
+#SBATCH --job-name=63
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
-#SBATCH --mem=200g
+#SBATCH --mem=100g
 #SBATCH -C volta32gb
 #SBATCH --cpus-per-task=10
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
@@ -60,27 +60,27 @@ SAVE_ROOT=${savedir}/saved_models
 #else
 #    exit
 #fi
-lang_pairs="en-de,en-fr,en-ta,en-tr"
-ename="o2m"
-gtgt="xx"
-etok="tgt"
-glevel="target_lang"
+lang_pairs="de-en,fr-en,ta-en,tr-en"
+ename="m2o"
+gtgt="en"
+etok="src"
+glevel="source_lang"
 
 if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
-    baselines="de:,fr:,ta:,tr:"
-    ename="o2m_t1"
+    baselines="de:2.838,fr:2.699,ta:3.296,tr:2.395"
+    ename="m2o_t1"
 elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
-    baselines="de:,fr:,ta:,tr:"
-    ename="o2m_t100"
+    baselines="de:2.944,fr:2.774,ta:3.07,tr:2.055"
+    ename="m2o_t100"
 elif [ $SLURM_ARRAY_TASK_ID = 2 ]; then
-    baselines="de:,fr:,ta:,tr:"
-    ename="o2m_tbest"
+    baselines="de:2.838,fr:2.699,ta:3.07,tr:2.055"
+    ename="m2o_tbest"
 else
     exit
 fi
 
 model=transformer_wmt_en_de
-exp_name=62_baselines_ema_0.1_ch_0_rho_0.1_min_0.2_chi_square_resample_wmt4_de_${ename}
+exp_name=63_baselines_ema_0.1_ch_0_rho_0.1_min_0.2_chi_square_resample_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
