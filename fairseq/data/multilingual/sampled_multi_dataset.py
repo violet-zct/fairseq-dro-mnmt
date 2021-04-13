@@ -228,7 +228,7 @@ class SampledMultiDataset(FairseqDataset):
     def get_unique_mapping_from_pair_to_idx(self, ds_idx, sample_idx):
         sizes = [len(d) for d in self.datasets]
         # set a one-to-one mapping from any pair (ds_idx, ds_sample_idx) to a index of the concat dataset
-        idx = sum(sizes[:ds_idx]) if ds_idx > 0 else 0 + sample_idx
+        idx = (sum(sizes[:ds_idx]) if ds_idx > 0 else 0) + sample_idx
         return idx
 
     def _get_dataset_and_index(self, index):
