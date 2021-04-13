@@ -417,7 +417,7 @@ def on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
                 train_med_probs[sample_ids] = median_p
                 train_avg_ent[sample_ids] = avg_ent
 
-            if i % 1000 == 0:
+            if i % 500 == 0:
                 # log stats
                 stats = agg.get_smoothed_values()
                 progress.print(stats, tag=cur_subset, step=i)
