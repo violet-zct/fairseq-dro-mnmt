@@ -452,7 +452,7 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
         ignore_invalid_inputs=False, required_batch_size_multiple=1,
         seed=1, num_shards=1, shard_id=0, num_workers=0, epoch=1,
         data_buffer_size=0, disable_iterator_cache=False,
-        reset_sample_ratios=None,
+        reset_sample_ratios=None, new_iterator=False,
     ):
         """
         Get an iterator that yields batches of data from the given dataset.
@@ -491,8 +491,11 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
         """
         # initialize the dataset with the correct starting epoch
         assert isinstance(dataset, FairseqDataset)
-        if dataset in self.dataset_to_epoch_iter:
+        if new_iterator and "special" in self.dataset_to_epoch_iter:
+            return self.dataset_to_epoch_iter["special"]
+        if dataset in self.dataset_to_epoch_iter and not new_iterator:
             return self.dataset_to_epoch_iter[dataset]
+
         if (
             self.args.sampling_method == 'RoundRobin'
         ):
@@ -536,7 +539,9 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
             epoch=epoch,
         )
 
-        if dataset == self.datasets['valid'] or self.args.sampling_method == 'concat':
+        if new_iterator:
+            self.dataset_to_epoch_iter['special'] = epoch_iter
+        elif dataset == self.datasets['valid'] or self.args.sampling_method == 'concat':
             self.dataset_to_epoch_iter[dataset] = epoch_iter
         return epoch_iter
 

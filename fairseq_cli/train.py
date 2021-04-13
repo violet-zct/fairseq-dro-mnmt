@@ -142,7 +142,7 @@ def main(args):
         valid_losses, should_stop = train(args, trainer, task, epoch_itr)
 
         if hasattr(args, 'compute_train_dynamics') and args.compute_train_dynamics:
-            on_the_fly_train_dynamics(args, trainer, epoch_itr)
+            on_the_fly_train_dynamics(args, trainer, task, epoch_itr)
 
         if should_stop:
             break
@@ -369,7 +369,7 @@ def get_valid_stats(args, trainer, stats):
     return stats
 
 
-def on_the_fly_train_dynamics(args, trainer, epoch_itr):
+def on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
     cur_subset = 'train'
     data_size = trainer.task.datasets[cur_subset]
     train_avg_probs = torch.zeros(data_size, device='cuda')
@@ -377,7 +377,23 @@ def on_the_fly_train_dynamics(args, trainer, epoch_itr):
     train_avg_ent = torch.zeros(data_size, device='cuda')
     sanity_ids = torch.zeros(data_size, device='cuda')
     # make sure the sampling method is 'concat'
-    itr = trainer.get_valid_iterator(cur_subset).next_epoch_itr(shuffle=False)
+    itr = task.get_batch_iterator(
+            dataset=trainer.task.dataset(cur_subset),
+            max_tokens=args.max_tokens_valid,
+            max_sentences=args.max_sentences_valid,
+            max_positions=utils.resolve_max_positions(
+                trainer.task.max_positions(),
+                trainer.model.max_positions(),
+            ),
+            ignore_invalid_inputs=args.skip_invalid_size_inputs_valid_test,
+            required_batch_size_multiple=args.required_batch_size_multiple,
+            seed=args.seed,
+            num_shards=trainer.data_parallel_world_size,
+            shard_id=trainer.data_parallel_rank,
+            num_workers=args.num_workers,
+            new_iterator=True,
+        ).next_epoch_itr(shuffle=False)
+
     progress = progress_bar.progress_bar(
         itr,
         log_format=args.log_format,
