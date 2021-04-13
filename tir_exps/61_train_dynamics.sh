@@ -43,7 +43,7 @@ send_dir=/home/chuntinz/tir5/logs/${exp_name}
 python -u train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
-	  --encoder-langtok ${etok} --group-level ${glevel} \
+	  --encoder-langtok ${etok} --group-level ${glevel} --max-tokens-valid 12868 \
 	  --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
@@ -53,7 +53,7 @@ python -u train.py ${DATA}\
 	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'inverse_sqrt' \
 	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 5e-4 --min-lr -1 \
 	  --criterion 'train_dynamics_label_smoothed_cross_entropy' --label-smoothing 0.1 --compute-train-dynamics 1 \
-	  --max-tokens 8192 \
+	  --max-tokens 5892 \
 	  --seed 222 \
   	--max-source-positions 512 --max-target-positions 512 \
   	--save-dir ${SAVE} \
