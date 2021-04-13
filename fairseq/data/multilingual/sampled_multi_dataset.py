@@ -225,6 +225,12 @@ class SampledMultiDataset(FairseqDataset):
         in_dataset_indices = np.hstack(in_dataset_indices)
         return in_dataset_indices, cumulative_sizes, virtual_sizes_per_dataset
 
+    def get_unique_mapping_from_pair_to_idx(self, ds_idx, sample_idx):
+        sizes = [len(d) for d in self.datasets]
+        # set a one-to-one mapping from any pair (ds_idx, ds_sample_idx) to a index of the concat dataset
+        idx = sum(sizes[:ds_idx]) if ds_idx > 0 else 0 + sample_idx
+        return idx
+
     def _get_dataset_and_index(self, index):
         i = bisect_right(self.cumulated_sizes, index)
         return i, self._cur_indices[index]
@@ -233,7 +239,9 @@ class SampledMultiDataset(FairseqDataset):
         # self.__getitem__(index) returns self.datasets[k][self._cur_indices[index]]
         # where k satisfies self.cumulated_sizes[k - 1] <= k < self.cumulated_sizes[k]
         ds_idx, ds_sample_idx = self._get_dataset_and_index(index)
-        ret = (ds_idx, self.datasets[ds_idx][ds_sample_idx])
+        datum = self.datasets[ds_idx][ds_sample_idx]
+        datum['concat_ds_id'] = self.get_unique_mapping_from_pair_to_idx(ds_idx, ds_sample_idx)
+        ret = (ds_idx, datum)
         return ret
 
     def num_tokens(self, index):
@@ -304,6 +312,9 @@ class SampledMultiDataset(FairseqDataset):
                 batch['net_input']['src_lang_id'] = straight_order([b['net_input']['src_lang_id'] for b in batches])
             if 'tgt_lang_id' in batches[0]:
                 batch['tgt_lang_id'] = straight_order([b['tgt_lang_id'] for b in batches])
+            if 'concat_ds_id' in batches[0]:
+                batch['concat_ds_id'] = straight_order([b['concat_ds_id'] for b in batches])
+
         return batch
 
     @property
