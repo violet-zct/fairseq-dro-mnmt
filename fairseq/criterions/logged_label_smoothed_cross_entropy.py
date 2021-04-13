@@ -90,7 +90,7 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 loss, nll_loss = self.compute_mixed_loss(model, net_output, sample, sample['lambda_'])
                 sample_size = sample['target_a'].size(0) if self.sentence_avg else sample['ntokens']
             else:
-                loss, nll_loss = self.compute_loss(model, net_output, sample, reduce=reduce)
+                loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=reduce)
                 sample_size = sample['target'].size(0) if self.sentence_avg else sample['ntokens']
         else:
             loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=False)
@@ -156,15 +156,6 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         loss = loss * valid_indices
         nll_loss = nll_loss * valid_indices
         return loss.sum(), nll_loss.sum()
-
-    def compute_loss(self, model, net_output, sample, reduce=True):
-        lprobs = model.get_normalized_probs(net_output, log_probs=True)
-        lprobs = lprobs.view(-1, lprobs.size(-1))
-        target = model.get_targets(sample, net_output).view(-1, 1)
-        loss, nll_loss = label_smoothed_nll_loss(
-            lprobs, target, self.eps, ignore_index=self.padding_idx, reduce=reduce,
-        )
-        return loss, nll_loss
 
     @staticmethod
     def reduce_metrics(logging_outputs) -> None:
