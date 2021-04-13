@@ -89,10 +89,11 @@ class TrainDynamicsLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             avg_probs = torch.sum(probs, dim=-1) / word_mask.sum(1)
             probs.masked_fill_(pad_mask, float('inf'))
             median_indices = torch.ceil(word_mask.sum(1, keepdim=True) / 2 - 1).long()
-            sorted_probs, _ = torch.median(probs, dim=-1)
-            median_probs = torch.gather(sorted_probs, 1, median_indices)
+            sorted_probs, _ = torch.sort(probs, dim=-1)
+            median_probs = torch.gather(sorted_probs, 1, median_indices).squeeze(-1)
             loss = loss.sum()
             nll_loss = nll_loss.sum()
+            sample_size = sample['ntokens']
         else:
             loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=False)
             mask = (sample['target'] != self.padding_idx).float()
@@ -108,7 +109,6 @@ class TrainDynamicsLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             fg_group_loss = fg_zero_vec.scatter_add(0, fg_labels, ind_loss)
             nll_loss = nll_loss.sum()
 
-
         logging_output = {
             'loss': loss.data,
             'nll_loss': nll_loss.data,
@@ -120,7 +120,7 @@ class TrainDynamicsLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         }
 
         if train_dynamic:
-            return loss, sample_size, logging_output, sample['id'], avg_probs, median_probs, avg_entropy
+            return loss, sample_size, logging_output, sample['concat_ds_id'], avg_probs, median_probs, avg_entropy
 
         if not self.training and not train_dynamic:
             for ii in range(self.n_groups):

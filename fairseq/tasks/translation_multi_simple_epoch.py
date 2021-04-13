@@ -354,7 +354,7 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
     def train_dynamic_step(self, sample, model, criterion):
         model.eval()
         with torch.no_grad():
-            loss, logging_output, sample_size, sample_ids, average_p, median_p, avg_entropy = \
+            loss, sample_size, logging_output, sample_ids, average_p, median_p, avg_entropy = \
                 criterion(model, sample, train_dynamic=True)
         return loss, sample_size, logging_output, sample_ids, average_p, median_p, avg_entropy
 

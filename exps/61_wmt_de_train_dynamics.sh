@@ -26,7 +26,6 @@ log=1
 
 SAVE_ROOT=${savedir}/saved_models
 direction=$SLURM_ARRAY_TASK_ID
-temp=1
 
 if [ $direction = 0 ]; then
     lang_pairs="en-de,en-fr,en-ta,en-tr"
@@ -60,7 +59,7 @@ fi
 python -u train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
-	  --encoder-langtok ${etok} --group-level ${glevel} \
+	  --encoder-langtok ${etok} --group-level ${glevel} --max-tokens-valid 28268 \
 	  --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \

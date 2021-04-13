@@ -771,7 +771,7 @@ class Trainer(object):
         # log validation stats
         logging_output = self._reduce_and_log_stats(logging_outputs, sample_size)
 
-        return logging_output, sample_ids, average_p, median_p, avg_entropy
+        return logging_output, sample_ids, average_p, median_p, avg_entropy, is_dummy_batch
 
     def zero_grad(self):
         self.optimizer.zero_grad()

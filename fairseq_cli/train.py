@@ -372,7 +372,7 @@ def get_valid_stats(args, trainer, stats):
 
 def on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
     cur_subset = 'train'
-    data_size = trainer.task.datasets[cur_subset]
+    data_size = len(trainer.task.datasets[cur_subset])
     train_avg_probs = torch.zeros(data_size, device='cuda')
     train_med_probs = torch.zeros(data_size, device='cuda')
     train_avg_ent = torch.zeros(data_size, device='cuda')
@@ -410,18 +410,20 @@ def on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
     # don't pollute other aggregators (e.g., train meters)
     with metrics.aggregate(new_root=True) as agg:
         for i, sample in enumerate(progress):
-            log_output, sample_ids, average_p, median_p, avg_ent = trainer.compute_train_dynamics_step(sample)
-            sanity_ids[sample_ids] = 1
-            train_avg_probs[sample_ids] = average_p
-            train_med_probs[sample_ids] = median_p
-            train_avg_ent[sample_ids] = avg_ent
+            log_output, sample_ids, average_p, median_p, avg_ent, is_dummy = trainer.compute_train_dynamics_step(sample)
+            if not is_dummy:
+                sanity_ids[sample_ids] = 1
+                train_avg_probs[sample_ids] = average_p
+                train_med_probs[sample_ids] = median_p
+                train_avg_ent[sample_ids] = avg_ent
 
-            if i % 10000 == 0:
+            if i % 1000 == 0:
                 # log stats
                 stats = agg.get_smoothed_values()
                 progress.print(stats, tag=cur_subset, step=i)
+
     torch.distributed.all_reduce(sanity_ids)
-    diff = (sanity_ids - torch.ones(data_size)).sum().item()
+    diff = (sanity_ids - torch.ones(data_size, device='cuda')).sum().item()
     assert diff == 0, "diff={}".format(diff)
     torch.distributed.all_reduce(train_avg_probs)
     torch.distributed.all_reduce(train_med_probs)
@@ -429,7 +431,7 @@ def on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
 
     def _write_to_file(tensor, fname):
         tensor = tensor.cpu().numpy()
-        fout = "{}_{}.npy".format(fname, epoch_itr.epoch)
+        fout = os.path.join(args.save_dir, "{}_{}.npy".format(fname, epoch_itr.epoch))
         np.save(fout, tensor)
 
     _write_to_file(train_avg_probs, "avg_probs")
