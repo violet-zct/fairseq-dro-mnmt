@@ -542,7 +542,7 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
 
         if new_iterator:
             self.dataset_to_epoch_iter['special'] = epoch_iter
-        elif dataset == self.datasets['valid'] or self.args.sampling_method == 'concat':
+        elif ('valid' in self.datasets and dataset == self.datasets['valid']) or self.args.sampling_method == 'concat':
             self.dataset_to_epoch_iter[dataset] = epoch_iter
         return epoch_iter
 
