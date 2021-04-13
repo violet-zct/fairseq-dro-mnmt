@@ -144,7 +144,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 lang_dict = self.task.data_manager.tgt_lang_dict if self.group_level == "target_lang" else self.task.data_manager.src_lang_dict
                 baselines[lang_dict.index(lang) - 1] = value
             self.loss_baselines = torch.Tensor(baselines).to(self.device)
-
+        logger.info("baseline loss = {}".format(self.loss_baselines))
         self.register_buffer('valid_losses', torch.zeros(self.n_groups))
         self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('count_cat', torch.ones(self.n_groups))
