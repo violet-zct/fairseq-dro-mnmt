@@ -18,8 +18,8 @@
 
 source activate mnmt
 
-savedir=/home/chuntinz/fairseq-dro-mnmt
-datadir=/home/chuntinz/data
+savedir=/home/chuntinz/tir5/fairseq-dro-mnmt
+datadir=/home/chuntinz/tir5/data/mnmt_data
 
 SAVE_ROOT=${savedir}/saved_models
 
