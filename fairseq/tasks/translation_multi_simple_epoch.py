@@ -491,9 +491,10 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
         """
         # initialize the dataset with the correct starting epoch
         assert isinstance(dataset, FairseqDataset)
-        if new_iterator and "special" in self.dataset_to_epoch_iter:
-            return self.dataset_to_epoch_iter["special"]
-        if dataset in self.dataset_to_epoch_iter and not new_iterator:
+        if new_iterator:
+            if "special" in self.dataset_to_epoch_iter:
+                return self.dataset_to_epoch_iter["special"]
+        elif dataset in self.dataset_to_epoch_iter:
             return self.dataset_to_epoch_iter[dataset]
 
         if (
