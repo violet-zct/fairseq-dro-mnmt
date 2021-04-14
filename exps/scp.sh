@@ -18,10 +18,17 @@
 #    done
 #done
 
-for exp_name in 55_erm_temp_1_wmt4_o2m 55_erm_temp_5_wmt4_o2m 55_erm_temp_100_wmt4_o2m 55_erm_temp_1_wmt4_m2o 55_erm_temp_5_wmt4_m2o 55_erm_temp_100_wmt4_m2o; do
-  scp saved_models/${exp_name}/checkpoint_best.pt tir:/home/chuntinz/tir5/logs/${exp_name}/
-done
+#for exp_name in 55_erm_temp_1_wmt4_o2m 55_erm_temp_5_wmt4_o2m 55_erm_temp_100_wmt4_o2m 55_erm_temp_1_wmt4_m2o 55_erm_temp_5_wmt4_m2o 55_erm_temp_100_wmt4_m2o; do
+#  scp saved_models/${exp_name}/checkpoint_best.pt tir:/home/chuntinz/tir5/logs/${exp_name}/
+#done
+#
+#for exp_name in 57_erm_temp_1_wmt4_de_m2o 57_erm_temp_5_wmt4_de_m2o 57_erm_temp_100_wmt4_de_m2o 57_erm_temp_1_wmt4_de_o2m 57_erm_temp_5_wmt4_de_o2m 57_erm_temp_100_wmt4_de_o2m; do
+#  scp saved_models/${exp_name}/checkpoint_best.pt tir:/home/chuntinz/tir5/logs/${exp_name}/
+#done
 
-for exp_name in 57_erm_temp_1_wmt4_de_m2o 57_erm_temp_5_wmt4_de_m2o 57_erm_temp_100_wmt4_de_m2o 57_erm_temp_1_wmt4_de_o2m 57_erm_temp_5_wmt4_de_o2m 57_erm_temp_100_wmt4_de_o2m; do
-  scp saved_models/${exp_name}/checkpoint_best.pt tir:/home/chuntinz/tir5/logs/${exp_name}/
-done
+exp_name=61_erm_train_dynamics_wmt4_de_o2m
+SAVE=/private/home/ghazvini/chunting/fairseq-dro-mnmt/saved_models/${exp_name}
+send_dir=/home/chuntinz/tir5/logs/${exp_name}
+tar -cvzf ${SAVE}/tt.dynamics.tar.gz ${SAVE}/*npy ${SAVE}/*opt
+scp ${SAVE}/tt.dynamics.tar.gz tir:${send_dir}/
+rm ${SAVE}/tt.dynamics.tar.gz
