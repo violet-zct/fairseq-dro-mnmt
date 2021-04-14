@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-2
+#SBATCH --array=1-2
 
 source activate mnmt2
 
@@ -37,13 +37,13 @@ trap_handler () {
 trap 'trap_handler USR1' USR1
 trap 'trap_handler TERM' TERM
 
-savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
+#savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
 DATA=${datadir}/wmt4/data-bin-v2
 langs="de,fr,ta,tr"
 log=1
 
-SAVE_ROOT=${savedir}/saved_models
+SAVE_ROOT=saved_models
 
 #if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
 #    lang_pairs="en-de,en-fr,en-ta,en-tr"
@@ -80,7 +80,7 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=63_baselines_ema_0.1_ch_0_rho_0.1_min_0.2_chi_square_resample_wmt4_de_${ename}
+exp_name=63_baselines_ema_0.1_ch_0_rho_0.5_min_0.2_chi_square_resample_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -98,7 +98,7 @@ python train.py ${DATA}\
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_resample' --label-smoothing 0.1 --baselines ${baselines}\
-    --rho 0.1 --min-prob 0.2 --group-level ${glevel} --ema 0.1 --clear-history 0 \
+    --rho 0.5 --min-prob 0.2 --group-level ${glevel} --ema 0.1 --clear-history 0 \
     --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
