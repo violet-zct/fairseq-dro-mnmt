@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-5
+#SBATCH --array=0-2
 
 source activate mnmt2
 
@@ -66,10 +66,8 @@ gtgt="xx"
 etok="tgt"
 glevel="target_lang"
 
-rhos=(0.1 0.5)
-direction=$(($SLURM_ARRAY_TASK_ID % 3))
-tempid=$(($SLURM_ARRAY_TASK_ID / 3))
-rho=${rhos[$tempid]}
+direction=$SLURM_ARRAY_TASK_ID
+rho=0.5
 
 if [ $direction = 2 ]; then
     baselines="de:2.912,fr:2.539,ta:3.668,tr:2.832"
