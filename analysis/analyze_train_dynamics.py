@@ -76,19 +76,25 @@ def process_epochs(eid_start, eid_end, plot_data_maps=True, compare=None):
     avg_probs = []
     med_probs = []
 
+    print("start loading data")
     for eid in range(eid_start, eid_end+1):
+        if not os.path.exists(os.path.join(model_path, "avg_ent_{}.npy".format(eid))):
+            continue
         avg_ents.append(np.load(os.path.join(model_path, "avg_ent_{}.npy".format(eid))))
         avg_probs.append(np.load(os.path.join(model_path, "avg_probs_{}.npy".format(eid))))
         med_probs.append(np.load(os.path.join(model_path, "med_probs_{}.npy".format(eid))))
 
+    print("end loading data")
     ds_ent_mus, ds_ent_std = get_confidence_and_variability(avg_ents)
     ds_avg_prob_mus, ds_avg_prob_std = get_confidence_and_variability(avg_probs)
     ds_med_prob_mus, ds_med_prob_std = get_confidence_and_variability(med_probs)
 
+    print("plot histograms")
     plot_histogram([ds_avg_prob_mus, ds_med_prob_mus, ds_ent_mus], ["avg_prob", "median_prob", "entropy"])
     plot_histogram([ds_avg_prob_std, ds_med_prob_std, ds_ent_std], ["avg_prob", "median_prob", "entropy"], "std")
 
     if plot_data_maps:
+        print("plot data maps!")
         ent_dfs = create_pd_frame_dict(ds_ent_mus, ds_ent_std)
         avg_prob_dfs = create_pd_frame_dict(ds_avg_prob_mus, ds_avg_prob_std)
         med_prob_dfs = create_pd_frame_dict(ds_med_prob_mus, ds_med_prob_std)
@@ -98,6 +104,7 @@ def process_epochs(eid_start, eid_end, plot_data_maps=True, compare=None):
             plot_data_map(med_prob_dfs[lang], 'med_prob_{}_dm.pdf'.format(lang))
 
     if compare is not None:
+        print("compute pearson correlation!")
         keys = ['ent_mu', 'ent_std', 'avg_prob_mu', 'avg_prob_std', 'med_prob_mu', 'med_prob_std']
         for s, e in compare:
             ds_ent_mus_partial, ds_ent_std_partial = get_confidence_and_variability(avg_ents, s, e)
