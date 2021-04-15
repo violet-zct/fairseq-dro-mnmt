@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=1-2
+#SBATCH --array=0-5
 
 source activate mnmt2
 
@@ -66,21 +66,27 @@ gtgt="xx"
 etok="tgt"
 glevel="target_lang"
 
-if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
+rhos=(0.1 0.5)
+direction=$(($SLURM_ARRAY_TASK_ID % 3))
+tempid=$(($SLURM_ARRAY_TASK_ID / 3))
+rho=${rhos[$tempid]}
+
+if [ $direction = 2 ]; then
     baselines="de:2.912,fr:2.539,ta:3.668,tr:2.832"
     ename="o2m_t1"
-elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
+elif [ $direction = 0 ]; then
     baselines="de:3.104,fr:2.64,ta:3.226,tr:2.195"
     ename="o2m_t100"
-elif [ $SLURM_ARRAY_TASK_ID = 2 ]; then
+elif [ $direction = 1 ]; then
     baselines="de:2.912,fr:2.539,ta:3.226,tr:2.195"
     ename="o2m_tbest"
 else
     exit
 fi
 
+
 model=transformer_wmt_en_de
-exp_name=62_baselines_ema_0.1_ch_0_rho_0.5_min_0.2_chi_square_resample_wmt4_de_${ename}
+exp_name=62_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -98,7 +104,7 @@ python train.py ${DATA}\
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_resample' --label-smoothing 0.1 --baselines ${baselines}\
-    --rho 0.5 --min-prob 0.2 --group-level ${glevel} --ema 0.1 --clear-history 0 \
+    --rho ${rho} --min-prob 0.2 --group-level ${glevel} --ema 0.1 --clear-history 0 \
     --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \

@@ -168,14 +168,6 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
             epoch=epoch, combine=combine, shard_epoch=shard_epoch, **kwargs
         )
 
-        if split == 'train' and hasattr(self.args, 'compute_train_dynamics') and self.args.compute_train_dynamics:
-            opt_path = os.path.join(self.args.save_dir, 'info.opt')
-            if not os.path.exists(opt_path):
-                with open(opt_path, "w") as fout:
-                    for ii in range(len(self.datasets[split])):
-                        ds_idx, _ = self.datasets[split][ii]
-                        fout.write("{}\n".format(self.datasets[split].keys[ds_idx]))
-
     def build_dataset_for_inference(self, src_tokens, src_lengths, constraints=None):
         if constraints is not None:
             raise NotImplementedError("Constrained decoding with the multilingual_translation task is not supported")
@@ -262,72 +254,6 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
         """
         model.train()
         model.set_num_updates(update_num)
-
-        def reorder_dict(x, ordered_indices):
-            return {key: value[ordered_indices] for key, value in x.items()}
-
-        def get_reg_strength(gen_errors):
-            # self.args.beta_dist_alpha = max_strength, 0.4
-            return torch.sigmoid(gen_errors) * self.args.beta_dist_alpha
-
-        if self.args.aug_option == "in_group":
-            if self.args.group_level == "source_lang":
-                group_idx = sample["src_lang_id"]
-            else:
-                group_idx = sample["tgt_lang_id"]
-            uniq_groups = torch.unique(group_idx, sorted=True)
-
-            inds = torch.arange(len(group_idx)).to(group_idx.device)
-            shuffled_inds = torch.randperm(len(group_idx)).to(group_idx.device)
-            shuffled_group_idx = group_idx[shuffled_inds]
-            inds_a = torch.cat([inds[group_idx == gid] for gid in uniq_groups])
-            inds_b = torch.cat([shuffled_inds[shuffled_group_idx == gid] for gid in uniq_groups])
-
-        elif self.args.aug_option == "global":
-            inds_b = torch.randperm(len(sample['id'])).to(sample['id'].device)
-            inds_a = None
-        else:
-            inds_a = inds_b = None
-
-        if inds_a is not None or inds_b is not None:
-            new_sample = {
-                'id': sample['id'] if inds_a is None else sample['id'][inds_a],
-                'nsentences': sample["nsentences"],
-                'ntokens': sample["ntokens"],
-                'net_input_a': sample['net_input'] if inds_a is None else reorder_dict(sample['net_input'], inds_a),
-                'net_input_b': reorder_dict(sample['net_input'], inds_b),
-                'target_a': sample['target'] if inds_a is None else sample['target'][inds_a],
-                'target_b': sample['target'][inds_b],
-            }
-            if 'src_lang_id' in sample:
-                new_sample['src_lang_id'] = sample['src_lang_id'][inds_a] if inds_a is not None else sample['src_lang_id']
-            if 'tgt_lang_id' in sample:
-                new_sample['tgt_lang_id'] = sample['tgt_lang_id'][inds_a] if inds_a is not None else sample['tgt_lang_id']
-
-            bsz = len(sample['id'])
-            device = sample['id'].device
-            if self.args.mix_beta_type == "fixed":
-                dist = Beta(self.args.beta_dist_alpha, self.args.beta_dist_alpha)
-                lambda_ = dist.sample(sample_shape=[bsz]).to(device)
-            else:
-                lang_ids = new_sample['src_lang_id'] if self.args.group_level == "source_lang" else new_sample['tgt_lang_id']
-                uniq_groups = torch.unique(lang_ids, sorted=True)
-                gen_error = criterion.get_generalization_errors()
-                lambda_ = torch.ones(bsz).to(device)
-                if gen_error is not None:
-                    alphas = get_reg_strength(gen_error)
-                    for gid in uniq_groups:
-                        dist = Beta(alphas[gid], alphas[gid])
-                        valid_ids = (lang_ids == gid)
-                        lambda_[valid_ids] = dist.sample(sample_shape=[sum(valid_ids.long())]).to(device)
-
-            lambda_ = torch.max(lambda_, 1 - lambda_)
-            if self.args.fp16:
-                lambda_ = lambda_.half()
-            new_sample['lambda_'] = lambda_
-            sample = new_sample
-        else:
-            sample['lambda_'] = None
 
         with torch.autograd.profiler.record_function("forward"):
             loss, sample_size, logging_output = criterion(model, sample)
@@ -542,8 +468,6 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
 
         if new_iterator:
             self.dataset_to_epoch_iter['special'] = epoch_iter
-        elif ('valid' in self.datasets and dataset == self.datasets['valid']) or self.args.sampling_method == 'concat':
-            self.dataset_to_epoch_iter[dataset] = epoch_iter
         return epoch_iter
 
     def reduce_metrics(self, logging_outputs, criterion):

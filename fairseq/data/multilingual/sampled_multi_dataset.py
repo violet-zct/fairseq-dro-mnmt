@@ -122,6 +122,10 @@ class SampledMultiDataset(FairseqDataset):
         self.setup_sampling(sampling_ratios, virtual_size)
         self.set_epoch(epoch)
 
+        in_dataset_indices = [list(range(s)) for s in sizes]
+        cumulative_sizes = np.cumsum(in_dataset_indices)
+        logger.info("langs = ")
+
     def _clean_if_not_none(self, var_list):
         for v in var_list:
             if v is not None:
