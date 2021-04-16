@@ -15,7 +15,7 @@ import torch
 from fairseq.file_io import PathManager
 from fairseq.models import FairseqDecoder, FairseqEncoder
 from torch.serialization import default_restore_location
-
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +184,22 @@ def load_checkpoint(args, trainer, **passthrough_args):
     if extra_state is not None and not reset_dataloader:
         # restore iterator from checkpoint
         itr_state = extra_state["train_iterator"]
+        if hasattr(args, 'warmup_epochs') and itr_state["epoch"] > args.warmup_epochs and args.compute_train_dynamics:
+            def _get_confidence_and_variability(epochs_of_vecs):
+                mat = np.vstack(epochs_of_vecs)
+                mu = np.mean(mat, axis=0)
+                var = np.std(mat, axis=0)
+                return mu, var
+
+            med_probs = []
+            for eid in range(1, args.warmup_epochs):
+                path = os.path.join(args.save_dir, "med_probs_{}.npy".format(eid))
+                if not os.path.exists(path):
+                    continue
+                med_probs.append(np.load(path))
+            mu, var = _get_confidence_and_variability(med_probs)
+            trainer.task.datasets['train'].set_data_properties(mu, var)
+
         epoch_itr = trainer.get_train_iterator(
             epoch=itr_state["epoch"], load_dataset=True, **passthrough_args
         )

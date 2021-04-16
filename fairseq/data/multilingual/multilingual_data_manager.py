@@ -301,6 +301,10 @@ class MultilingualDatasetManager(object):
             "up data loading and have specific dynamic sampling strategy interval",
         )
 
+        parser.add_argument('--max-scale-up', type=float, default=1.5,
+                            help="max scale ratio when doing resampling")
+        parser.add_argument('--exclude-c', type=float, default=0)
+
         parser.add_argument(
             '--inner-baseline-file',
             default=None, type=str

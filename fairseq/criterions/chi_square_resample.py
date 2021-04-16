@@ -127,6 +127,8 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         parser.add_argument('--clear-history', default=1, type=int)
         parser.add_argument('--resample', default=1, type=int, help="resample=0 is ERM")
+
+        parser.add_argument('--compute-train-dynamics', type=int, default=1)
         # fmt: on
 
     def _print(self, x):
@@ -264,7 +266,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             index = sample['target'].view(-1)
         return index
 
-    def compute_loss(self, model, sample):
+    def compute_loss(self, model, sample, reduce=True):
         if 'lambda_' in sample and sample['lambda_'] is not None:
             net_output = model.mix(sample['lambda_'],
                                    sample["net_input_a"]["src_tokens"],
@@ -281,6 +283,12 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             token_loss, nll_loss = self.individual_losses(model, net_output, sample)
 
         mask = (sample[target_kw] != self.padding_idx).float()
+
+        if not reduce:
+            ind_loss = token_loss.reshape_as(sample[target_kw]) * mask
+            nll_loss = nll_loss.reshape_as(sample[target_kw])
+            return nll_loss, ind_loss, None, None
+
         ind_loss = (token_loss.reshape_as(sample[target_kw]) * mask).sum(1)
         nll_loss = (nll_loss.reshape_as(sample[target_kw]) * mask).sum(1)
 
@@ -301,7 +309,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         )
         return loss, nll_loss
 
-    def forward(self, model, sample, reduce=True):
+    def forward(self, model, sample, reduce=True, train_dynamic=False):
         """Compute the loss for the given sample.
 
         Returns a tuple with three elements:
@@ -319,6 +327,15 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         sample_size = sample['ntokens']
 
         if not self.training:
+            if train_dynamic:
+                word_mask = (sample['target'] != self.padding_idx).float()
+                pad_mask = (sample['target'] == self.padding_idx)
+                probs = torch.exp(-nll_loss)
+                probs[pad_mask] = 0
+                probs.masked_fill_(pad_mask, float('inf'))
+                median_indices = word_mask.sum(1, keepdim=True).long() // 2
+                sorted_probs, _ = torch.sort(probs, dim=-1)
+                median_probs = torch.gather(sorted_probs, 1, median_indices).squeeze(-1)
             if self.logging:
                 fg_labels = self.retrieve_group_labels(sample)
                 fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
@@ -354,6 +371,8 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             'n_groups': self.n_groups,
             'gpu_count': 1,
         }
+        if train_dynamic:
+            return loss, sample_size, logging_output, sample['concat_ds_id'], median_probs
 
         if self.logging and not self.training:
             for ii in range(self.n_groups):

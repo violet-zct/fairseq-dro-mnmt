@@ -153,6 +153,6 @@ def plot_data_map(dataframe: pd.DataFrame,
     fig.savefig(filename, dpi=300)
 
 
-process_epochs(1, 73, plot_data_maps=True, compare=[(1, 20), (30, 50), (53, 63)])
+process_epochs(1, 105, plot_data_maps=True, compare=[(1, 20), (50, 70), (84, 105)])
 
 

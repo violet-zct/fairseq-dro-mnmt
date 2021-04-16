@@ -737,7 +737,7 @@ class Trainer(object):
                 is_dummy_batch = False
 
             try:
-                _loss, sample_size, logging_output, sample_ids, average_p, median_p, avg_entropy = self.task.train_dynamic_step(
+                _loss, sample_size, logging_output, sample_ids, median_p= self.task.train_dynamic_step(
                     sample, self.model, self.criterion
                 )
             except RuntimeError as e:
@@ -771,7 +771,7 @@ class Trainer(object):
         # log validation stats
         logging_output = self._reduce_and_log_stats(logging_outputs, sample_size)
 
-        return logging_output, sample_ids, average_p, median_p, avg_entropy, is_dummy_batch
+        return logging_output, sample_ids, median_p, is_dummy_batch
 
     def zero_grad(self):
         self.optimizer.zero_grad()

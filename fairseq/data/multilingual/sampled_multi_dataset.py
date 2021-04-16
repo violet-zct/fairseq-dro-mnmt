@@ -123,9 +123,9 @@ class SampledMultiDataset(FairseqDataset):
         self.set_epoch(epoch)
 
         sizes = [len(d) for d in datasets]
-        cumulative_sizes = np.cumsum(sizes)
+        self.cumulative_sizes = np.cumsum(sizes)
         logger.info("langs = {}".format(self.keys))
-        logger.info("cumulative sizes= {}".format(cumulative_sizes))
+        logger.info("cumulative sizes= {}".format(self.cumulative_sizes))
 
     def _clean_if_not_none(self, var_list):
         for v in var_list:
@@ -151,7 +151,7 @@ class SampledMultiDataset(FairseqDataset):
             self.sample_ratios = sample_ratios
             virtual_size = default_virtual_size_func if virtual_size is None else virtual_size
             self.virtual_size = (
-                virtual_size(self.datasets, self.sample_ratios) if callable(virtual_size)
+                virtual_size(self.datasets, self.sample_ratios, self.args.max_scale_up) if callable(virtual_size)
                 else virtual_size)
 
     def adjust_sampling(self, epoch, sampling_ratios, virtual_size):
@@ -182,6 +182,23 @@ class SampledMultiDataset(FairseqDataset):
                 ret = ret[self.remapped_lang_ids]
         return ret
 
+    def set_data_properties(self, mu, var):
+        if hasattr(self, 'data_values'):
+            return
+        # tensor can be variabilities or any other measurements that is used for data selection
+        self.data_values = []
+        for ii, eid in enumerate(self.cumulative_sizes):
+            sid = 0 if ii == 0 else self.cumulated_sizes[ii-1]
+            sorted_mu_indices = np.argsort(mu[sid: eid])  # ascending
+            sorted_var_indices = np.argsort(var[sid: eid])[::-1]  # descending
+
+            if self.args.exclude_c > 0:
+                # remove tail of least confident examples
+                exclude = sorted_mu_indices[int(len(sorted_mu_indices) * self.args.exclude_c):]
+                sorted_var_indices = [idx for idx in sorted_var_indices if idx not in exclude]
+            self.data_values.append(sorted_var_indices)
+            # self.data_values.append({"mu": (sorted_mu, sorted_mu_indices), "var": (sorted_var, sorted_var_indices)})
+
     def random_choice_in_dataset(self, rng, dataset, choice_size):
         if hasattr(dataset, 'random_choice_in_dataset'):
             return dataset.random_choice_in_dataset(rng, choice_size)
@@ -210,7 +227,25 @@ class SampledMultiDataset(FairseqDataset):
             return indices
 
         sizes = [len(d) for d in datasets]
-        if sample_ratios is None:
+        if hasattr(self, 'data_values'):
+            logger.info("select data indices by training dynamics!")
+            assert sample_ratios is not None
+            ratios = sample_ratios / sample_ratios.sum()
+            counts = get_counts(ratios)
+            in_dataset_indices = []
+            # (1) data_values are variability
+            for ii, (count, ds) in enumerate(zip(counts, sizes)):
+                sorted_var_inds = self.data_values[ii]
+                if count >= ds:
+                    multiply = count // ds
+                    select_indices = [ii for _ in range(multiply) for ii in sorted_var_inds]
+                    add_count = count - len(select_indices)
+                    in_dataset_indices.append(select_indices + sorted_var_inds[:add_count] if add_count > 0 else select_indices)
+                else:
+                    add_count = count - len(sorted_var_inds)
+                    in_dataset_indices.append(sorted_var_inds[:count] + sorted_var_inds[:add_count] if add_count > 0 else sorted_var_inds[:count])
+            virtual_sizes_per_dataset = [len(d) for d in in_dataset_indices]
+        elif sample_ratios is None:
             # default back to concating datasets
             in_dataset_indices = [list(range(s)) for s in sizes]
             virtual_sizes_per_dataset = sizes
