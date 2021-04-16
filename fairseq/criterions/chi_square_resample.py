@@ -322,12 +322,12 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             self.p_train = torch.Tensor(self.task.data_manager.data_ratios).to(self.device)
             logger.info("Fixed P train = {}".format(self.p_train))
 
-        nll_loss, ind_loss, group_losses, group_counts = self.compute_loss(model, sample)
         nsentences = sample['id'].size(0)
         sample_size = sample['ntokens']
 
         if not self.training:
             if train_dynamic:
+                nll_loss, ind_loss, group_losses, group_counts = self.compute_loss(model, sample, reduce=False)
                 word_mask = (sample['target'] != self.padding_idx).float()
                 pad_mask = (sample['target'] == self.padding_idx)
                 probs = torch.exp(-nll_loss)
@@ -337,6 +337,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 sorted_probs, _ = torch.sort(probs, dim=-1)
                 median_probs = torch.gather(sorted_probs, 1, median_indices).squeeze(-1)
             elif self.logging:
+                nll_loss, ind_loss, group_losses, group_counts = self.compute_loss(model, sample)
                 fg_labels = self.retrieve_group_labels(sample)
                 fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
                 fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
@@ -344,7 +345,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 fg_loss_vec = group_losses
         else:
             self.update_steps += 1
-
+            nll_loss, ind_loss, group_losses, group_counts = self.compute_loss(model, sample)
             reduce_group_losses = group_losses.detach().clone()
             if torch.cuda.device_count() > 1:
                 torch.distributed.all_reduce(group_counts)
