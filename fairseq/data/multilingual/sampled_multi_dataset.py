@@ -123,8 +123,7 @@ class SampledMultiDataset(FairseqDataset):
         self.set_epoch(epoch)
 
         sizes = [len(d) for d in datasets]
-        in_dataset_indices = [list(range(s)) for s in sizes]
-        cumulative_sizes = np.cumsum(in_dataset_indices)
+        cumulative_sizes = np.cumsum(sizes)
         logger.info("langs = {}".format(self.keys))
         logger.info("cumulative sizes= {}".format(cumulative_sizes))
 
