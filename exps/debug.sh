@@ -3,20 +3,20 @@
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 #SBATCH --partition=learnfair
 ##SBATCH --partition=priority
-##SBATCH --comment="TACL 3.20"
-#SBATCH --job-name=debug.35
+##SBATCH --comment="TACL 4.20"
+#SBATCH --job-name=63
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
 #SBATCH --mem=100g
 #SBATCH -C volta32gb
 #SBATCH --cpus-per-task=10
-#SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
-#SBATCH --open-mode=append
+##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
+##SBATCH --open-mode=append
 #SBATCH --time=4320
 #SBATCH --array=0
 
-source activate mnmt2
+source activate mnmt
 
 trap_handler () {
    echo "Caught signal: " $1
@@ -37,36 +37,54 @@ trap_handler () {
 trap 'trap_handler USR1' USR1
 trap 'trap_handler TERM' TERM
 
-savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
+#savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
-DATA=${datadir}/opus10/data-bin
-langs="yi,mr,oc,be,ta,ka,gl,ur,bg,is"
+DATA=${datadir}/wmt4/data-bin-v2
+langs="de,fr,ta,tr"
 log=1
 
-SAVE_ROOT=${savedir}/saved_models
+SAVE_ROOT=saved_models
 
-if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
-    lang_pairs="en-yi,en-mr,en-oc,en-be,en-ta,en-ka,en-gl,en-ur,en-bg,en-is"
-    ename="o2m"
-    gtgt="xx"
-    etok="tgt"
-    glevel="target_lang"
-    obfile="enxx_outer_baselines"
-    ibfile="enxx_inner_baselines"
-elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
-    lang_pairs="yi-en,mr-en,oc-en,be-en,ta-en,ka-en,gl-en,ur-en,bg-en,is-en"
-    ename="m2o"
-    gtgt="en"
-    etok="src"
-    glevel="source_lang"
-    obfile="xxen_outer_baselines"
-    ibfile="xxen_inner_baselines"
+#if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
+#    lang_pairs="en-de,en-fr,en-ta,en-tr"
+#    ename="o2m"
+#    gtgt="xx"
+#    etok="tgt"
+#    glevel="target_lang"
+#elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
+#    lang_pairs="de-en,fr-en,ta-en,tr-en"
+#    ename="m2o"
+#    gtgt="en"
+#    etok="src"
+#    glevel="source_lang"
+#else
+#    exit
+#fi
+
+lang_pairs="de-en,fr-en,ta-en,tr-en"
+ename="m2o"
+gtgt="en"
+etok="src"
+glevel="source_lang"
+
+direction=0
+rho=0.5
+
+if [ $direction = 2 ]; then
+    baselines="de:2.838,fr:2.699,ta:3.296,tr:2.395"
+    ename="m2o_t1"
+elif [ $direction = 0 ]; then
+    baselines="de:2.944,fr:2.774,ta:3.07,tr:2.055"
+    ename="m2o_t100"
+elif [ $direction = 1 ]; then
+    baselines="de:2.838,fr:2.699,ta:3.07,tr:2.055"
+    ename="m2o_tbest"
 else
     exit
 fi
 
 model=transformer_wmt_en_de
-exp_name=35_debug_opus10_${ename}
+exp_name=debug_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -83,8 +101,8 @@ python train.py ${DATA}\
     --task translation_multi_simple_epoch \
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --encoder-langtok ${etok} --enable-lang-ids \
-    --criterion 'chi_square_resample' --label-smoothing 0.1 \
-    --rho 0.1 --min-prob 0.2 --group-level ${glevel} --ema 0.1 \
+    --criterion 'chi_square_resample' --label-smoothing 0.1 --baselines ${baselines}\
+    --rho ${rho} --min-prob 0.2 --group-level ${glevel} --ema 0.1 --clear-history 0 \
     --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
@@ -111,19 +129,29 @@ for lang in ${langs//,/ }; do
         gsrc="en"
         gtgt=${lang}
     fi
-    python fairseq_cli/generate.py ${DATA} \
+
+    for cpt in ${SAVE}/checkpoint*; do
+        if [[ $cpt == *"last"* ]]; then
+          cpt_name=test_${lang}_en_last.log
+        elif [[ $cpt == *"best"* ]]; then
+          cpt_name=test_${lang}_en.log
+        else
+          cpt_name=test_${lang}_en_160k.log
+        fi
+
+        python fairseq_cli/generate.py ${DATA} \
           --task translation_multi_simple_epoch  \
-          --gen-subset test --skip-invalid-size-inputs-valid-test \
-          --path ${SAVE}/checkpoint_best.pt \
-          --batch-size 300 \
+          --gen-subset test \
+          --path ${cpt} \
+          --batch-size 150 \
           --lenpen 1.0 \
           --remove-bpe sentencepiece --scoring sacrebleu \
           --lang-pairs ${lang_pairs} --lang-dict ${DATA}/langs.list \
           --encoder-langtok ${etok} \
           --source-lang ${gsrc} --target-lang ${gtgt} \
-          --quiet --beam 5 | tee ${SAVE}/test_${lang}_en.log
-    scp ${SAVE}/test_${lang}_en.log tir:${send_dir}/
-
+          --quiet --beam 5 | tee ${SAVE}/${cpt_name}
+        scp ${SAVE}/${cpt_name} tir:${send_dir}/
+    done
 done
 
 scp ${SAVE}/log.txt tir:${send_dir}/
