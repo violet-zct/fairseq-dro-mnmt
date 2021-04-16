@@ -168,7 +168,7 @@ class TranslationMultiSimpleEpochTask(LegacyFairseqTask):
             epoch=epoch, combine=combine, shard_epoch=shard_epoch, **kwargs
         )
         if split == "train" and hasattr(self.args, 'compute_train_dynamics') and self.args.compute_train_dynamics:
-            self.datasets["concat_train"] = self.data_manager.load_sampled_multi_epoch_dataset(
+            self.datasets["concat_train"] = self.data_manager.load_sampled_multi_epoch_dataset_concat(
             split,
             training=False,
             epoch=1, combine=combine, shard_epoch=shard_epoch, **kwargs
