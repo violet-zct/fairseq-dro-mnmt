@@ -336,7 +336,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 median_indices = word_mask.sum(1, keepdim=True).long() // 2
                 sorted_probs, _ = torch.sort(probs, dim=-1)
                 median_probs = torch.gather(sorted_probs, 1, median_indices).squeeze(-1)
-            if self.logging:
+            elif self.logging:
                 fg_labels = self.retrieve_group_labels(sample)
                 fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
                 fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)

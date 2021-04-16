@@ -136,6 +136,10 @@ for lang in ${langs//,/ }; do
     done
 done
 
+tar -cvzf ${SAVE}/dynamics.tar.gz ${SAVE}/*npy
+scp ${SAVE}/dynamics.tar.gz tir:${send_dir}/
+rm ${SAVE}/*npy
+
 scp ${SAVE}/log.txt tir:${send_dir}/
 scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.out tir:${send_dir}/
 scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.err tir:${send_dir}/
