@@ -78,7 +78,7 @@ fi
 
 python train.py ${DATA}\
     --warmup-epochs 20 --exclude-c 0.0 --max-scale-up 1.0 --compute-train-dynamics 1 \
-    --task translation_multi_simple_epoch --max-tokens-valid 38268 \
+    --task translation_multi_simple_epoch --max-tokens-valid 30268 \
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_resample' --label-smoothing 0.1 --baselines ${baselines}\
