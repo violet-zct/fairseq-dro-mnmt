@@ -185,23 +185,12 @@ def load_checkpoint(args, trainer, **passthrough_args):
         # restore iterator from checkpoint
         itr_state = extra_state["train_iterator"]
         if hasattr(args, 'warmup_epochs') and itr_state["epoch"] > args.warmup_epochs and args.compute_train_dynamics:
-            def _get_confidence_and_variability(epochs_of_vecs):
-                mat = np.vstack(epochs_of_vecs)
-                mu = np.mean(mat, axis=0)
-                var = np.std(mat, axis=0)
-                return mu, var
-
-            med_probs = []
-            for eid in range(1, args.warmup_epochs):
-                path = os.path.join(args.save_dir, "med_probs_{}.npy".format(eid))
-                if not os.path.exists(path):
-                    continue
-                med_probs.append(np.load(path))
-            mu, var = _get_confidence_and_variability(med_probs)
-            trainer.task.datasets['train'].set_data_properties(mu, var)
+            set_data_prop = True
+        else:
+            set_data_prop = False
 
         epoch_itr = trainer.get_train_iterator(
-            epoch=itr_state["epoch"], load_dataset=True, **passthrough_args
+            epoch=itr_state["epoch"], load_dataset=True, set_data_prop=set_data_prop, **passthrough_args
         )
         epoch_itr.load_state_dict(itr_state)
     else:

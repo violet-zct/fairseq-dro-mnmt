@@ -21,7 +21,8 @@ from fairseq.file_io import PathManager
 from fairseq.logging import meters, metrics
 from fairseq.nan_detector import NanDetector
 from fairseq.optim import lr_scheduler
-
+import numpy as np
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -345,6 +346,7 @@ class Trainer(object):
         data_selector=None,
         shard_batch_itr=True,
         disable_iterator_cache=False,
+        set_data_prob=False,
     ):
         """Return an EpochBatchIterator over the training set for a given epoch."""
         if load_dataset:
@@ -355,6 +357,22 @@ class Trainer(object):
                 combine=combine,
                 data_selector=data_selector,
             )
+            if set_data_prob:
+                def _get_confidence_and_variability(epochs_of_vecs):
+                    mat = np.vstack(epochs_of_vecs)
+                    mu = np.mean(mat, axis=0)
+                    var = np.std(mat, axis=0)
+                    return mu, var
+
+                med_probs = []
+                for eid in range(1, self.args.warmup_epochs):
+                    path = os.path.join(self.args.save_dir, "med_probs_{}.npy".format(eid))
+                    if not os.path.exists(path):
+                        continue
+                    med_probs.append(np.load(path))
+                mu, var = _get_confidence_and_variability(med_probs)
+                self.task.datasets['train'].set_data_properties(mu, var)
+                
         if hasattr(self.criterion, 'resample') and self.criterion.resample:
             if epoch > 1:
                 self.criterion.set_p_train(self.task.data_manager.data_ratios)
