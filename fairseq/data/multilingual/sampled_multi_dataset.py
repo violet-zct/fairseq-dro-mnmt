@@ -240,7 +240,7 @@ class SampledMultiDataset(FairseqDataset):
             for ii, (count, ds) in enumerate(zip(counts, sizes)):
                 sorted_var_inds = self.data_values[ii]
                 if count >= ds:
-                    multiply = count // ds
+                    multiply = count // len(sorted_var_inds)
                     select_indices = [ii for _ in range(multiply) for ii in sorted_var_inds]
                     add_count = count - len(select_indices)
                     in_dataset_indices.append(select_indices + sorted_var_inds[:add_count] if add_count > 0 else select_indices)
