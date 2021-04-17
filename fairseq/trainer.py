@@ -346,7 +346,7 @@ class Trainer(object):
         data_selector=None,
         shard_batch_itr=True,
         disable_iterator_cache=False,
-        set_data_prob=False,
+        set_data_prop=False,
     ):
         """Return an EpochBatchIterator over the training set for a given epoch."""
         if load_dataset:
@@ -357,7 +357,7 @@ class Trainer(object):
                 combine=combine,
                 data_selector=data_selector,
             )
-            if set_data_prob:
+            if set_data_prop:
                 def _get_confidence_and_variability(epochs_of_vecs):
                     mat = np.vstack(epochs_of_vecs)
                     mu = np.mean(mat, axis=0)
@@ -372,7 +372,7 @@ class Trainer(object):
                     med_probs.append(np.load(path))
                 mu, var = _get_confidence_and_variability(med_probs)
                 self.task.datasets['train'].set_data_properties(mu, var)
-                
+
         if hasattr(self.criterion, 'resample') and self.criterion.resample:
             if epoch > 1:
                 self.criterion.set_p_train(self.task.data_manager.data_ratios)
