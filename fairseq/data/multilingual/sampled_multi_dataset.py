@@ -247,6 +247,8 @@ class SampledMultiDataset(FairseqDataset):
                 else:
                     add_count = count - len(sorted_var_inds)
                     in_dataset_indices.append(sorted_var_inds[:count] + sorted_var_inds[:add_count] if add_count > 0 else sorted_var_inds[:count])
+                logger.info("id = {}, lang = {}, ds = {}, count = {}, select = {}".format(ii, self.keys[ii], ds, count,
+                                                                                 len(in_dataset_indices[-1])))
             virtual_sizes_per_dataset = [len(d) for d in in_dataset_indices]
         elif sample_ratios is None:
             # default back to concating datasets
