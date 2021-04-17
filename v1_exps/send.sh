@@ -3,7 +3,7 @@
 dirname=$1 # exp name
 
 end=$((SECONDS+259200))
-saved_models=saved_models/${dirname}
+saved_models=/checkpoint/xianl/space/dro_mnt/${dirname}
 send_dir=/home/chuntinz/tir5/logs/${dirname}
 end_file=$saved_models/END
 ssh tir "mkdir ${send_dir}"

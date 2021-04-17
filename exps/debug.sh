@@ -37,13 +37,13 @@ trap_handler () {
 trap 'trap_handler USR1' USR1
 trap 'trap_handler TERM' TERM
 
-#savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
+savedir=/checkpoint/xianl/space/dro_mnt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
 DATA=${datadir}/wmt4/data-bin-v2
 langs="de,fr,ta,tr"
 log=1
 
-SAVE_ROOT=saved_models
+SAVE_ROOT=${savedir}
 
 #if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
 #    lang_pairs="en-de,en-fr,en-ta,en-tr"
