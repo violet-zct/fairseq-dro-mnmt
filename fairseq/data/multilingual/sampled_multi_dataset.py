@@ -73,6 +73,7 @@ class SampledMultiDataset(FairseqDataset):
 
     def __init__(
         self,
+        args,
         datasets,
         sampling_ratios=None,
         seed=2,
@@ -86,6 +87,7 @@ class SampledMultiDataset(FairseqDataset):
         remapped_lang_ids=None,
     ):
         super().__init__()
+        self.args = args
         self.shared_collater = shared_collater
         self.shuffle = shuffle
 
@@ -185,6 +187,7 @@ class SampledMultiDataset(FairseqDataset):
     def set_data_properties(self, mu, var):
         if hasattr(self, 'data_values'):
             return
+        logger.info("set data values!")
         # tensor can be variabilities or any other measurements that is used for data selection
         self.data_values = []
         for ii, eid in enumerate(self.cumulative_sizes):

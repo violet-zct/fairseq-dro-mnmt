@@ -1104,6 +1104,7 @@ class MultilingualDatasetManager(object):
             my_lang_ids = [_lang_id(self.lang_dict, key.split(":")[-1].split("-")[idx]) for key in list(datasets.keys())]
             logger.info("Mapped lang ids = {}".format(my_lang_ids))
             return SampledMultiDataset(
+                args=self.args,
                 datasets=datasets,
                 sampling_ratios=sample_ratios,
                 seed=2,
@@ -1148,6 +1149,7 @@ class MultilingualDatasetManager(object):
         my_lang_ids = [_lang_id(self.lang_dict, key.split(":")[-1].split("-")[idx]) for key in list(datasets.keys())]
         logger.info("Mapped lang ids = {}".format(my_lang_ids))
         return SampledMultiDataset(
+            args=self.args,
             datasets=datasets,
             seed=2,
             epoch=epoch,
