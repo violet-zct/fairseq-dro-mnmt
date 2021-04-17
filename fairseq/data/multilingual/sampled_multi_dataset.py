@@ -193,7 +193,7 @@ class SampledMultiDataset(FairseqDataset):
         for ii, eid in enumerate(self.cumulative_sizes):
             sid = 0 if ii == 0 else self.cumulated_sizes[ii-1]
             sorted_mu_indices = np.argsort(mu[sid: eid])  # ascending
-            sorted_var_indices = np.argsort(var[sid: eid])[::-1]  # descending
+            sorted_var_indices = list(np.argsort(var[sid: eid])[::-1])  # descending
 
             if self.args.exclude_c > 0:
                 # remove tail of least confident examples
