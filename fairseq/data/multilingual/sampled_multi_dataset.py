@@ -197,7 +197,7 @@ class SampledMultiDataset(FairseqDataset):
 
             if self.args.exclude_c > 0:
                 # remove tail of least confident examples
-                exclude = sorted_mu_indices[int(len(sorted_mu_indices) * self.args.exclude_c):]
+                exclude = sorted_mu_indices[:int(len(sorted_mu_indices) * self.args.exclude_c)]
                 sorted_var_indices = [idx for idx in sorted_var_indices if idx not in exclude]
             self.data_values.append(sorted_var_indices)
             # self.data_values.append({"mu": (sorted_mu, sorted_mu_indices), "var": (sorted_var, sorted_var_indices)})

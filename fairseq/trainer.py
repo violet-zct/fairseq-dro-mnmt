@@ -353,7 +353,7 @@ class Trainer(object):
             logger.info("loading train data for epoch {}".format(epoch))
             self.task.load_dataset(
                 self.args.train_subset,
-                epoch=epoch,
+                epoch=1,
                 combine=combine,
                 data_selector=data_selector,
             )
