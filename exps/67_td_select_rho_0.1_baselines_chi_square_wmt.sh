@@ -43,7 +43,6 @@ DATA=${datadir}/wmt4/data-bin-v2
 langs="de,fr,ta,tr"
 log=1
 
-
 if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
     lang_pairs="en-de,en-fr,en-ta,en-tr"
     ename="o2m"
@@ -76,6 +75,7 @@ send_dir=/home/chuntinz/tir5/logs/${exp_name}
 if [ ${log} = 1 ]; then
   bash v1_exps/send.sh ${exp_name} &
 fi
+echo $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID $SLURM_JOB_ID > ${SAVE}/log.txt
 
 python train.py ${DATA}\
     --warmup-epochs 20 --exclude-c 0.05 --max-scale-up 1.0 --compute-train-dynamics 1 \

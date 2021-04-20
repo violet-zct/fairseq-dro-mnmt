@@ -55,6 +55,7 @@ class TrainDynamicsLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                             help='epsilon for label smoothing, 0 means no label smoothing')
         parser.add_argument('--group-level', type=str, choices=['source_lang', 'target_lang'])
         parser.add_argument('--compute-train-dynamics', type=int, default=1)
+        parser.add_argument('--analyze', type=int, default=1)
         # fmt: on
 
     def retrieve_group_labels(self, sample):
@@ -80,20 +81,22 @@ class TrainDynamicsLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=True)
             sample_size = sample['target'].size(0) if self.sentence_avg else sample['ntokens']
         elif train_dynamic:
-            loss, nll_loss, avg_entropy = self.more_loss(model, net_output, sample, reduce=False)
+            loss, nll_loss = self.more_loss(model, net_output, sample, reduce=False)
             word_mask = (sample['target'] != self.padding_idx).float()
             pad_mask = (sample['target'] == self.padding_idx)
             nll_loss = nll_loss.reshape_as(sample['target'])
             probs = torch.exp(-nll_loss)
-            probs[pad_mask] = 0
-            avg_probs = torch.sum(probs, dim=-1) / word_mask.sum(1)
+            # probs[pad_mask] = 0
+            # avg_probs = torch.sum(probs, dim=-1) / word_mask.sum(1)
             probs.masked_fill_(pad_mask, float('inf'))
+            min_probs, _ = probs.min(dim=-1)
             median_indices = word_mask.sum(1, keepdim=True).long() // 2
-            sorted_probs, _ = torch.sort(probs, dim=-1)
+            sorted_probs, _ = torch.sort(probs, dim=-1)  # ascending
             median_probs = torch.gather(sorted_probs, 1, median_indices).squeeze(-1)
             loss = loss.sum()
             nll_loss = nll_loss.sum()
             sample_size = sample['ntokens']
+            return_metrics = {'min_probs': min_probs, 'median_probs': median_probs}
         else:
             loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=False)
             mask = (sample['target'] != self.padding_idx).float()
@@ -102,11 +105,12 @@ class TrainDynamicsLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             nll_loss = nll_loss.reshape_as(sample['target']).sum(1)
 
             sample_size = sample['ntokens']
-            fg_labels = self.retrieve_group_labels(sample)
-            fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
-            fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
-            fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1))
-            fg_group_loss = fg_zero_vec.scatter_add(0, fg_labels, ind_loss)
+            if self.n_groups > 1:
+                fg_labels = self.retrieve_group_labels(sample)
+                fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
+                fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
+                fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1))
+                fg_group_loss = fg_zero_vec.scatter_add(0, fg_labels, ind_loss)
             nll_loss = nll_loss.sum()
 
         logging_output = {
@@ -120,9 +124,9 @@ class TrainDynamicsLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         }
 
         if train_dynamic:
-            return loss, sample_size, logging_output, sample['concat_ds_id'], avg_probs, median_probs, avg_entropy
+            return loss, sample_size, logging_output, sample['concat_ds_id'], return_metrics
 
-        if not self.training and not train_dynamic:
+        if not self.training and not train_dynamic and self.n_groups > 1:
             for ii in range(self.n_groups):
                 logging_output["fg_gnll{}".format(ii)] = fg_group_nll[ii].data
                 logging_output["fg_loss{}".format(ii)] = fg_group_loss[ii].data
@@ -143,15 +147,15 @@ class TrainDynamicsLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         probs = torch.exp(lprobs)
         mask = (sample['target'] != self.padding_idx).float()
-        entropy = -(probs * lprobs).sum(-1) * mask  # B X L
-        avg_entropy = entropy.sum(1) / mask.sum(1)
+        # entropy = -(probs * lprobs).sum(-1) * mask  # B X L
+        # avg_entropy = entropy.sum(1) / mask.sum(1)
 
         lprobs = lprobs.view(-1, lprobs.size(-1))
         target = model.get_targets(sample, net_output).view(-1, 1)
         loss, nll_loss = label_smoothed_nll_loss(
             lprobs, target, self.eps, ignore_index=self.padding_idx, reduce=reduce,
         )
-        return loss, nll_loss, avg_entropy
+        return loss, nll_loss #, avg_entropy
 
     @staticmethod
     def reduce_metrics(logging_outputs) -> None:

@@ -755,7 +755,7 @@ class Trainer(object):
                 is_dummy_batch = False
 
             try:
-                _loss, sample_size, logging_output, sample_ids, median_p= self.task.train_dynamic_step(
+                _loss, sample_size, logging_output, sample_ids, median_p = self.task.train_dynamic_step(
                     sample, self.model, self.criterion
                 )
             except RuntimeError as e:
