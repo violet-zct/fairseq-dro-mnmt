@@ -1,8 +1,8 @@
 #! /bin/bash
 #SBATCH --output=slurm_logs/slurm-%A-%a.out
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
-##SBATCH --partition=learnfair
-#SBATCH --partition=priority
+#SBATCH --partition=learnfair
+##SBATCH --partition=priority
 #SBATCH --comment="TACL 4.28"
 #SBATCH --job-name=67
 #SBATCH --nodes=1
