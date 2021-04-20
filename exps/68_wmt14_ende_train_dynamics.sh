@@ -57,7 +57,7 @@ echo $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID $SLURM_JOB_ID > ${SAVE}/log.txt
 python -u train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
-	  --group-level ${glevel} --max-tokens-valid 30268 \
+	  --group-level ${glevel} --max-tokens-valid 28268 \
 	  --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
 	  --no-epoch-checkpoints \
@@ -88,7 +88,7 @@ for lang in ${langs//,/ }; do
             --task translation_multi_simple_epoch  \
             --gen-subset test --skip-invalid-size-inputs-valid-test \
             --path ${SAVE}/checkpoint_${cpt}.pt \
-            --batch-size 150 \
+            --batch-size 300 \
             --lenpen 1.0 \
             --remove-bpe sentencepiece --scoring sacrebleu \
             --lang-pairs ${lang_pairs} \
