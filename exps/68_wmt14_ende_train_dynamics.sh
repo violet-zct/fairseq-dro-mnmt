@@ -18,12 +18,11 @@
 
 source activate mnmt
 
-savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
+SAVE_ROOT=/checkpoint/xianl/space/dro_mnt
 DATA=/private/home/ghazvini/chunting/data/marjan_data/mnmt_data/wmt14_ende
 langs="de"
 log=1
 
-SAVE_ROOT=${savedir}/saved_models
 direction=$SLURM_ARRAY_TASK_ID
 
 if [ $direction = 0 ]; then
