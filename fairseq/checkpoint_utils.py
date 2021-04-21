@@ -184,7 +184,7 @@ def load_checkpoint(args, trainer, **passthrough_args):
     if extra_state is not None and not reset_dataloader:
         # restore iterator from checkpoint
         itr_state = extra_state["train_iterator"]
-        if hasattr(args, 'warmup_epochs') and itr_state["epoch"] > args.warmup_epochs and args.compute_train_dynamics:
+        if hasattr(args, 'burnout_epochs') and itr_state["epoch"] > args.burnout_epochs and args.compute_train_dynamics:
             set_data_prop = True
         else:
             set_data_prop = False

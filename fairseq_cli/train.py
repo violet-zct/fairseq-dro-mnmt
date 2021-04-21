@@ -374,8 +374,8 @@ def get_valid_stats(args, trainer, stats):
 
 
 def on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
-    if hasattr(args, 'warmup_epochs') and epoch_itr.epoch > args.warmup_epochs:
-        return
+    # if hasattr(args, 'warmup_epochs') and epoch_itr.epoch > args.warmup_epochs:
+    #     return
 
     cur_subset = 'concat_train'
     data_size = len(trainer.task.datasets[cur_subset])
@@ -449,7 +449,7 @@ def on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
     # _write_to_file(train_avg_ent, "avg_ent")
     logger.info("saved files to the disk for epoch = {}".format(epoch_itr.epoch))
 
-    if epoch_itr.epoch == args.warmup_epochs:
+    if epoch_itr.epoch >= args.burnout_epochs:
         med_probs = []
         for eid in range(1, epoch_itr.epoch+1):
             path = os.path.join(args.save_dir, "med_probs_{}.npy".format(eid))
@@ -461,9 +461,6 @@ def on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
 
 
 def analysis_on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
-    if hasattr(args, 'warmup_epochs') and epoch_itr.epoch > args.warmup_epochs:
-        return
-
     cur_subset = 'concat_train'
     data_size = len(trainer.task.datasets[cur_subset])
 
