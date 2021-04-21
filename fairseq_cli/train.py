@@ -451,7 +451,7 @@ def on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
 
     if epoch_itr.epoch >= args.burnout_epochs:
         med_probs = []
-        for eid in range(1, epoch_itr.epoch+1):
+        for eid in range(2, epoch_itr.epoch+1):
             path = os.path.join(args.save_dir, "med_probs_{}.npy".format(eid))
             if not os.path.exists(path):
                 continue

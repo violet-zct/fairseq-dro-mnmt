@@ -304,6 +304,7 @@ class MultilingualDatasetManager(object):
         parser.add_argument('--max-scale-up', type=float, default=1.5,
                             help="max scale ratio when doing resampling")
         parser.add_argument('--exclude-c', type=float, default=0)
+        parser.add_argument('--selection-method', type=str, choices=['cutoff', 'sample'], default='cutoff')
 
         parser.add_argument(
             '--inner-baseline-file',

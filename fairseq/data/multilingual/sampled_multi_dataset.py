@@ -192,14 +192,22 @@ class SampledMultiDataset(FairseqDataset):
         self.data_values = []
         for ii, eid in enumerate(self.cumulative_sizes):
             sid = 0 if ii == 0 else self.cumulated_sizes[ii-1]
-            sorted_mu_indices = np.argsort(mu[sid: eid])  # ascending
-            sorted_var_indices = list(np.argsort(var[sid: eid])[::-1])  # descending
+            if self.args.selection_method == 'cutoff':
+                sorted_mu_indices = np.argsort(mu[sid: eid])  # ascending
+                sorted_var_indices = list(np.argsort(var[sid: eid])[::-1])  # descending
 
-            if self.args.exclude_c > 0:
-                # remove tail of least confident examples
-                exclude = sorted_mu_indices[:int(len(sorted_mu_indices) * self.args.exclude_c)]
-                sorted_var_indices = [idx for idx in sorted_var_indices if idx not in exclude]
-            self.data_values.append(sorted_var_indices)
+                if self.args.exclude_c > 0:
+                    # remove tail of least confident examples
+                    exclude = sorted_mu_indices[:int(len(sorted_mu_indices) * self.args.exclude_c)]
+                    sorted_var_indices = [idx for idx in sorted_var_indices if idx not in exclude]
+                self.data_values.append(sorted_var_indices)
+            else:
+                sorted_mu_indices = np.argsort(mu[sid: eid])  # ascending
+                select_var = var[sid:eid]
+                if self.args.exclude_c > 0:
+                    exclude = sorted_mu_indices[:int(len(sorted_mu_indices) * self.args.exclude_c)]
+                    select_var[exclude] = 0.
+                self.data_values.append(select_var / sum(select_var))
             # self.data_values.append({"mu": (sorted_mu, sorted_mu_indices), "var": (sorted_var, sorted_var_indices)})
 
     def random_choice_in_dataset(self, rng, dataset, choice_size):
@@ -236,19 +244,29 @@ class SampledMultiDataset(FairseqDataset):
             ratios = sample_ratios / sample_ratios.sum()
             counts = get_counts(ratios)
             in_dataset_indices = []
-            # (1) data_values are variability
-            for ii, (count, ds) in enumerate(zip(counts, sizes)):
-                sorted_var_inds = self.data_values[ii]
-                if count >= ds:
-                    multiply = count // len(sorted_var_inds)
-                    select_indices = [ii for _ in range(multiply) for ii in sorted_var_inds]
-                    add_count = count - len(select_indices)
-                    in_dataset_indices.append(select_indices + sorted_var_inds[:add_count] if add_count > 0 else select_indices)
-                else:
-                    add_count = count - len(sorted_var_inds)
-                    in_dataset_indices.append(sorted_var_inds[:count] + sorted_var_inds[:add_count] if add_count > 0 else sorted_var_inds[:count])
-                logger.info("id = {}, lang = {}, ds = {}, count = {}, select = {}".format(ii, self.keys[ii], ds, count,
-                                                                                 len(in_dataset_indices[-1])))
+            if self.args.selection_method == 'cutoff':
+                # (1) data_values are variability
+                for ii, (count, ds) in enumerate(zip(counts, sizes)):
+                    sorted_var_inds = self.data_values[ii]
+                    if count >= ds:
+                        multiply = count // len(sorted_var_inds)
+                        select_indices = [ii for _ in range(multiply) for ii in sorted_var_inds]
+                        add_count = count - len(select_indices)
+                        in_dataset_indices.append(select_indices + sorted_var_inds[:add_count] if add_count > 0 else select_indices)
+                    else:
+                        add_count = count - len(sorted_var_inds)
+                        in_dataset_indices.append(sorted_var_inds[:count] + sorted_var_inds[:add_count] if add_count > 0 else sorted_var_inds[:count])
+                    logger.info("id = {}, lang = {}, ds = {}, count = {}, select = {}".format(ii, self.keys[ii], ds, count,
+                                                                                     len(in_dataset_indices[-1])))
+            elif self.args.selection_method == 'sample':
+                for ii, (count, ds) in enumerate(zip(counts, sizes)):
+                    sample_probs = self.data_values[ii]
+                    assert ds == len(sample_probs)
+                    selected_index = rng.choice(ds, count, replace=(count > ds), p=sample_probs)
+                    in_dataset_indices.append(selected_index)
+                    logger.info("id = {}, lang = {}, ds = {}, count = {}, select = {}".format(ii, self.keys[ii], ds, count,
+                                                                                     len(in_dataset_indices[-1])))
+
             virtual_sizes_per_dataset = [len(d) for d in in_dataset_indices]
         elif sample_ratios is None:
             # default back to concating datasets
