@@ -467,7 +467,7 @@ def analysis_on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
     cur_subset = 'concat_train'
     data_size = len(trainer.task.datasets[cur_subset])
 
-    results = {'min_probs': torch.zeros(data_size, device='cuda'), 'median_probs': torch.zeros(data_size, device='cuda')}
+    results = None
     sanity_ids = torch.zeros(data_size, device='cuda')
 
     itr = task.get_batch_iterator(
@@ -502,6 +502,9 @@ def analysis_on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
     with metrics.aggregate(new_root=True) as agg:
         for i, sample in enumerate(progress):
             log_output, sample_ids, return_results, is_dummy = trainer.compute_train_dynamics_step(sample)
+            if results is None:
+                results = {key: torch.zeros(data_size, device='cuda') for key in return_results.keys()}
+
             if not is_dummy:
                 sanity_ids[sample_ids] = 1
                 for key, vec in return_results.items():

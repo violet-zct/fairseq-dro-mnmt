@@ -86,8 +86,8 @@ class TrainDynamicsLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             pad_mask = (sample['target'] == self.padding_idx)
             nll_loss = nll_loss.reshape_as(sample['target'])
             probs = torch.exp(-nll_loss)
-            # probs[pad_mask] = 0
-            # avg_probs = torch.sum(probs, dim=-1) / word_mask.sum(1)
+            probs[pad_mask] = 0
+            avg_probs = torch.sum(probs, dim=-1) / word_mask.sum(1)
             probs.masked_fill_(pad_mask, float('inf'))
             min_probs, _ = probs.min(dim=-1)
             median_indices = word_mask.sum(1, keepdim=True).long() // 2
@@ -96,7 +96,7 @@ class TrainDynamicsLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             loss = loss.sum()
             nll_loss = nll_loss.sum()
             sample_size = sample['ntokens']
-            return_metrics = {'min_probs': min_probs, 'median_probs': median_probs}
+            return_metrics = {'min_probs': min_probs, 'median_probs': median_probs, "avg_probs": avg_probs}
         else:
             loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=False)
             mask = (sample['target'] != self.padding_idx).float()
