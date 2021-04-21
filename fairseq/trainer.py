@@ -365,7 +365,8 @@ class Trainer(object):
                     return mu, var
 
                 med_probs = []
-                for eid in range(1, epoch):
+                till_epoch = epoch if self.args.burnout_epochs > 0 else (self.args.warmup_epochs+1)
+                for eid in range(2, till_epoch):
                     path = os.path.join(self.args.save_dir, "med_probs_{}.npy".format(eid))
                     if not os.path.exists(path):
                         continue

@@ -129,7 +129,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--resample', default=1, type=int, help="resample=0 is ERM")
 
         parser.add_argument('--compute-train-dynamics', type=int, default=1)
-        parser.add_argument('--burnout-epochs', type=int, default=1)
+        parser.add_argument('--burnout-epochs', type=int, default=-1)
         # fmt: on
 
     def _print(self, x):
