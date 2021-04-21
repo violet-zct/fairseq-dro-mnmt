@@ -65,7 +65,7 @@ fi
 rho=0.3
 
 model=transformer_wmt_en_de
-exp_name=64_td_select_warmup_20_c_0.05_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
+exp_name=64_rerun_td_select_warmup_20_c_0.05_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -78,7 +78,7 @@ if [ ${log} = 1 ]; then
 fi
 
 python train.py ${DATA}\
-    --warmup-epochs 20 --exclude-c 0.05 --max-scale-up 1.0 --compute-train-dynamics 1 \
+    --warmup-epochs 20 --burnout-epochs 20 --exclude-c 0.05 --max-scale-up 1.0 --compute-train-dynamics 1 \
     --task translation_multi_simple_epoch --max-tokens-valid 30268 \
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --encoder-langtok ${etok} --enable-lang-ids \

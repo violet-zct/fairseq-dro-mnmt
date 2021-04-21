@@ -125,9 +125,9 @@ class SampledMultiDataset(FairseqDataset):
         self.set_epoch(epoch)
 
         sizes = [len(d) for d in datasets]
-        self.cumulative_sizes = np.cumsum(sizes)
+        self.fixed_cumulative_sizes = np.cumsum(sizes)
         logger.info("langs = {}".format(self.keys))
-        logger.info("cumulative sizes= {}".format(self.cumulative_sizes))
+        logger.info("cumulative sizes= {}".format(self.fixed_cumulative_sizes))
 
     def _clean_if_not_none(self, var_list):
         for v in var_list:
@@ -190,8 +190,8 @@ class SampledMultiDataset(FairseqDataset):
         logger.info("set data values!")
         # tensor can be variabilities or any other measurements that is used for data selection
         self.data_values = []
-        for ii, eid in enumerate(self.cumulative_sizes):
-            sid = 0 if ii == 0 else self.cumulated_sizes[ii-1]
+        for ii, eid in enumerate(self.fixed_cumulative_sizes):
+            sid = 0 if ii == 0 else self.fixed_cumulative_sizes[ii-1]
             if self.args.selection_method == 'cutoff':
                 sorted_mu_indices = np.argsort(mu[sid: eid])  # ascending
                 sorted_var_indices = list(np.argsort(var[sid: eid])[::-1])  # descending
