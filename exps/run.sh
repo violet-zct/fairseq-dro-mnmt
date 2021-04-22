@@ -2,6 +2,7 @@
 
 rm -rf /checkpoint/xianl/space/dro_mnt/64*
 rm -rf /checkpoint/xianl/space/dro_mnt/65*
+rm -rf /checkpoint/xianl/space/dro_mnt/66*
 rm -rf /checkpoint/xianl/space/dro_mnt/67*
 
 # keeps updating train dynamics; fix bugs; try sample based selection
