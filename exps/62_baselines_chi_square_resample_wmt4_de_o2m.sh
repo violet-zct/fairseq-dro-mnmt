@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0
+#SBATCH --array=0-1
 
 source activate mnmt
 
@@ -43,46 +43,28 @@ DATA=${datadir}/wmt4/data-bin-v2
 langs="de,fr,ta,tr"
 log=1
 
-#if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
-#    lang_pairs="en-de,en-fr,en-ta,en-tr"
-#    ename="o2m"
-#    gtgt="xx"
-#    etok="tgt"
-#    glevel="target_lang"
-#elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
-#    lang_pairs="de-en,fr-en,ta-en,tr-en"
-#    ename="m2o"
-#    gtgt="en"
-#    etok="src"
-#    glevel="source_lang"
-#else
-#    exit
-#fi
-lang_pairs="en-de,en-fr,en-ta,en-tr"
-ename="o2m"
-gtgt="xx"
-etok="tgt"
-glevel="target_lang"
-
-direction=$SLURM_ARRAY_TASK_ID
-rho=0.3
-
-if [ $direction = 2 ]; then
-    baselines="de:2.912,fr:2.539,ta:3.668,tr:2.832"
-    ename="o2m_t1"
-elif [ $direction = 0 ]; then
+if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
+    lang_pairs="en-de,en-fr,en-ta,en-tr"
+    ename="o2m"
+    gtgt="xx"
+    etok="tgt"
+    glevel="target_lang"
     baselines="de:3.104,fr:2.64,ta:3.226,tr:2.195"
-    ename="o2m_t100"
-elif [ $direction = 1 ]; then
-    baselines="de:2.912,fr:2.539,ta:3.226,tr:2.195"
-    ename="o2m_tbest"
+elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
+    lang_pairs="de-en,fr-en,ta-en,tr-en"
+    ename="m2o"
+    gtgt="en"
+    etok="src"
+    glevel="source_lang"
+    baselines="de:2.944,fr:2.774,ta:3.07,tr:2.055"
 else
     exit
 fi
 
 
+rho=0.3
 model=transformer_wmt_en_de
-exp_name=71_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
+exp_name=71_baselines_t100_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -96,7 +78,7 @@ fi
 
 python train.py ${DATA}\
     --warmup-epochs 1 \
-    --task translation_multi_simple_epoch \
+    --task translation_multi_simple_epoch --max-scale-up 1.0 \
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_resample' --label-smoothing 0.1 --baselines ${baselines}\
