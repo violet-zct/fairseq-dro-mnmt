@@ -437,16 +437,16 @@ def competent_cl_on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
     assert diff == 0, "diff={}".format(diff)
     torch.distributed.all_reduce(train_hardness)
 
-    def _write_to_file(tensor):
-        tensor = tensor.cpu().numpy()
+    def _write_to_file(nparray):
         fout = os.path.join(args.save_dir, "hardness_last.npy")
         if os.path.exists(fout):
             os.remove(fout)
-        np.save(fout, tensor)
+        np.save(fout, nparray)
 
     def competence_func(t, T):
         return min(1, math.sqrt(t * (1 - 0.01**2) / T + 0.01**2))
 
+    train_hardness = train_hardness.cpu().numpy()
     _write_to_file(train_hardness)
     logger.info("saved files to the disk for epoch = {}".format(epoch_itr.epoch))
     ratio = competence_func(trainer.get_num_updates()+1000, args.max_update)
