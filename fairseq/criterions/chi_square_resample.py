@@ -179,6 +179,9 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             return None
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
         past_losses = self.sum_losses - self.loss_baselines
+        if past_losses.max() < 0:
+            past_losses = self.sum_losses
+
         rho = self.rho
         p_train = self.p_train
 

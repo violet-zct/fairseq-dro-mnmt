@@ -57,10 +57,10 @@ if [ ${log} = 1 ]; then
 fi
 echo $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID $SLURM_JOB_ID > ${SAVE}/log.txt
 
-python -u train.py ${DATA}\
+python -u train.py ${DATA} \
 	  --task translation_multi_simple_epoch --selection-method sample --max-scale-up 1.0 \
 	  --compute-train-dynamics 1 --warmup-epochs 5 --competent-cl 1 --hardness 'sum_log_prob' \
-	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
+	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test --max-tokens-valid 30268 \
 	  --sampling-method "temperature" --sampling-temperature ${temp} \
 	  --encoder-langtok ${etok} --group-level ${glevel} \
 	  --max-update 300000 --layernorm-embedding \
