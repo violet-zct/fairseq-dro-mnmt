@@ -440,7 +440,8 @@ def competent_cl_on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
     def _write_to_file(tensor):
         tensor = tensor.cpu().numpy()
         fout = os.path.join(args.save_dir, "hardness_last.npy")
-        os.remove(fout)
+        if os.path.exists(fout):
+            os.remove(fout)
         np.save(fout, tensor)
 
     def competence_func(t, T):
