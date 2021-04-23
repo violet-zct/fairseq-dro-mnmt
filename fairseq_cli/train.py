@@ -439,9 +439,10 @@ def competent_cl_on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
 
     def _write_to_file(nparray):
         fout = os.path.join(args.save_dir, "hardness_last.npy")
-        if os.path.exists(fout):
-            os.remove(fout)
-        np.save(fout, nparray)
+        if distributed_utils.is_master(args):
+            if os.path.exists(fout):
+                os.remove(fout)
+            np.save(fout, nparray)
 
     def competence_func(t, T):
         return min(1, math.sqrt(t * (1 - 0.01**2) / T + 0.01**2))
@@ -525,7 +526,8 @@ def on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
         var = np.std(mat, axis=0)
         return mu, var
     # _write_to_file(train_avg_probs, "avg_probs")
-    _write_to_file(train_med_probs, "med_probs")
+    if distributed_utils.is_master(args):
+        _write_to_file(train_med_probs, "med_probs")
     # _write_to_file(train_avg_ent, "avg_ent")
     logger.info("saved files to the disk for epoch = {}".format(epoch_itr.epoch))
 
@@ -612,7 +614,8 @@ def fix_on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
         var = np.std(mat, axis=0)
         return mu, var
     # _write_to_file(train_avg_probs, "avg_probs")
-    _write_to_file(train_med_probs, "med_probs")
+    if distributed_utils.is_master(args):
+        _write_to_file(train_med_probs, "med_probs")
     # _write_to_file(train_avg_ent, "avg_ent")
     logger.info("saved files to the disk for epoch = {}".format(epoch_itr.epoch))
 
@@ -690,8 +693,9 @@ def analysis_on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
         fout = os.path.join(args.save_dir, "{}_{}.npy".format(fname, epoch_itr.epoch))
         np.save(fout, tensor)
 
-    for key, value in results.items():
-        _write_to_file(value, key)
+    if distributed_utils.is_master(args):
+        for key, value in results.items():
+            _write_to_file(value, key)
     logger.info("saved files to the disk for epoch = {}".format(epoch_itr.epoch))
 
 
