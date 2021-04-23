@@ -95,6 +95,8 @@ class SampledMultiDataset(FairseqDataset):
         remapped_lang_ids=None,
     ):
         super().__init__()
+        self.cl_ratio = -1
+        
         self.args = args
         self.shared_collater = shared_collater
         self.shuffle = shuffle
@@ -136,8 +138,6 @@ class SampledMultiDataset(FairseqDataset):
         self.fixed_cumulative_sizes = np.cumsum(sizes)
         logger.info("langs = {}".format(self.keys))
         logger.info("cumulative sizes= {}".format(self.fixed_cumulative_sizes))
-
-        self.cl_ratio = -1
 
     def _clean_if_not_none(self, var_list):
         for v in var_list:

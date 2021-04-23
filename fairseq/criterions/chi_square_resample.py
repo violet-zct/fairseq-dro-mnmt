@@ -349,7 +349,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                     probs.masked_fill_(pad_mask, float('inf'))
                     hardness_metrics, _ = probs.min(dim=-1)
                 elif self.args.hardness == 'sum_log_prob':
-                    hardness_metrics = nll_loss.sum(1)
+                    hardness_metrics = -nll_loss.sum(1)
                 else:
                     raise NotImplementedError
             else:
