@@ -67,7 +67,7 @@ etok="tgt"
 glevel="target_lang"
 
 direction=$SLURM_ARRAY_TASK_ID
-rho=0.5
+rho=0.3
 
 if [ $direction = 2 ]; then
     baselines="de:2.912,fr:2.539,ta:3.668,tr:2.832"
@@ -84,7 +84,7 @@ fi
 
 
 model=transformer_wmt_en_de
-exp_name=62_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
+exp_name=71_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}

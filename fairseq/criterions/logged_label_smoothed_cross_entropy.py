@@ -103,6 +103,7 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 sample_size = sample['target'].size(0) if self.sentence_avg else sample['ntokens']
         else:
             loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=False)
+            sample_size = sample['ntokens']
             if train_dynamic:
                 nll_loss = nll_loss.reshape_as(sample['target'])
                 word_mask = (sample['target'] != self.padding_idx).float()
@@ -128,7 +129,6 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 mask = (sample['target'] != self.padding_idx).float()
                 ind_loss = (loss.reshape_as(sample['target']) * mask).sum(1)
                 nll_loss = nll_loss.reshape_as(sample['target']).sum(1)
-                sample_size = sample['ntokens']
                 fg_labels = self.retrieve_group_labels(sample)
                 fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
                 fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)

@@ -61,7 +61,7 @@ else
     exit
 fi
 
-rho=0.1
+rho=0.3
 
 model=transformer_wmt_en_de
 exp_name=75_cl_hard_min_warmup5_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
