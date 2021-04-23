@@ -134,7 +134,8 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
                 fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1))
                 fg_group_loss = fg_zero_vec.scatter_add(0, fg_labels, ind_loss)
-                nll_loss = nll_loss.sum()
+
+            nll_loss = nll_loss.sum()
             loss = loss.sum()
 
         logging_output = {
