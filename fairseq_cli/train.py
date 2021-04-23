@@ -386,6 +386,13 @@ def competent_cl_on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
     if hasattr(args, 'warmup_epochs') and epoch_itr.epoch < args.warmup_epochs:
         return
 
+    def competence_func(t, T):
+        return min(1, math.sqrt(t * (1 - 0.3**2) / T + 0.3**2))
+
+    ratio = competence_func(trainer.get_num_updates(), 200000)
+    if ratio >= 1:
+        return
+
     cur_subset = 'concat_train'
     data_size = len(trainer.task.datasets[cur_subset])
     train_hardness = torch.zeros(data_size, device='cuda')
@@ -444,13 +451,9 @@ def competent_cl_on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
                 os.remove(fout)
             np.save(fout, nparray)
 
-    def competence_func(t, T):
-        return min(1, math.sqrt(t * (1 - 0.3**2) / T + 0.3**2))
-
     train_hardness = train_hardness.cpu().numpy()
     _write_to_file(train_hardness)
     logger.info("saved files to the disk for epoch = {}".format(epoch_itr.epoch))
-    ratio = competence_func(trainer.get_num_updates(), 200000)
     logger.info("epoch = {}, CL ratio = {}".format(epoch_itr.epoch, ratio))
     with open(os.path.join(args.save_dir, "cl_ratio"), "w") as fout:
         fout.write("{}".format(ratio))

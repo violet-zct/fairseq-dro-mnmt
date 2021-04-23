@@ -75,7 +75,7 @@ send_dir=/home/chuntinz/tir5/logs/${exp_name}
 if [ ${log} = 1 ]; then
   bash v1_exps/send.sh ${exp_name} &
 fi
-echo $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID $SLURM_JOB_ID > ${SAVE}/log.txt
+echo $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID $SLURM_JOB_ID >> ${SAVE}/log.txt
 
 python train.py ${DATA}\
     --warmup-epochs 1 --burnout-epochs 20 --selection-method sample \
