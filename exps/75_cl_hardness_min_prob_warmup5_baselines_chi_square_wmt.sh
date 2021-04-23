@@ -77,7 +77,7 @@ if [ ${log} = 1 ]; then
 fi
 echo $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID $SLURM_JOB_ID > ${SAVE}/log.txt
 
-python train.py ${DATA}\
+python -u train.py ${DATA}\
     --warmup-epochs 5 --competent-cl 1 --hardness min_prob \
     --max-scale-up 1.0 --compute-train-dynamics 1 --selection-method sample \
     --task translation_multi_simple_epoch --max-tokens-valid 30268 \
