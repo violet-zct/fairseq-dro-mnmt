@@ -292,7 +292,7 @@ class SampledMultiDataset(FairseqDataset):
                             "id = {}, lang = {}, ds = {}, count = {}, select = {}, select_from = {}".format(ii,
                                                                                                             self.keys[ii],
                                                                                                             ds, count,
-                                                                                                            len(in_dataset_indices[-1]),
+                                                                                                            len(selected_index),
                                                                                                             select_from))
                     else:
                         sample_probs = self.data_values[ii]
@@ -300,7 +300,7 @@ class SampledMultiDataset(FairseqDataset):
                         selected_index = rng.choice(ds, count, replace=(count > ds), p=sample_probs)
                         logger.info(
                             "id = {}, lang = {}, ds = {}, count = {}, select = {}".format(ii, self.keys[ii], ds, count,
-                                                                                          len(in_dataset_indices[-1])))
+                                                                                          len(selected_index)))
                     in_dataset_indices.append(selected_index)
 
 
