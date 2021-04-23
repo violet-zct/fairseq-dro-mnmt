@@ -41,6 +41,14 @@ def default_virtual_size_func(datasets, ratios, max_scale_up=1.5):
     return int(vsize if vsize < max_size else max_size)
 
 
+def ecdf(data):
+    """ Compute ECDF """
+    x = np.sort(data)
+    n = x.size
+    y = np.arange(1, n+1) / n
+    return (x, y)
+
+
 class CollateFormat(Enum):
     single = 1
     ordered_dict = 2
@@ -129,6 +137,8 @@ class SampledMultiDataset(FairseqDataset):
         logger.info("langs = {}".format(self.keys))
         logger.info("cumulative sizes= {}".format(self.fixed_cumulative_sizes))
 
+        self.cl_ratio = -1
+
     def _clean_if_not_none(self, var_list):
         for v in var_list:
             if v is not None:
@@ -151,10 +161,13 @@ class SampledMultiDataset(FairseqDataset):
             if not isinstance(sample_ratios, np.ndarray):
                 sample_ratios = np.array(sample_ratios)
             self.sample_ratios = sample_ratios
-            virtual_size = default_virtual_size_func if virtual_size is None else virtual_size
-            self.virtual_size = (
-                virtual_size(self.datasets, self.sample_ratios, self.args.max_scale_up) if callable(virtual_size)
-                else virtual_size)
+            if self.cl_ratio > 0:
+                self.virtual_size = int(sum(sizes) * self.cl_ratio)
+            else:
+                virtual_size = default_virtual_size_func if virtual_size is None else virtual_size
+                self.virtual_size = (
+                    virtual_size(self.datasets, self.sample_ratios, self.args.max_scale_up) if callable(virtual_size)
+                    else virtual_size)
 
     def adjust_sampling(self, epoch, sampling_ratios, virtual_size):
         if sampling_ratios is not None:
@@ -184,18 +197,28 @@ class SampledMultiDataset(FairseqDataset):
                 ret = ret[self.remapped_lang_ids]
         return ret
 
-    def set_data_properties(self, mu, var):
+    def set_data_properties(self, mu, var, ratio=None):
         if hasattr(self, 'data_values'):
             return
         logger.info("set data values!")
+        if ratio is not None:
+            self.cl_ratio = ratio
+            sizes = [len(d) for d in self.datasets]
+            self.virtual_size = int(sum(sizes) * self.cl_ratio)
+
         # tensor can be variabilities or any other measurements that is used for data selection
         self.data_values = []
+        sizes = [len(d) for d in self.datasets]
         for ii, eid in enumerate(self.fixed_cumulative_sizes):
             sid = 0 if ii == 0 else self.fixed_cumulative_sizes[ii-1]
-            if self.args.selection_method == 'cutoff':
+            assert eid - sid == sizes[ii]
+            if var is None and ratio is not None:
+                sorted_mu_indices = np.argsort(mu[sid: eid])[::-1]  # descending
+                cutoff = int(len(sorted_mu_indices) * ratio)
+                self.data_values.append(sorted_mu_indices[:cutoff])
+            elif self.args.selection_method == 'cutoff':
                 sorted_mu_indices = np.argsort(mu[sid: eid])  # ascending
                 sorted_var_indices = list(np.argsort(var[sid: eid])[::-1])  # descending
-
                 if self.args.exclude_c > 0:
                     # remove tail of least confident examples
                     exclude = sorted_mu_indices[:int(len(sorted_mu_indices) * self.args.exclude_c)]
@@ -206,7 +229,7 @@ class SampledMultiDataset(FairseqDataset):
                 select_var = var[sid:eid]
                 if self.args.exclude_c > 0:
                     exclude = sorted_mu_indices[:int(len(sorted_mu_indices) * self.args.exclude_c)]
-                    select_var[exclude] = 0.
+                    select_var[exclude] = 1e-7
                 self.data_values.append(select_var / sum(select_var))
             # self.data_values.append({"mu": (sorted_mu, sorted_mu_indices), "var": (sorted_var, sorted_var_indices)})
 
@@ -217,6 +240,9 @@ class SampledMultiDataset(FairseqDataset):
         return rng.choice(dataset_size, choice_size, replace=(choice_size > dataset_size))
 
     def get_virtual_indices(self, rng, datasets, sample_ratios, virtual_size):
+        logger.info("CL competence = {}, virtual_size = {}".format(self.cl_ratio, virtual_size))
+        sizes = [len(d) for d in datasets]
+
         def get_counts(sample_ratios):
             counts = np.array([virtual_size * r for r in sample_ratios], dtype=np.int64)
             diff = virtual_size - counts.sum()
@@ -237,7 +263,6 @@ class SampledMultiDataset(FairseqDataset):
                 for c, d in zip(counts, datasets)]
             return indices
 
-        sizes = [len(d) for d in datasets]
         if hasattr(self, 'data_values'):
             logger.info("select data indices by training dynamics!")
             assert sample_ratios is not None
@@ -260,12 +285,24 @@ class SampledMultiDataset(FairseqDataset):
                                                                                      len(in_dataset_indices[-1])))
             elif self.args.selection_method == 'sample':
                 for ii, (count, ds) in enumerate(zip(counts, sizes)):
-                    sample_probs = self.data_values[ii]
-                    assert ds == len(sample_probs)
-                    selected_index = rng.choice(ds, count, replace=(count > ds), p=sample_probs)
+                    if self.cl_ratio > 0:
+                        select_from = len(self.data_values[ii])
+                        selected_index = rng.choice(self.data_values[ii], count, replace=(count > select_from))
+                        logger.info(
+                            "id = {}, lang = {}, ds = {}, count = {}, select = {}, select_from = {}".format(ii,
+                                                                                                            self.keys[ii],
+                                                                                                            ds, count,
+                                                                                                            len(in_dataset_indices[-1]),
+                                                                                                            select_from))
+                    else:
+                        sample_probs = self.data_values[ii]
+                        assert ds == len(sample_probs)
+                        selected_index = rng.choice(ds, count, replace=(count > ds), p=sample_probs)
+                        logger.info(
+                            "id = {}, lang = {}, ds = {}, count = {}, select = {}".format(ii, self.keys[ii], ds, count,
+                                                                                          len(in_dataset_indices[-1])))
                     in_dataset_indices.append(selected_index)
-                    logger.info("id = {}, lang = {}, ds = {}, count = {}, select = {}".format(ii, self.keys[ii], ds, count,
-                                                                                     len(in_dataset_indices[-1])))
+
 
             virtual_sizes_per_dataset = [len(d) for d in in_dataset_indices]
         elif sample_ratios is None:

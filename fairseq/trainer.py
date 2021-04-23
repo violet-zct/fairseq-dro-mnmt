@@ -358,21 +358,29 @@ class Trainer(object):
                 data_selector=data_selector,
             )
             if set_data_prop:
-                def _get_confidence_and_variability(epochs_of_vecs):
-                    mat = np.vstack(epochs_of_vecs)
-                    mu = np.mean(mat, axis=0)
-                    var = np.std(mat, axis=0)
-                    return mu, var
+                if hasattr(self.args, 'competent_cl') and self.args.competent_cl:
+                    path = os.path.join(self.args.save_dir, "hardness_last.npy")
+                    if os.path.exists(path):
+                        mu = np.load(path)
+                        with open(os.path.join(self.args.save_dir, "cl_ratio")) as fin:
+                            ratio = float(fin.read().strip())
+                        self.task.datasets['train'].set_data_properties(mu, None, ratio)
+                else:
+                    def _get_confidence_and_variability(epochs_of_vecs):
+                        mat = np.vstack(epochs_of_vecs)
+                        mu = np.mean(mat, axis=0)
+                        var = np.std(mat, axis=0)
+                        return mu, var
 
-                med_probs = []
-                till_epoch = epoch if self.args.burnout_epochs > 0 else (self.args.warmup_epochs+1)
-                for eid in range(2, till_epoch):
-                    path = os.path.join(self.args.save_dir, "med_probs_{}.npy".format(eid))
-                    if not os.path.exists(path):
-                        continue
-                    med_probs.append(np.load(path))
-                mu, var = _get_confidence_and_variability(med_probs)
-                self.task.datasets['train'].set_data_properties(mu, var)
+                    med_probs = []
+                    till_epoch = epoch if self.args.burnout_epochs > 0 else (self.args.warmup_epochs+1)
+                    for eid in range(2, till_epoch):
+                        path = os.path.join(self.args.save_dir, "med_probs_{}.npy".format(eid))
+                        if not os.path.exists(path):
+                            continue
+                        med_probs.append(np.load(path))
+                    mu, var = _get_confidence_and_variability(med_probs)
+                    self.task.datasets['train'].set_data_properties(mu, var)
 
         if hasattr(self.criterion, 'resample') and self.criterion.resample:
             if epoch > 1:
@@ -756,7 +764,7 @@ class Trainer(object):
                 is_dummy_batch = False
 
             try:
-                _loss, sample_size, logging_output, sample_ids, median_p = self.task.train_dynamic_step(
+                _loss, sample_size, logging_output, sample_ids, hardness_metrics = self.task.train_dynamic_step(
                     sample, self.model, self.criterion
                 )
             except RuntimeError as e:
@@ -790,7 +798,7 @@ class Trainer(object):
         # log validation stats
         logging_output = self._reduce_and_log_stats(logging_outputs, sample_size)
 
-        return logging_output, sample_ids, median_p, is_dummy_batch
+        return logging_output, sample_ids, hardness_metrics, is_dummy_batch
 
     def zero_grad(self):
         self.optimizer.zero_grad()

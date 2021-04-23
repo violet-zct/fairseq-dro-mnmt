@@ -35,6 +35,8 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
     def __init__(self, task, sentence_avg, label_smoothing, group_level):
         super().__init__(task)
+
+        self.args = task.args
         self.sentence_avg = sentence_avg
         self.eps = label_smoothing
         self.group_level = group_level
@@ -54,6 +56,13 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--label-smoothing', default=0., type=float, metavar='D',
                             help='epsilon for label smoothing, 0 means no label smoothing')
         parser.add_argument('--group-level', type=str, choices=['source_lang', 'target_lang'])
+
+        parser.add_argument('--compute-train-dynamics', type=int, default=0)
+        # competence-based CL
+        parser.add_argument('--warmup-epochs', default=1, type=int)
+        parser.add_argument('--competent-cl', type=int, default=0)
+        parser.add_argument('--hardness', type=str, default='median_prob',
+                            choices=['median_prob', 'min_prob', 'sum_log_prob', 'avg_prob'])
         # fmt: on
 
     def retrieve_group_labels(self, sample):
@@ -66,7 +75,7 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             index = sample['target'].view(-1)
         return index
 
-    def forward(self, model, sample, reduce=True):
+    def forward(self, model, sample, reduce=True, train_dynamic=False):
         """Compute the loss for the given sample.
 
         Returns a tuple with three elements:
@@ -94,18 +103,39 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 sample_size = sample['target'].size(0) if self.sentence_avg else sample['ntokens']
         else:
             loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=False)
-            mask = (sample['target'] != self.padding_idx).float()
-            ind_loss = (loss.reshape_as(sample['target']) * mask).sum(1)
+            if train_dynamic:
+                nll_loss = nll_loss.reshape_as(sample['target'])
+                word_mask = (sample['target'] != self.padding_idx).float()
+                pad_mask = (sample['target'] == self.padding_idx)
+                probs = torch.exp(-nll_loss)
+                # the larger hardness value is, more easier
+                if self.args.hardness == 'median_prob':
+                    probs.masked_fill_(pad_mask, float('inf'))
+                    median_indices = word_mask.sum(1, keepdim=True).long() // 2
+                    sorted_probs, _ = torch.sort(probs, dim=-1)
+                    hardness_metrics = torch.gather(sorted_probs, 1, median_indices).squeeze(-1)
+                elif self.args.hardness == 'avg_prob':
+                    probs[pad_mask] = 0
+                    hardness_metrics = torch.sum(probs, dim=-1) / word_mask.sum(1)
+                elif self.args.hardness == 'min_prob':
+                    probs.masked_fill_(pad_mask, float('inf'))
+                    hardness_metrics, _ = probs.min(dim=-1)
+                elif self.args.hardness == 'sum_log_prob':
+                    hardness_metrics = -nll_loss.sum(1)
+                else:
+                    raise NotImplementedError
+            else:
+                mask = (sample['target'] != self.padding_idx).float()
+                ind_loss = (loss.reshape_as(sample['target']) * mask).sum(1)
+                nll_loss = nll_loss.reshape_as(sample['target']).sum(1)
+                sample_size = sample['ntokens']
+                fg_labels = self.retrieve_group_labels(sample)
+                fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
+                fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
+                fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1))
+                fg_group_loss = fg_zero_vec.scatter_add(0, fg_labels, ind_loss)
+                nll_loss = nll_loss.sum()
             loss = loss.sum()
-            nll_loss = nll_loss.reshape_as(sample['target']).sum(1)
-
-            sample_size = sample['ntokens']
-            fg_labels = self.retrieve_group_labels(sample)
-            fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
-            fg_group_nll = fg_zero_vec.scatter_add(0, fg_labels, nll_loss)
-            fg_group_count = fg_zero_vec.scatter_add(0, fg_labels, mask.sum(1))
-            fg_group_loss = fg_zero_vec.scatter_add(0, fg_labels, ind_loss)
-            nll_loss = nll_loss.sum()
 
         logging_output = {
             'loss': loss.data,
@@ -116,6 +146,9 @@ class LoggedLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             'n_groups': self.n_groups,
             'gpu_count': 1,
         }
+        if train_dynamic:
+            return loss, sample_size, logging_output, sample['concat_ds_id'], hardness_metrics
+
         if not self.training:
             for ii in range(self.n_groups):
                 logging_output["fg_gnll{}".format(ii)] = fg_group_nll[ii].data

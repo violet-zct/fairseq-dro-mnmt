@@ -144,11 +144,16 @@ def main(args):
         if hasattr(args, 'compute_train_dynamics') and args.compute_train_dynamics:
             if hasattr(args, 'analyze') and args.analyze:
                 analysis_on_the_fly_train_dynamics(args, trainer, task, epoch_itr)
+            elif args.competent_cl:
+                # warmup = ERM
+                competent_cl_on_the_fly_train_dynamics(args, trainer, task, epoch_itr)
             elif args.burnout_epochs > 0:
                 # constantly update train dynamics
+                # warmup = ERM; burnout = data selection
                 on_the_fly_train_dynamics(args, trainer, task, epoch_itr)
             else:
                 # use stale train dynamics from the warmup epochs
+                # warmup = ERM, data selection
                 fix_on_the_fly_train_dynamics(args, trainer, task, epoch_itr)
 
         if should_stop:
@@ -375,6 +380,79 @@ def get_valid_stats(args, trainer, stats):
             checkpoint_utils.save_checkpoint.best, stats[args.best_checkpoint_metric]
         )
     return stats
+
+
+def competent_cl_on_the_fly_train_dynamics(args, trainer, task, epoch_itr):
+    if hasattr(args, 'warmup_epochs') and epoch_itr.epoch < args.warmup_epochs:
+        return
+
+    cur_subset = 'concat_train'
+    data_size = len(trainer.task.datasets[cur_subset])
+    train_hardness = torch.zeros(data_size, device='cuda')
+    sanity_ids = torch.zeros(data_size, device='cuda')
+
+    itr = task.get_batch_iterator(
+            dataset=trainer.task.dataset(cur_subset),
+            max_tokens=args.max_tokens_valid,
+            max_sentences=args.max_sentences_valid,
+            max_positions=utils.resolve_max_positions(
+                trainer.task.max_positions(),
+                trainer.model.max_positions(),
+            ),
+            ignore_invalid_inputs=args.skip_invalid_size_inputs_valid_test,
+            required_batch_size_multiple=args.required_batch_size_multiple,
+            seed=args.seed,
+            num_shards=trainer.data_parallel_world_size,
+            shard_id=trainer.data_parallel_rank,
+            num_workers=args.num_workers,
+        ).next_epoch_itr(shuffle=False)
+
+    progress = progress_bar.progress_bar(
+        itr,
+        log_format=args.log_format,
+        log_interval=10000,
+        epoch=epoch_itr.epoch,
+        prefix=f"summarize on train subset",
+        tensorboard_logdir=(
+            args.tensorboard_logdir if distributed_utils.is_master(args) else None
+        ),
+        default_log_format=("tqdm" if not args.no_progress_bar else "simple"),
+    )
+    # create a new root metrics aggregator so validation metrics
+    # don't pollute other aggregators (e.g., train meters)
+    with metrics.aggregate(new_root=True) as agg:
+        for i, sample in enumerate(progress):
+            log_output, sample_ids, b_train_hardness, is_dummy = trainer.compute_train_dynamics_step(sample)
+            if not is_dummy:
+                sanity_ids[sample_ids] = 1
+                train_hardness[sample_ids] = b_train_hardness
+
+            if i % 500 == 0:
+                # log stats
+                stats = agg.get_smoothed_values()
+                progress.print(stats, tag=cur_subset, step=i)
+
+    torch.distributed.all_reduce(sanity_ids)
+    diff = (sanity_ids - torch.ones(data_size, device='cuda')).sum().item()
+    assert diff == 0, "diff={}".format(diff)
+    torch.distributed.all_reduce(train_hardness)
+
+    def _write_to_file(tensor):
+        tensor = tensor.cpu().numpy()
+        fout = os.path.join(args.save_dir, "hardness_last.npy")
+        os.remove(fout)
+        np.save(fout, tensor)
+
+    def competence_func(t, T):
+        return min(1, math.sqrt(t * (1 - 0.01**2) / T + 0.01**2))
+
+    _write_to_file(train_hardness)
+    logger.info("saved files to the disk for epoch = {}".format(epoch_itr.epoch))
+    ratio = competence_func(trainer.get_num_updates()+1000, args.max_update)
+    logger.info("epoch = {}, CL ratio = {}".format(epoch_itr.epoch, ratio))
+    with open(os.path.join(args.save_dir, "cl_ratio"), "w") as fout:
+        fout.write("{}".format(ratio))
+    trainer.task.datasets['train'].set_data_properties(train_hardness, None, ratio)
 
 
 def on_the_fly_train_dynamics(args, trainer, task, epoch_itr):

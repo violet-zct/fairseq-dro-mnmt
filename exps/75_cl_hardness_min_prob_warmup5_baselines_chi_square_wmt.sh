@@ -4,7 +4,7 @@
 #SBATCH --partition=learnfair
 ##SBATCH --partition=priority
 ##SBATCH --comment="TACL 4.20"
-#SBATCH --job-name=71
+#SBATCH --job-name=75
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -64,7 +64,7 @@ fi
 rho=0.1
 
 model=transformer_wmt_en_de
-exp_name=71_sample_warmup1_burnout20_td_select_c0.05_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
+exp_name=75_cl_hard_min_warmup5_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -78,8 +78,8 @@ fi
 echo $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID $SLURM_JOB_ID > ${SAVE}/log.txt
 
 python train.py ${DATA}\
-    --warmup-epochs 1 --burnout-epochs 20 --selection-method sample \
-    --exclude-c 0.05 --max-scale-up 1.0 --compute-train-dynamics 1 \
+    --warmup-epochs 5 --competent-cl 1 --hardness min_prob \
+    --max-scale-up 1.0 --compute-train-dynamics 1 \
     --task translation_multi_simple_epoch --max-tokens-valid 30268 \
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --encoder-langtok ${etok} --enable-lang-ids \
@@ -135,10 +135,6 @@ for lang in ${langs//,/ }; do
         scp ${SAVE}/${cpt_name} tir:${send_dir}/
     done
 done
-
-tar -cvzf ${SAVE}/dynamics.tar.gz ${SAVE}/*npy
-scp ${SAVE}/dynamics.tar.gz tir:${send_dir}/
-rm ${SAVE}/*npy
 
 scp ${SAVE}/log.txt tir:${send_dir}/
 scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.out tir:${send_dir}/

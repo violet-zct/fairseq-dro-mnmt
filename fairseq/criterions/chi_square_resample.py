@@ -128,8 +128,13 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--clear-history', default=1, type=int)
         parser.add_argument('--resample', default=1, type=int, help="resample=0 is ERM")
 
-        parser.add_argument('--compute-train-dynamics', type=int, default=1)
+        parser.add_argument('--compute-train-dynamics', type=int, default=0)
         parser.add_argument('--burnout-epochs', type=int, default=-1)
+
+        # competence-based CL
+        parser.add_argument('--competent-cl', type=int, default=0)
+        parser.add_argument('--hardness', type=str, default='median_prob',
+                            choices=['median_prob', 'min_prob', 'sum_log_prob', 'avg_prob'])
         # fmt: on
 
     def _print(self, x):
@@ -332,12 +337,22 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
                 word_mask = (sample['target'] != self.padding_idx).float()
                 pad_mask = (sample['target'] == self.padding_idx)
                 probs = torch.exp(-nll_loss)
-                probs[pad_mask] = 0
-                probs.masked_fill_(pad_mask, float('inf'))
-                median_indices = word_mask.sum(1, keepdim=True).long() // 2
-                sorted_probs, _ = torch.sort(probs, dim=-1)
-                median_probs = torch.gather(sorted_probs, 1, median_indices).squeeze(-1)
-            elif self.logging:
+                if self.args.hardness == 'median_prob':
+                    probs.masked_fill_(pad_mask, float('inf'))
+                    median_indices = word_mask.sum(1, keepdim=True).long() // 2
+                    sorted_probs, _ = torch.sort(probs, dim=-1)
+                    hardness_metrics = torch.gather(sorted_probs, 1, median_indices).squeeze(-1)
+                elif self.args.hardness == 'avg_prob':
+                    probs[pad_mask] = 0
+                    hardness_metrics = torch.sum(probs, dim=-1) / word_mask.sum(1)
+                elif self.args.hardness == 'min_prob':
+                    probs.masked_fill_(pad_mask, float('inf'))
+                    hardness_metrics, _ = probs.min(dim=-1)
+                elif self.args.hardness == 'sum_log_prob':
+                    hardness_metrics = nll_loss.sum(1)
+                else:
+                    raise NotImplementedError
+            else:
                 nll_loss, ind_loss, group_losses, group_counts = self.compute_loss(model, sample)
                 fg_labels = self.retrieve_group_labels(sample)
                 fg_zero_vec = torch.zeros(self.n_groups, device='cuda')
@@ -374,7 +389,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             'gpu_count': 1,
         }
         if train_dynamic:
-            return loss, sample_size, logging_output, sample['concat_ds_id'], median_probs
+            return loss, sample_size, logging_output, sample['concat_ds_id'], hardness_metrics
 
         if self.logging and not self.training:
             for ii in range(self.n_groups):
