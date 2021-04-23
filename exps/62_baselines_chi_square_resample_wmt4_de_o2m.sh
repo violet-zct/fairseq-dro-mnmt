@@ -14,9 +14,9 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-2
+#SBATCH --array=0
 
-source activate mnmt2
+source activate mnmt
 
 trap_handler () {
    echo "Caught signal: " $1
@@ -37,13 +37,11 @@ trap_handler () {
 trap 'trap_handler USR1' USR1
 trap 'trap_handler TERM' TERM
 
-#savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
+SAVE_ROOT=/checkpoint/xianl/space/dro_mnt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
 DATA=${datadir}/wmt4/data-bin-v2
 langs="de,fr,ta,tr"
 log=1
-
-SAVE_ROOT=saved_models
 
 #if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
 #    lang_pairs="en-de,en-fr,en-ta,en-tr"
