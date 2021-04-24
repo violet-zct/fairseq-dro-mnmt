@@ -63,6 +63,8 @@ def collect_random_index(K=0.5):
 def process_epochs():
     max_epoch = 0
     for path in os.listdir(model_path):
+        if not path.endswith("npy"):
+            continue
         epoch = int(path.split(".")[0].split("_")[-1])
         if epoch > max_epoch:
             max_epoch = epoch
