@@ -91,7 +91,11 @@ rm -f ${SAVE}/checkpoint2*.pt
 rm -f ${SAVE}/checkpoint_254_500000.pt
 
 opt=${SAVE}/test_last10.log
-python -u fairseq_cli/generate.py $DATA --gen-subset test -s $src -t $tgt --path ${SAVE}/checkpoint_last10.pt --batch-size 300 --remove-bpe "@@ " --beam 5 --max-len-a 2 --max-len-b 0 --quiet | tee ${opt}
+python -u fairseq_cli/generate.py $DATA \
+--gen-subset test -s $src -t $tgt \
+--path ${SAVE}/checkpoint_last10.pt \
+--batch-size 300 \
+--remove-bpe "@@ " --beam 5 --max-len-a 2 --max-len-b 0 --quiet | tee ${opt}
 scp ${opt} tir:${send_dir}/
 
 scp ${SAVE}/checkpoint_*.pt tir:${send_dir}/
