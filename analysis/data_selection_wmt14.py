@@ -5,7 +5,7 @@ from collections import defaultdict
 import shutil
 
 bperoot = "/home/chuntinz/tir5/data/opus_wmt14/joint-bpe-37k"
-model_path = "/home/chuntinz/tir5/logs/68_erm_train_dynamics_wmt14_ende_ende"
+model_path = "/home/chuntinz/tir5/logs/68_erm_train_dynamics_wmt14_ende_ende/outputs"
 optroot = "/home/chuntinz/tir5/data/opus_wmt14/wmt14_train_dynamics_bpe"
 
 data = []
