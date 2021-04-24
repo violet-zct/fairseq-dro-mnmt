@@ -35,7 +35,7 @@ def collect_topk_index(list_of_tensors, title, K=0.5):
     os.mkdir(opt_dir)
     for lang in ["en", "de"]:
         for split in ["test", "dev"]:
-            opt_split = split if split == "test" else "valide"
+            opt_split = split if split == "test" else "valid"
             shutil.copy(os.path.join(bperoot, "{}.{}".format(split, lang)),  os.path.join(opt_dir, "{}.{}".format(opt_split, lang)))
     with open(os.path.join(opt_dir, "train.en"), "w", encoding="utf-8") as fen, open(os.path.join(opt_dir, "train.de"), "w", encoding="utf-8") as fde:
         for ii in sorted_indices:
