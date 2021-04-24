@@ -65,7 +65,8 @@ python -u train.py ${DATA}\
 	  --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 1e-4 \
 	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'inverse_sqrt' \
 	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 5e-4 --min-lr -1 \
-	  --criterion 'train_dynamics_label_smoothed_cross_entropy' --label-smoothing 0.1 --compute-train-dynamics 1 \
+	  --criterion 'train_dynamics_label_smoothed_cross_entropy' --label-smoothing 0.1 \
+	  --compute-train-dynamics 0 --analyze 0 \
 	  --max-tokens 8192 \
 	  --seed 222 \
   	--max-source-positions 512 --max-target-positions 512 \
