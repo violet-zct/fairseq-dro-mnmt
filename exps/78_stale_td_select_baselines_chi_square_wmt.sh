@@ -43,7 +43,7 @@ DATA=${datadir}/wmt4/data-bin-v2
 langs="de,fr,ta,tr"
 log=1
 
-rhos=(0.3 0.5)
+rhos=(0.3 0.1)
 direction=$(($SLURM_ARRAY_TASK_ID / 2))
 tempid=$(($SLURM_ARRAY_TASK_ID % 2))
 rho=${rhos[$tempid]}
