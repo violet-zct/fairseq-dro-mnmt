@@ -4,7 +4,7 @@
 #SBATCH --partition=learnfair
 ##SBATCH --partition=priority
 ##SBATCH --comment="TACL 4.20"
-#SBATCH --job-name=64
+#SBATCH --job-name=78
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -67,7 +67,7 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=64_fix_td_select_warmup_20_c_0.05_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
+exp_name=78_stale_td_select_warmup_20_c_0.05_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -79,7 +79,7 @@ if [ ${log} = 1 ]; then
   bash v1_exps/send.sh ${exp_name} &
 fi
 
-python train.py ${DATA}\
+python train.py ${DATA} \
     --warmup-epochs 20 --burnout-epochs -1 --exclude-c 0.05 --max-scale-up 1.0 --compute-train-dynamics 1 \
     --task translation_multi_simple_epoch --max-tokens-valid 30268 \
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
