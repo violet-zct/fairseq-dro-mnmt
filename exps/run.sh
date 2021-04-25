@@ -35,6 +35,7 @@
 #scp /checkpoint/xianl/space/dro_mnt/68_erm_train_dynamics_wmt14_ende_deen/checkpoint*pt tir:/home/chuntinz/tir5/logs/68_erm_train_dynamics_wmt14_ende_deen/
 
 scp -r tir:/home/chuntinz/tir5/data/opus_wmt14/wmt14_train_dynamics_bin /checkpoint/xianl/space/dro_mnt/
+sbatch exps/76_baselines_chi_square_resample_wmt4_de_o2m.sh
 sbatch exps/77_subset_wmt14_ende_train_dynamics.sh
 sbatch exps/78_stale_td_select_baselines_chi_square_wmt.sh
 

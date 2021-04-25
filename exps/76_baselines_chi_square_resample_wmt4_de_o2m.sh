@@ -43,10 +43,11 @@ DATA=${datadir}/wmt4/data-bin-v2
 langs="de,fr,ta,tr"
 log=1
 
-rhos=(0.1 0.5)
-direction=$(($SLURM_ARRAY_TASK_ID / 2))
-tempid=$(($SLURM_ARRAY_TASK_ID % 2))
-rho=${rhos[$tempid]}
+#rhos=(0.2)
+direction=$(($SLURM_ARRAY_TASK_ID % 2))  # 0,1,0,1
+tempid=$(($SLURM_ARRAY_TASK_ID / 2))  # 0,0,1,1
+rho=0.2
+#rho=${rhos[$tempid]}
 
 if [ $direction = 0 ]; then
     lang_pairs="en-de,en-fr,en-ta,en-tr"
@@ -54,14 +55,24 @@ if [ $direction = 0 ]; then
     gtgt="xx"
     etok="tgt"
     glevel="target_lang"
-    baselines="de:3.104,fr:2.64,ta:3.226,tr:2.195"
+    if [ $tempid = 0 ]; then
+      baselines="de:3.104,fr:2.64,ta:3.226,tr:2.195"
+    else
+      baselines="de:2.956,fr:2.563,ta:3.226,tr:2.195"
+      ename="corrected_o2m"
+    fi
 elif [ $direction = 1 ]; then
     lang_pairs="de-en,fr-en,ta-en,tr-en"
     ename="m2o"
     gtgt="en"
     etok="src"
     glevel="source_lang"
-    baselines="de:2.944,fr:2.774,ta:3.07,tr:2.055"
+    if [ $tempid = 0 ]; then
+      baselines="de:2.944,fr:2.774,ta:3.07,tr:2.055"
+    else
+      baselines="de:2.796,fr:2.697,ta:3.07,tr:2.055"
+      ename="corrected_m2o"
+    fi
 else
     exit
 fi
