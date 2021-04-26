@@ -4,25 +4,43 @@
 ##SBATCH --partition=learnfair
 #SBATCH --partition=priority
 #SBATCH --comment="TACL 1.10"
-#SBATCH --job-name=6.erm
+#SBATCH --job-name=6
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:8
-#SBATCH --mem=700g
-##SBATCH -C volta32gb
+#SBATCH --gres=gpu:4
+#SBATCH --mem=50g
+#SBATCH -C volta32gb
 #SBATCH --cpus-per-task=10
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-3
+#SBATCH --array=2-3
 
 source activate mnmt
 
-savedir=/private/home/ghazvini/chunting/fairseq-dro-mnmt
+trap_handler () {
+   echo "Caught signal: " $1
+   # SIGTERM must be bypassed
+   if [ "$1" = "TERM" ]; then
+       echo "bypass sigterm"
+   else
+     # Submit a new job to the queue
+     echo "Requeuing " $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+     # SLURM_JOB_ID is a unique representation of the job, equivalent
+     # to above
+     scontrol requeue $SLURM_JOB_ID
+   fi
+}
+
+
+# Install signal handler
+trap 'trap_handler USR1' USR1
+trap 'trap_handler TERM' TERM
+
+SAVE_ROOT=/checkpoint/xianl/space/dro_mnt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
 log=1
 
-SAVE_ROOT=${savedir}/saved_models
 
 if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
     langs="aze,bel,glg,slk,tur,rus,por,ces"
@@ -32,8 +50,6 @@ if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
     gtgt="xx"
     etok="tgt"
     glevel="target_lang"
-    obfile="enxx_outer_baselines"
-    ibfile="enxx_inner_baselines"
 elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
     langs="aze,bel,glg,slk,tur,rus,por,ces"
     lang_pairs="aze-en,bel-en,glg-en,slk-en,tur-en,rus-en,por-en,ces-en"
@@ -42,8 +58,6 @@ elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
     gtgt="en"
     etok="src"
     glevel="source_lang"
-    obfile="xxen_outer_baselines"
-    ibfile="xxen_inner_baselines"
 elif [ $SLURM_ARRAY_TASK_ID = 2 ]; then
     langs="bos,mar,hin,mkd,ell,bul,fra,kor"
     lang_pairs="en-bos,en-mar,en-hin,en-mkd,en-ell,en-bul,en-fra,en-kor"
@@ -52,8 +66,6 @@ elif [ $SLURM_ARRAY_TASK_ID = 2 ]; then
     gtgt="xx"
     etok="tgt"
     glevel="target_lang"
-    obfile="enxx_outer_baselines"
-    ibfile="enxx_inner_baselines"
 elif [ $SLURM_ARRAY_TASK_ID = 3 ]; then
     langs="bos,mar,hin,mkd,ell,bul,fra,kor"
     lang_pairs="bos-en,mar-en,hin-en,mkd-en,ell-en,bul-en,fra-en,kor-en"
@@ -62,14 +74,12 @@ elif [ $SLURM_ARRAY_TASK_ID = 3 ]; then
     gtgt="en"
     etok="src"
     glevel="source_lang"
-    obfile="xxen_outer_baselines"
-    ibfile="xxen_inner_baselines"
 else
     exit
 fi
 
 model=transformer_iwslt_de_en
-exp_name=6_erm_ted8_${ename}
+exp_name=6_erm_ted8_t100_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
@@ -85,9 +95,9 @@ fi
 python -u train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset cap.valid \
-	  --sampling-method "temperature" --sampling-temperature 1 \
+	  --sampling-method "temperature" --sampling-temperature 100 \
 	  --encoder-langtok ${etok} --group-level ${glevel} \
-	  --max-update 300000 --layernorm-embedding \
+	  --max-update 250000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
 	  --no-epoch-checkpoints \
@@ -96,12 +106,12 @@ python -u train.py ${DATA}\
 	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'inverse_sqrt' \
 	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --min-lr -1 \
 	  --criterion 'logged_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-	  --max-tokens 8192 \
+	  --max-tokens 16384 \
 	  --seed 222 \
   	--max-source-positions 512 --max-target-positions 512 \
   	--save-dir ${SAVE} \
     --encoder-normalize-before --decoder-normalize-before \
-	  --log-interval 100 --log-format simple | tee ${SAVE}/log.txt
+	  --log-interval 100 --log-format simple | tee -a ${SAVE}/log.txt
 
 date
 echo "end" | tee ${SAVE}/END
@@ -127,3 +137,8 @@ for lang in ${langs//,/ }; do
     scp ${SAVE}/test_${lang}_en.log tir:${send_dir}/
 done
 
+
+scp ${SAVE}/log.txt tir:${send_dir}/
+scp ${SAVE}/checkpoint_*pt tir:${send_dir}/
+scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.out tir:${send_dir}/
+scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.err tir:${send_dir}/
