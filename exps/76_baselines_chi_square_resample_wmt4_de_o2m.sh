@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-3
+#SBATCH --array=2-3
 
 source activate mnmt
 
@@ -46,7 +46,7 @@ log=1
 #rhos=(0.2)
 direction=$(($SLURM_ARRAY_TASK_ID % 2))  # 0,1,0,1
 tempid=$(($SLURM_ARRAY_TASK_ID / 2))  # 0,0,1,1
-rho=0.2
+rho=0.3
 #rho=${rhos[$tempid]}
 
 if [ $direction = 0 ]; then
