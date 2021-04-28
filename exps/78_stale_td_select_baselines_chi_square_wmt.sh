@@ -43,7 +43,7 @@ DATA=${datadir}/wmt4/data-bin-v2
 langs="de,fr,ta,tr"
 log=1
 
-rhos=(0.3 0.1)
+rhos=(0.2)
 direction=$(($SLURM_ARRAY_TASK_ID % 2))  # 0,1,0,1
 tempid=$(($SLURM_ARRAY_TASK_ID / 2))  # 0,0,1,1
 rho=${rhos[$tempid]}
@@ -67,7 +67,7 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=78_stale_td_select_warmup_20_c_0.05_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
+exp_name=78_least_mu_stale_td_select_warmup_20_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}

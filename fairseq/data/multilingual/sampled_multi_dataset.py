@@ -218,12 +218,13 @@ class SampledMultiDataset(FairseqDataset):
                 self.data_values.append(sorted_mu_indices[:cutoff])
             elif self.args.selection_method == 'cutoff':
                 sorted_mu_indices = np.argsort(mu[sid: eid])  # ascending
-                sorted_var_indices = list(np.argsort(var[sid: eid])[::-1])  # descending
-                if self.args.exclude_c > 0:
-                    # remove tail of least confident examples
-                    exclude = sorted_mu_indices[:int(len(sorted_mu_indices) * self.args.exclude_c)]
-                    sorted_var_indices = [idx for idx in sorted_var_indices if idx not in exclude]
-                self.data_values.append(sorted_var_indices)
+                # sorted_var_indices = list(np.argsort(var[sid: eid])[::-1])  # descending
+                # if self.args.exclude_c > 0:
+                #     # remove tail of least confident examples
+                #     exclude = sorted_mu_indices[:int(len(sorted_mu_indices) * self.args.exclude_c)]
+                #     sorted_var_indices = [idx for idx in sorted_var_indices if idx not in exclude]
+                # self.data_values.append(sorted_var_indices)
+                self.data_values.append(sorted_mu_indices)
             else:
                 sorted_mu_indices = np.argsort(mu[sid: eid])  # ascending
                 select_var = var[sid:eid]

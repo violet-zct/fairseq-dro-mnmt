@@ -42,10 +42,13 @@
 root=/checkpoint/xianl/space/dro_mnt
 tirroot=/home/chuntinz/tir5/logs
 
-for exp in avg_probs_var_0.5 min_probs_var_0.5 med_probs_var_0.5 random_0.5; do
-  scp ${root}/77_erm_train_dynamics_wmt14_ende_${exp}/test*log tir:${tirroot}/77_erm_train_dynamics_wmt14_ende_${exp}/
-done
+#for exp in avg_probs_var_0.5 min_probs_var_0.5 med_probs_var_0.5 random_0.5; do
+#  scp ${root}/77_erm_train_dynamics_wmt14_ende_${exp}/test*log tir:${tirroot}/77_erm_train_dynamics_wmt14_ende_${exp}/
+#done
+#sbatch exps/76_baselines_chi_square_resample_wmt4_de_o2m.sh
+
 sbatch exps/76_baselines_chi_square_resample_wmt4_de_o2m.sh
+sbatch exps/78_stale_td_select_baselines_chi_square_wmt.sh
 
 
 
