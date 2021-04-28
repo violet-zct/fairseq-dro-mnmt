@@ -4,7 +4,7 @@
 #SBATCH --partition=learnfair
 ##SBATCH --partition=priority
 ##SBATCH --comment="TACL 4.20"
-#SBATCH --job-name=76
+#SBATCH --job-name=76.scale
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=2-3
+#SBATCH --array=0-1
 
 source activate mnmt
 
@@ -43,11 +43,10 @@ DATA=${datadir}/wmt4/data-bin-v2
 langs="de,fr,ta,tr"
 log=1
 
-#rhos=(0.2)
+rhos=(0.1 0.3)
 direction=$(($SLURM_ARRAY_TASK_ID % 2))  # 0,1,0,1
 tempid=$(($SLURM_ARRAY_TASK_ID / 2))  # 0,0,1,1
-rho=0.3
-#rho=${rhos[$tempid]}
+rho=${rhos[$tempid]}
 
 if [ $direction = 0 ]; then
     lang_pairs="en-de,en-fr,en-ta,en-tr"
@@ -55,30 +54,22 @@ if [ $direction = 0 ]; then
     gtgt="xx"
     etok="tgt"
     glevel="target_lang"
-    if [ $tempid = 0 ]; then
-      baselines="de:3.104,fr:2.64,ta:3.226,tr:2.195"
-    else
-      baselines="de:2.956,fr:2.563,ta:3.226,tr:2.195"
-      ename="corrected_o2m"
-    fi
+    baselines="de:3.104,fr:2.64,ta:3.226,tr:2.195"
+    #baselines="de:2.956,fr:2.563,ta:3.226,tr:2.195"
 elif [ $direction = 1 ]; then
     lang_pairs="de-en,fr-en,ta-en,tr-en"
     ename="m2o"
     gtgt="en"
     etok="src"
     glevel="source_lang"
-    if [ $tempid = 0 ]; then
-      baselines="de:2.944,fr:2.774,ta:3.07,tr:2.055"
-    else
-      baselines="de:2.796,fr:2.697,ta:3.07,tr:2.055"
-      ename="corrected_m2o"
-    fi
+    baselines="de:2.944,fr:2.774,ta:3.07,tr:2.055"
+#    baselines="de:2.796,fr:2.697,ta:3.07,tr:2.055"
 else
     exit
 fi
 
 model=transformer_wmt_en_de
-exp_name=76_baselines_t100_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
+exp_name=76_scale_0.5_baselines_t100_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -92,7 +83,7 @@ fi
 
 python train.py ${DATA}\
     --warmup-epochs 1 \
-    --task translation_multi_simple_epoch --max-scale-up 1.0 \
+    --task translation_multi_simple_epoch --max-scale-up 0.5 \
     --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --encoder-langtok ${etok} --enable-lang-ids \
     --criterion 'chi_square_resample' --label-smoothing 0.1 --baselines ${baselines}\
