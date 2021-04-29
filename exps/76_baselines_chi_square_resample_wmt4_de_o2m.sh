@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-3
+#SBATCH --array=0-5
 
 source activate mnmt
 
@@ -43,9 +43,9 @@ DATA=${datadir}/wmt4/data-bin-v2
 langs="de,fr,ta,tr"
 log=1
 
-rhos=(0.1 0.3)
-direction=$(($SLURM_ARRAY_TASK_ID % 2))  # 0,1,0,1
-tempid=$(($SLURM_ARRAY_TASK_ID / 2))  # 0,0,1,1
+rhos=(0.1 0.2 0.3)
+direction=$(($SLURM_ARRAY_TASK_ID % 2))  # 0,1,0,1,0,1
+tempid=$(($SLURM_ARRAY_TASK_ID / 3))  # 0,0,0,1,1,1
 rho=${rhos[$tempid]}
 
 if [ $direction = 0 ]; then
