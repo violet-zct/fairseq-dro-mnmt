@@ -44,8 +44,9 @@ langs="de,fr,ta,tr"
 log=1
 
 rhos=(0.1 0.2 0.3)
-direction=$(($SLURM_ARRAY_TASK_ID % 2))  # 0,1,0,1,0,1
-tempid=$(($SLURM_ARRAY_TASK_ID / 3))  # 0,0,0,1,1,1
+# 0 1 2 3 4 5
+direction=$(($SLURM_ARRAY_TASK_ID / 3))  # 0,0,0,1,1,1
+tempid=$(($SLURM_ARRAY_TASK_ID % 3))  # 0,1,2,0,1,2
 rho=${rhos[$tempid]}
 
 if [ $direction = 0 ]; then
