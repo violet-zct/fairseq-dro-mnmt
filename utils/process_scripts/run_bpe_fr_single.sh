@@ -19,13 +19,13 @@ python ${SPM_TRAIN} \
 for lang in en fr; do
   python ${SPM_ENCODE} \
       --model ${opt_dir}/spm.model \
-      --inputs ${opt_dir}/train.en-${lang}.${lang} \
+      --inputs ${opt_dir}/train.en-fr.${lang} \
       --outputs ${opt_dir}/spm.train.${lang}
 
   for split in test valid; do
       python ${SPM_ENCODE} \
-      --model ${opt_dir}/spm.mode \
-      --inputs ${data_path}/${split}.en-${lang}.${lang} \
+      --model ${opt_dir}/spm.model \
+      --inputs ${data_path}/${split}.en-fr.${lang} \
       --outputs ${opt_dir}/spm.${split}.${lang}
   done
 done
