@@ -7,9 +7,9 @@ opt_bin=${opt_root}/enfr_bin
 
 SPM_TRAIN=scripts/spm_train.py
 SPM_ENCODE=scripts/spm_encode.py
-BPE_SIZE=34000
+BPE_SIZE=30000
 
-cat ${opt_dir}/train.en-de.en ${opt_dir}/train.en-de.de > ${opt_dir}/combine
+cat ${opt_dir}/train.en-fr.en ${opt_dir}/train.en-fr.fr > ${opt_dir}/combine
 python ${SPM_TRAIN} \
   --input=${opt_dir}/combine \
   --model_prefix=${opt_dir}/spm \
