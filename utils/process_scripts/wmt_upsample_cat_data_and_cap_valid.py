@@ -3,7 +3,7 @@ import os
 import sys
 
 np.random.seed(1)
-temperature = 5.
+temperature = 3.
 cap_valid = 1500
 
 root = "/jet/home/chuntinz/work/data"

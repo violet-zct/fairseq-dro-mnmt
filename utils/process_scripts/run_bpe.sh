@@ -7,8 +7,9 @@
 
 langs="fr,tr,de,ta"
 opt_root=/jet/home/chuntinz/work/data/wmt4
-opt_data=${opt_root}/data_de_v2
-opt_bin=${opt_root}/data-bin-v2
+opt_dirname=data_de_14
+opt_data=${opt_root}/${opt_dirname}
+opt_bin=${opt_root}/data-bin-14de
 
 rm -rf ${opt_bin}
 rm -rf ${opt_data}
@@ -23,7 +24,7 @@ EN_BPE_SIZE=24000
 SCRIPTS=/jet/home/chuntinz/work/data/wmt4/mosesdecoder/scripts
 CLEAN=$SCRIPTS/training/clean-corpus-n.perl  # clean corpus by min/max lengths and ratios;
 
-python utils/process_scripts/wmt_upsample_cat_data_and_cap_valid.py data_de_v2 ${langs}
+python utils/process_scripts/wmt_upsample_cat_data_and_cap_valid.py ${opt_dirname} ${langs}
 
 python ${SPM_TRAIN} \
   --input=${opt_data}/raw.combine.en \
@@ -43,7 +44,7 @@ for lang in ${langs//,/ }; do
   if [ ${lang} = "fr" ]; then
     langdir="14_enfr"
   elif [ ${lang} = "de" ]; then
-    langdir="14_ende"
+    langdir="ff_ende"
   elif [ ${lang} = "tr" ]; then
     langdir="18_entr"
   elif [ ${lang} = "ta" ]; then
@@ -63,7 +64,7 @@ for lang in ${langs//,/ }; do
     python ${SPM_ENCODE} \
       --model ${opt_data}/spm.${model}.${size}.model \
       --inputs ${opt_root}/${langdir}/train.en-${lang}.${lid} \
-      --outputs ${opt_root}/${langdir}/spm.train.en-${lang}.v2.${lid}
+      --outputs ${opt_root}/${langdir}/spm.train.en-${lang}.${lid}
 
     for split in test valid; do
       python ${SPM_ENCODE} \
@@ -75,18 +76,28 @@ for lang in ${langs//,/ }; do
       --model ${opt_data}/spm.${model}.${size}.model \
       --inputs ${opt_root}/${langdir}/cap.valid.${lid} \
       --outputs ${opt_data}/${lang}_en/spm.cap.valid.${lid}
-    done
+  done
 
-  perl ${CLEAN} -ratio 1.5 ${opt_root}/${langdir}/spm.train.en-${lang}.v2 ${lid} en ${opt_data}/${lang}_en/spm.train 2 250
+  if [ ${lang} != "de" ]; then
+    perl ${CLEAN} -ratio 1.5 ${opt_root}/${langdir}/spm.train.en-${lang} ${lid} en ${opt_data}/${lang}_en/spm.train 2 250
+  else
+    mv ${opt_root}/${langdir}/spm.train.en-${lang}.en  ${opt_data}/${lang}_en/spm.train.en
+    mv ${opt_root}/${langdir}/spm.train.en-${lang}.de  ${opt_data}/${lang}_en/spm.train.de
+    wc -l ${opt_data}/${lang}_en/spm.train*
+  fi
 
   if [ ${lang} = "fr" ]; then
-    python utils/process_scripts/subsample_data.py ${opt_data}/${lang}_en spm.train.en spm.train.fr 1800000 subset
+    python utils/process_scripts/subsample_data.py ${opt_data}/${lang}_en spm.train.en spm.train.fr 2000000 subset
     mv ${opt_data}/${lang}_en/spm.train.en.subset ${opt_data}/${lang}_en/spm.train.en
     mv ${opt_data}/${lang}_en/spm.train.fr.subset ${opt_data}/${lang}_en/spm.train.fr
-  elif [ ${lang} = "de" ]; then
-    python utils/process_scripts/subsample_data.py ${opt_data}/${lang}_en spm.train.en spm.train.de 2500000 subset
-    mv ${opt_data}/${lang}_en/spm.train.en.subset ${opt_data}/${lang}_en/spm.train.en
-    mv ${opt_data}/${lang}_en/spm.train.de.subset ${opt_data}/${lang}_en/spm.train.de
+
+    fr_opt=${opt_root}/enfr_data
+    python utils/process_scripts/detok_spm.py ${opt_data}/${lang}_en/spm.train.en ${fr_opt}/train.en-fr.en
+    python utils/process_scripts/detok_spm.py ${opt_data}/${lang}_en/spm.train.fr ${fr_opt}/train.en-fr.fr
+#  elif [ ${lang} = "de" ]; then
+#    python utils/process_scripts/subsample_data.py ${opt_data}/${lang}_en spm.train.en spm.train.de 2500000 subset
+#    mv ${opt_data}/${lang}_en/spm.train.en.subset ${opt_data}/${lang}_en/spm.train.en
+#    mv ${opt_data}/${lang}_en/spm.train.de.subset ${opt_data}/${lang}_en/spm.train.de
   fi
 
 done
