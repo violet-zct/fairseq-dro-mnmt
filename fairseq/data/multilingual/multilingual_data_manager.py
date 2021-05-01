@@ -305,6 +305,7 @@ class MultilingualDatasetManager(object):
                             help="max scale ratio when doing resampling")
         parser.add_argument('--exclude-c', type=float, default=0)
         parser.add_argument('--selection-method', type=str, choices=['cutoff', 'sample'], default='cutoff')
+        parser.add_argument('--selection-criterion', type=str, choices=['var', 'avg'], default='var')
 
         parser.add_argument(
             '--inner-baseline-file',

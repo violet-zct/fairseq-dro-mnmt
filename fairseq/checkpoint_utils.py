@@ -190,6 +190,8 @@ def load_checkpoint(args, trainer, **passthrough_args):
             set_data_prop = True
         elif hasattr(args, 'burnout_epochs') and args.burnout_epochs == -1 and hasattr(args, 'warmup_epochs') and itr_state["epoch"] > args.warmup_epochs and args.compute_train_dynamics:
             set_data_prop = True
+        elif hasattr(args, 'competent_cl') and not args.competent_cl and itr_state["epoch"] > args.warmup_epochs and args.compute_train_dynamics:
+            set_data_prop = True
         else:
             set_data_prop = False
 

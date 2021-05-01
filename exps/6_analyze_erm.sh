@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=2-3
+#SBATCH --array=0-3
 
 source activate mnmt
 
@@ -79,7 +79,7 @@ else
 fi
 
 model=transformer_iwslt_de_en
-exp_name=6_erm_ted8_t100_${ename}
+exp_name=6_erm_ted8_t1_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 rm -rf ${SAVE}
@@ -95,7 +95,6 @@ fi
 python -u train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset cap.valid \
-	  --sampling-method "temperature" --sampling-temperature 100 \
 	  --encoder-langtok ${etok} --group-level ${glevel} \
 	  --max-update 250000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
@@ -113,6 +112,7 @@ python -u train.py ${DATA}\
     --encoder-normalize-before --decoder-normalize-before \
 	  --log-interval 100 --log-format simple | tee -a ${SAVE}/log.txt
 
+	  #--sampling-method "temperature" --sampling-temperature 1 \
 date
 echo "end" | tee ${SAVE}/END
 

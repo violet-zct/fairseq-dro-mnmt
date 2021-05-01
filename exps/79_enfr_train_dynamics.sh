@@ -4,7 +4,7 @@
 #SBATCH --partition=learnfair
 ##SBATCH --partition=priority
 ##SBATCH --comment="TACL 4.20"
-#SBATCH --job-name=68
+#SBATCH --job-name=79
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:8
@@ -14,25 +14,44 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-1
+#SBATCH --array=0
 
 source activate mnmt
 
-SAVE_ROOT=/checkpoint/xianl/space/dro_mnt
-DATA=/private/home/ghazvini/chunting/data/marjan_data/mnmt_data/wmt14_ende
-langs="de"
+trap_handler () {
+   echo "Caught signal: " $1
+   # SIGTERM must be bypassed
+   if [ "$1" = "TERM" ]; then
+       echo "bypass sigterm"
+   else
+     # Submit a new job to the queue
+     echo "Requeuing " $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+     # SLURM_JOB_ID is a unique representation of the job, equivalent
+     # to above
+     scontrol requeue $SLURM_JOB_ID
+   fi
+}
+
+
+# Install signal handler
+trap 'trap_handler USR1' USR1
+trap 'trap_handler TERM' TERM
+
+SAVE_ROOT=/checkpoint/xianl/space/dro_mnt/
+DATA=/checkpoint/xianl/space/dro_mnt/data/enfr_bin
+langs="fr"
 log=1
 
 direction=$SLURM_ARRAY_TASK_ID
 
 if [ $direction = 0 ]; then
-    lang_pairs="en-de"
-    ename="ende"
+    lang_pairs="en-fr"
+    ename="enfr"
     gtgt="xx"
     glevel="target_lang"
 elif [ $direction = 1 ]; then
-    lang_pairs="de-en"
-    ename="deen"
+    lang_pairs="fr-en"
+    ename="fren"
     gtgt="en"
     glevel="source_lang"
 else
@@ -40,7 +59,7 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=68_erm_train_dynamics_wmt14_ende_${ename}
+exp_name=79_erm_train_dynamics_wmt14_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -51,13 +70,12 @@ send_dir=/home/chuntinz/tir5/logs/${exp_name}
 if [ ${log} = 1 ]; then
   bash v1_exps/send.sh ${exp_name} &
 fi
-echo $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID $SLURM_JOB_ID > ${SAVE}/log.txt
 
 python -u train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
 	  --group-level ${glevel} --max-tokens-valid 28268 \
-	  --max-update 300000 --layernorm-embedding \
+	  --max-update 250000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
 	  --no-epoch-checkpoints \
 	  --share-all-embeddings \

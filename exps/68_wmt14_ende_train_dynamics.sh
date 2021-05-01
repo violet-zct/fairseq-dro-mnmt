@@ -14,9 +14,28 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-1
+#SBATCH --array=0
 
 source activate mnmt
+
+trap_handler () {
+   echo "Caught signal: " $1
+   # SIGTERM must be bypassed
+   if [ "$1" = "TERM" ]; then
+       echo "bypass sigterm"
+   else
+     # Submit a new job to the queue
+     echo "Requeuing " $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
+     # SLURM_JOB_ID is a unique representation of the job, equivalent
+     # to above
+     scontrol requeue $SLURM_JOB_ID
+   fi
+}
+
+
+# Install signal handler
+trap 'trap_handler USR1' USR1
+trap 'trap_handler TERM' TERM
 
 SAVE_ROOT=/checkpoint/xianl/space/dro_mnt
 DATA=/private/home/ghazvini/chunting/data/marjan_data/mnmt_data/wmt14_ende
@@ -40,7 +59,7 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=68_erm_train_dynamics_wmt14_ende_${ename}
+exp_name=68_erm_train_dynamics_wmt14_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
@@ -51,7 +70,6 @@ send_dir=/home/chuntinz/tir5/logs/${exp_name}
 if [ ${log} = 1 ]; then
   bash v1_exps/send.sh ${exp_name} &
 fi
-echo $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID $SLURM_JOB_ID > ${SAVE}/log.txt
 
 python -u train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
@@ -88,8 +106,7 @@ for lang in ${langs//,/ }; do
             --gen-subset test --skip-invalid-size-inputs-valid-test \
             --path ${SAVE}/checkpoint_${cpt}.pt \
             --batch-size 300 \
-            --lenpen 1.0 \
-            --remove-bpe sentencepiece --scoring sacrebleu \
+            --remove-bpe "@@ " --max-len-a 2 --max-len-b 0 \
             --lang-pairs ${lang_pairs} \
             --source-lang ${gsrc} --target-lang ${gtgt} \
             --quiet --beam 5 | tee ${SAVE}/test_${cpt}_${lang}_en.log

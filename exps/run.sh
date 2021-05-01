@@ -39,16 +39,31 @@
 #sbatch exps/77_subset_wmt14_ende_train_dynamics.sh
 #sbatch exps/78_stale_td_select_baselines_chi_square_wmt.sh
 
+mkdir -p /checkpoint/xianl/space/dro_mnt/data
+rm -rf /checkpoint/xianl/space/dro_mnt/wmt14_train_dynamics_bin
+
+datapath=/checkpoint/xianl/space/dro_mnt/data
 root=/checkpoint/xianl/space/dro_mnt
 tirroot=/home/chuntinz/tir5/logs
 
+scp -r tir:/home/chuntinz/tir5/data/mnmt_data/wmt4/data-bin-14de ${datapath}/
+scp -r tir:/home/chuntinz/tir5/data/mnmt_data/wmt4/enfr_bin ${datapath}/
 #for exp in avg_probs_var_0.5 min_probs_var_0.5 med_probs_var_0.5 random_0.5; do
 #  scp ${root}/77_erm_train_dynamics_wmt14_ende_${exp}/test*log tir:${tirroot}/77_erm_train_dynamics_wmt14_ende_${exp}/
 #done
 #sbatch exps/76_baselines_chi_square_resample_wmt4_de_o2m.sh
 
-sbatch exps/76_baselines_chi_square_resample_wmt4_de_o2m.sh
+# TED ERM to obtain models
+sbatch exps/6_analyze_erm.sh
+# resume training from previous runs
 sbatch exps/78_stale_td_select_baselines_chi_square_wmt.sh
+# bilingual experiments
+sbatch exps/68_wmt14_ende_train_dynamics.sh
+sbatch exps/79_enfr_train_dynamics.sh
+# multilingual experiments
+sbatch exps/80_new_wmt_erm_baseline.sh
+# multilingual experiments with multilingual TD selection
+sbatch exps/81_burnout20_td_select_wmt_new_oversample.sh
 
 
 
