@@ -46,6 +46,7 @@ datapath=/checkpoint/xianl/space/dro_mnt/data
 root=/checkpoint/xianl/space/dro_mnt
 tirroot=/home/chuntinz/tir5/logs
 
+# copy data
 scp -r tir:/home/chuntinz/tir5/data/mnmt_data/wmt4/data-bin-14de ${datapath}/
 scp -r tir:/home/chuntinz/tir5/data/mnmt_data/wmt4/enfr_bin ${datapath}/
 #for exp in avg_probs_var_0.5 min_probs_var_0.5 med_probs_var_0.5 random_0.5; do
@@ -53,16 +54,16 @@ scp -r tir:/home/chuntinz/tir5/data/mnmt_data/wmt4/enfr_bin ${datapath}/
 #done
 #sbatch exps/76_baselines_chi_square_resample_wmt4_de_o2m.sh
 
-# TED ERM to obtain models
+# TED ERM to obtain models for DRO
 sbatch exps/6_analyze_erm.sh
-# resume training from previous runs
+# resume training from previous runs; a run that was disrupted previously
 sbatch exps/78_stale_td_select_baselines_chi_square_wmt.sh
-# bilingual experiments
+# bilingual experiments for step A
 sbatch exps/68_wmt14_ende_train_dynamics.sh
 sbatch exps/79_enfr_train_dynamics.sh
-# multilingual experiments
+# baseline experiments on the new created dataset: multilingual experiments for step B
 sbatch exps/80_new_wmt_erm_baseline.sh
-# multilingual experiments with multilingual TD selection
+# multilingual experiments with multilingual TD selection for step B
 sbatch exps/81_burnout20_td_select_wmt_new_oversample.sh
 
 
