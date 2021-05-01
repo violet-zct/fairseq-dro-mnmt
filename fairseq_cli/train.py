@@ -147,7 +147,7 @@ def main(args):
             elif args.competent_cl:
                 # warmup = ERM
                 competent_cl_on_the_fly_train_dynamics(args, trainer, task, epoch_itr)
-            elif args.burnout_epochs > 0:
+            elif hasattr(args, 'burnout_epochs') and args.burnout_epochs > 0:
                 # constantly update train dynamics
                 # warmup = ERM; burnout = data selection
                 on_the_fly_train_dynamics(args, trainer, task, epoch_itr)

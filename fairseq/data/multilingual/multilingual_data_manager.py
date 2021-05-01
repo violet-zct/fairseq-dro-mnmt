@@ -58,6 +58,11 @@ def load_sampling_weights(from_file):
     return weights
 
 
+def print_dic(dd):
+    for ii in range(len(dd)):
+        logger.info("{} = {}".format(ii, dd[ii]))
+
+
 class MultilingualDatasetManager(object):
     def __init__(self, args, lang_pairs, langs, dicts, sampling_method):
         super().__init__()
@@ -71,6 +76,9 @@ class MultilingualDatasetManager(object):
 
         self.src_lang_dict = self.create_lang_dictionary(self.src_langs)
         self.tgt_lang_dict = self.create_lang_dictionary(self.tgt_langs)
+
+        print_dic(self.src_lang_dict)
+        print_dic(self.tgt_lang_dict)
 
         # used for sanity check
         low_langs = ['aze', 'bel', 'glg', 'slk', 'bos', 'mar', 'hin', 'mkd']
