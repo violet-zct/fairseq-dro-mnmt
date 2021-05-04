@@ -5,7 +5,6 @@
 #rm -rf /checkpoint/xianl/space/dro_mnt/66*
 #rm -rf /checkpoint/xianl/space/dro_mnt/67*
 
-
 #rm -rf /checkpoint/xianl/space/dro_mnt/73*
 #rm -rf /checkpoint/xianl/space/dro_mnt/74*
 #rm -rf /checkpoint/xianl/space/dro_mnt/75*
@@ -39,6 +38,11 @@
 #sbatch exps/77_subset_wmt14_ende_train_dynamics.sh
 #sbatch exps/78_stale_td_select_baselines_chi_square_wmt.sh
 
+#for exp in avg_probs_var_0.5 min_probs_var_0.5 med_probs_var_0.5 random_0.5; do
+#  scp ${root}/77_erm_train_dynamics_wmt14_ende_${exp}/test*log tir:${tirroot}/77_erm_train_dynamics_wmt14_ende_${exp}/
+#done
+#sbatch exps/76_baselines_chi_square_resample_wmt4_de_o2m.sh
+
 mkdir -p /checkpoint/xianl/space/dro_mnt/data
 rm -rf /checkpoint/xianl/space/dro_mnt/wmt14_train_dynamics_bin
 
@@ -49,10 +53,6 @@ tirroot=/home/chuntinz/tir5/logs
 # copy data
 scp -r tir:/home/chuntinz/tir5/data/mnmt_data/wmt4/data-bin-14de ${datapath}/
 scp -r tir:/home/chuntinz/tir5/data/mnmt_data/wmt4/enfr_bin ${datapath}/
-#for exp in avg_probs_var_0.5 min_probs_var_0.5 med_probs_var_0.5 random_0.5; do
-#  scp ${root}/77_erm_train_dynamics_wmt14_ende_${exp}/test*log tir:${tirroot}/77_erm_train_dynamics_wmt14_ende_${exp}/
-#done
-#sbatch exps/76_baselines_chi_square_resample_wmt4_de_o2m.sh
 
 # DRO baseline 1: cvar reweight
 sbatch exps/82_baseline_cvar_reweight.sh
@@ -61,11 +61,10 @@ sbatch exps/83_baseline_cvar_resample.sh
 # DRO baseline 3: full simplex, exponetiated GD
 sbatch exps/84_baseline_eg_reweight.sh
 # DRO baseline 4: chi-square primal dual
-#sbatch exps/85_baseline_chi_square_primal_dual_reweight.sh
-
-
+sbatch exps/85_baseline_chi_square_primal_dual_reweight.sh
 # TED ERM to obtain models for DRO
 sbatch exps/6_analyze_erm.sh
+
 # resume training from previous runs; a run that was disrupted previously
 sbatch exps/78_stale_td_select_baselines_chi_square_wmt.sh
 # bilingual experiments for step A

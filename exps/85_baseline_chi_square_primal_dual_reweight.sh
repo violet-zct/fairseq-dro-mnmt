@@ -47,7 +47,7 @@ else
 fi
 
 model=transformer_wmt_en_de
-exp_name=84_eg_wmt4_de_${ename}
+exp_name=85_primal_dual_chi_square_wmt4_de_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
 mkdir -p ${SAVE}
