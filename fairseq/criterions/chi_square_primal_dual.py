@@ -324,14 +324,13 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             sample_size = sample['ntokens']
 
             reduce_group_losses = group_losses.detach().clone()
-            token_group_losses = group_losses / (group_counts + 1e-8)
             if torch.cuda.device_count() > 1:
                 torch.distributed.all_reduce(group_counts)
                 torch.distributed.all_reduce(reduce_group_losses)
 
             group_denom = group_counts + 1e-8
             reduce_group_losses = reduce_group_losses / group_denom
-            w = self.compute_robust_loss(reduce_group_losses, token_group_losses)
+            w = self.compute_robust_loss(reduce_group_losses)
             loss = (w[group_index] * ind_losses).sum()
 
         nll_loss = nll_loss.sum()
