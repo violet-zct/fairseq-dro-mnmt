@@ -93,10 +93,16 @@ class UpperBoundResampleDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
     def initialize(self):
         logger.info("Group num = {}".format(self.n_groups))
-        if self.task.data_manager.outer_baseline is not None:
-            self.loss_baselines = torch.Tensor(self.task.data_manager.outer_baseline).to(self.device)
-        else:
+        if self.baselines is None:
             self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
+        else:
+            fields = self.baselines.split(",")
+            tdict = {fd.split(":")[0]: float(fd.split(":")[-1]) for fd in fields}
+            baselines = [-1 for _ in range(self.n_groups)]
+            for lang, value in tdict.items():
+                lang_dict = self.task.data_manager.tgt_lang_dict if self.group_level == "target_lang" else self.task.data_manager.src_lang_dict
+                baselines[lang_dict.index(lang) - 1] = value
+            self.loss_baselines = torch.Tensor(baselines).to(self.device)
         self.register_buffer('h_fun', torch.ones(self.n_groups))
         self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('count_cat', torch.ones(self.n_groups))

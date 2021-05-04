@@ -112,7 +112,7 @@ def project_to_cs_ball_old_and_incorrect(v, rho, p_train):
     # if the simplex projection is not in the chi-square ball,
     # compute best response (the rest is wrong)
 
-    return compute_best_response(torch.FloatTensor(v), rho, torch.FloatTensor(p_train), reg=0).data.numpy()
+    # return compute_best_response(torch.FloatTensor(v), rho, torch.FloatTensor(p_train), reg=0).data.numpy()
 
     # second, compute a chi-square best response
     def target_cs(eta, return_p=False):
@@ -187,6 +187,7 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--update-dro-freq', default=1, type=int)
         parser.add_argument('--start-ft-steps', default=0, type=int)
         parser.add_argument('--clip', default=None, type=float)
+        parser.add_argument('--baselines', default=None, type=str, help='baseline loss values.')
         # fmt: on
 
     def individual_losses(self, model, net_output, sample):

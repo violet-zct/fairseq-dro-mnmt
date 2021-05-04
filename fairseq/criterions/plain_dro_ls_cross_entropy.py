@@ -39,7 +39,7 @@ def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=T
 @register_criterion('plain_dro_label_smoothed_cross_entropy')
 class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, group_level, dro_alpha, baselines,
-                 update_dro_freq, start_ft_steps, ema,):
+                 update_dro_freq, start_ft_steps, ema, resampling):
         super().__init__(task)
         self.distributed_world_size = self.task.args.distributed_world_size
         self.eps = label_smoothing
@@ -48,6 +48,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.baselines = baselines
         self.update_freq = update_dro_freq
 
+        self.resampling = resampling
         self.device = torch.cuda.current_device()
         self.temp_idx = 0
         self.print_steps = 100
@@ -81,6 +82,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--update-dro-freq', default=1, type=int)
         parser.add_argument('--start-ft-steps', default=0, type=int)
         parser.add_argument('--ema', default=0.1, type=float)
+        parser.add_argument('--resampling', default=0, type=int)
         # fmt: on
 
     def initialize(self):
@@ -88,17 +90,26 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         if self.baselines is None:
             self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
         else:
-            self.loss_baselines = torch.Tensor(convert_to_list(self.baselines, float)).to(self.device)
+            fields = self.baselines.split(",")
+            tdict = {fd.split(":")[0]: float(fd.split(":")[-1]) for fd in fields}
+            baselines = [-1 for _ in range(self.n_groups)]
+            for lang, value in tdict.items():
+                lang_dict = self.task.data_manager.tgt_lang_dict if self.group_level == "target_lang" else self.task.data_manager.src_lang_dict
+                baselines[lang_dict.index(lang) - 1] = value
+            self.loss_baselines = torch.Tensor(baselines).to(self.device)
         self.register_buffer('h_fun', torch.ones(self.n_groups))
         self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('count_cat', torch.ones(self.n_groups))
 
-    def update_mw(self):
+    def update_mw(self, epoch=-1):
+        if epoch == 1 or self.p_train is None:
+            return None
+
         # version that uses EMA. (sum_losses is EMA running loss, count_cat is EMA running sum)
         past_losses = self.sum_losses
         baselined_losses = past_losses - self.loss_baselines
 
-        past_frac = self.count_cat / self.count_cat.sum()  # p_train_t
+        past_frac = self.p_train
         #
         sorted_losses, sort_id = torch.sort(baselined_losses, descending=True)
         sorted_frac = past_frac[sort_id]
@@ -113,9 +124,15 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
         self.temp_idx += 1
         if self.logging and self.temp_idx % self.print_steps == 0:
-            logger.info("EMA past losses: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_losses[0:self.n_groups]])))
+            logger.info("EMA past losses: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in baselined_losses[0:self.n_groups]])))
             logger.info("EMA group fractions: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_frac[0:self.n_groups]])))
             logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.h_fun[0:self.n_groups]])))
+
+        if self.resampling:
+            q = self.h_fun * self.p_train
+            logger.info("Q = {}".format(
+                " ".join(["{:.6f}".format(xx.item()) for xx in q[0:self.n_groups]])))
+            return q
 
     def individual_losses(self, model, net_output, sample):
         lprobs = model.get_normalized_probs(net_output, log_probs=True)
@@ -187,6 +204,10 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         2) the sample size, which is used as the denominator for the gradient
         3) logging outputs to display while training
         """
+        if self.p_train is None:
+            self.p_train = torch.Tensor(self.task.data_manager.data_ratios).to(self.device)
+            logger.info("Fixed P train = {}".format(self.p_train))
+
         # pure warmup
         if self.update_steps < self.start_ft_steps:
             nsentences = sample['target'].size(0)
@@ -255,10 +276,12 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             self.sum_losses[valid_index] = valid_losses.mul(1 - self.EMA_alpha).add(reduce_group_losses[valid_index], alpha=self.EMA_alpha)
             self.count_cat[valid_index] = valid_counts.mul(1 - 0.01).add(group_counts[valid_index], alpha=0.01)
 
-            if self.update_steps % self.update_freq == 0:
+            if not self.resampling:
                 self.update_mw()
+                loss = (group_losses * self.h_fun).sum()
+            else:
+                loss = group_losses.sum()
 
-            loss = (group_losses * self.h_fun).sum()
             sample_size = sample['ntokens']
 
         logging_output = {
@@ -271,11 +294,10 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             'gpu_count': 1,
         }
 
-        if self.logging:
-            if not self.training:
-                for ii in range(self.n_groups):
-                    logging_output["fg_gnll{}".format(ii)] = fg_group_nll[ii].data
-                    logging_output["fg_gcount{}".format(ii)] = fg_group_count[ii].data
+        if self.logging and not self.training:
+            for ii in range(self.n_groups):
+                logging_output["fg_gnll{}".format(ii)] = fg_group_nll[ii].data
+                logging_output["fg_gcount{}".format(ii)] = fg_group_count[ii].data
 
         return loss, sample_size, logging_output
 
