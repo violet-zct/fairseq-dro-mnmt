@@ -62,7 +62,7 @@ fi
 python -u train.py ${DATA}\
 	  --task translation_multi_simple_epoch \
 	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
-    --eg-normalize 1 --baselines ${baselines} --rho 0.1 --step-size 1e-3 \
+    --baselines ${baselines} --rho 0.1 --step-size 1e-3 \
 	  --encoder-langtok ${etok} --group-level ${glevel} \
 	  --max-update 300000 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \

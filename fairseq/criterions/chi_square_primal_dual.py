@@ -11,6 +11,7 @@ from fairseq.criterions import FairseqCriterion, register_criterion
 import logging
 import numpy as np
 from scipy import optimize
+import scipy
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=T
     eps_i = epsilon / lprobs.size(-1)
     loss = (1. - epsilon) * nll_loss + eps_i * smooth_loss
     return loss, nll_loss
+
 
 def project_to_cs_ball(v, rho, p_train):
     def cs_div(p):
