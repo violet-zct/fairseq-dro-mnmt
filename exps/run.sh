@@ -54,6 +54,16 @@ scp -r tir:/home/chuntinz/tir5/data/mnmt_data/wmt4/enfr_bin ${datapath}/
 #done
 #sbatch exps/76_baselines_chi_square_resample_wmt4_de_o2m.sh
 
+# DRO baseline 1: cvar reweight
+sbatch exps/82_baseline_cvar_reweight.sh
+# DRO baseline 2: cvar resample
+sbatch exps/83_baseline_cvar_resample.sh
+# DRO baseline 3: full simplex, exponetiated GD
+sbatch exps/84_baseline_eg_reweight.sh
+# DRO baseline 4: chi-square primal dual
+#sbatch exps/85_baseline_chi_square_primal_dual_reweight.sh
+
+
 # TED ERM to obtain models for DRO
 sbatch exps/6_analyze_erm.sh
 # resume training from previous runs; a run that was disrupted previously

@@ -97,6 +97,20 @@ class GroupDROEGCriterion(FairseqCriterion):
             index = sample['target'].view(-1)
         return index
 
+    def individual_losses(self, model, net_output, sample):
+        lprobs = model.get_normalized_probs(net_output, log_probs=True)
+        lprobs = lprobs.view(-1, lprobs.size(-1))
+        target = model.get_targets(sample, net_output).view(-1)
+
+        if self.eps > 0.0:
+            loss, nll_loss = label_smoothed_nll_loss(
+                lprobs, target, self.eps, ignore_index=self.padding_idx, reduce=False,
+            )
+            return loss, nll_loss
+        else:
+            loss = F.nll_loss(lprobs, target, ignore_index=self.padding_idx, reduction='none')
+            return loss, loss
+        
     def compute_loss(self, model, sample, reduce=True):
         net_output = model(**sample['net_input'])
         target_kw = 'target'

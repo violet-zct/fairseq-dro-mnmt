@@ -104,7 +104,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
 
     def _print(self, x):
         return " ".join(["{:.6f}".format(xx.item()) for xx in x])
-    
+
     def set_p_train(self, data_ratios):
         if self.p_train is not None:
             return
@@ -142,6 +142,8 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             q = self.h_fun * self.p_train
             logger.info("Q = {}".format(
                 " ".join(["{:.6f}".format(xx.item()) for xx in q[0:self.n_groups]])))
+            logger.info("EMA past losses: {}".format(
+                " ".join(["{:.6f}".format(xx.item()) for xx in baselined_losses[0:self.n_groups]])))
             return q
 
     def individual_losses(self, model, net_output, sample):

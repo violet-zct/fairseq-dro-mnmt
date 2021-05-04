@@ -60,7 +60,7 @@ if [ ${log} = 1 ]; then
 fi
 
 python -u train.py ${DATA}\
-	  --task translation_multi_simple_epoch \
+	  --task translation_multi_simple_epoch --max-scale-up 1 \
 	  --arch ${model} --valid-subset valid --skip-invalid-size-inputs-valid-test \
     --dro-alpha 0.5 --baselines ${baselines} --resampling 0 \
 	  --encoder-langtok ${etok} --group-level ${glevel} \
