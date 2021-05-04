@@ -38,8 +38,61 @@ def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=T
     loss = (1. - epsilon) * nll_loss + eps_i * smooth_loss
     return loss, nll_loss
 
-
 def project_to_cs_ball(v, rho, p_train):
+    def cs_div(p):
+        return 0.5 * ((np.square(p) / p_train).sum() - 1)
+    
+    n = v.shape[0]
+    
+    # first check if there is a simplex solution
+    target_simplex = lambda eta: np.sum(np.maximum(v - eta, 0)) - 1.0
+    eta_min_simplex = v.min() - 1 / n
+    eta_max_simplex = v.max()
+    eta_simplex = scipy.optimize.brentq(
+        target_simplex, eta_min_simplex, eta_max_simplex)
+    p_candidate = np.maximum(v - eta_simplex, 0)
+    if cs_div(p_candidate) <= rho:
+        return p_candidate
+    
+    q_candidate = lambda lam, eta: np.maximum(v - eta, 0) * p_train / (p_train + lam)
+    
+    target_eta = lambda lam, eta: q_candidate(lam, eta).sum() - 1
+    
+    def target_cs(lam, return_p=False):
+        if lam <= 0:
+            return float('inf')
+        
+        eta_min = v.min()
+        eta_max = v.max()
+        
+        f = lambda x: target_eta(lam, x)
+        
+        lower = f(eta_min)
+        upper = f(eta_max)
+        
+        while lower * upper >= 0:
+            length = eta_max - eta_min
+            eta_min -= 0.5 * length
+            eta_max += 0.5 * length
+
+            lower = f(eta_min)
+            upper = f(eta_max)
+        eta_star = optimize.brentq(f, eta_min, eta_max)
+        q = q_candidate(lam, eta_star)
+        if return_p: return q
+        return np.abs(cs_div(q) - rho)
+    
+    lam_star = optimize.minimize_scalar(lambda x: target_cs(x, return_p=False))
+    
+    assert lam_star.x >= 0
+    
+    candidate = target_cs(lam_star.x, return_p=True)
+
+    assert np.abs(cs_div(candidate) - rho) <= rho * 1e-2
+
+    return candidate
+
+def project_to_cs_ball_old_and_incorrect(v, rho, p_train):
     """Numpy/Scipy projection to chi-square ball of radius rho"""
     n = len(v)
 
