@@ -48,16 +48,17 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.baselines = baselines
         self.update_freq = update_dro_freq
 
-        self.resampling = resampling
+        self.resample = resampling
         self.device = torch.cuda.current_device()
         self.temp_idx = 0
-        self.print_steps = 100
+        self.print_steps = 500
 
         self.update_steps = 0
         self.start_ft_steps = start_ft_steps
         self.EMA_alpha = ema
 
         self.logging = True
+        self.p_train = None
         if group_level == "source_lang":
             self.n_groups = len(task.data_manager.src_langs)
         elif group_level == "target_lang":
@@ -128,7 +129,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             logger.info("EMA group fractions: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in past_frac[0:self.n_groups]])))
             logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.h_fun[0:self.n_groups]])))
 
-        if self.resampling:
+        if self.resample:
             q = self.h_fun * self.p_train
             logger.info("Q = {}".format(
                 " ".join(["{:.6f}".format(xx.item()) for xx in q[0:self.n_groups]])))
@@ -276,7 +277,7 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
             self.sum_losses[valid_index] = valid_losses.mul(1 - self.EMA_alpha).add(reduce_group_losses[valid_index], alpha=self.EMA_alpha)
             self.count_cat[valid_index] = valid_counts.mul(1 - 0.01).add(group_counts[valid_index], alpha=0.01)
 
-            if not self.resampling:
+            if not self.resample:
                 self.update_mw()
                 loss = (group_losses * self.h_fun).sum()
             else:
