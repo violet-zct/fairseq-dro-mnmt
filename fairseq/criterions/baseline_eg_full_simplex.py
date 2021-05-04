@@ -128,6 +128,7 @@ class GroupDROEGCriterion(FairseqCriterion):
         3) logging outputs to display while training
         """
 
+        logger.info(self.adv_probs)
         # train: nll_loss is summed,
         # valid: nll_loss is sentence-wise,
         nsentences = sample['target'].size(0)

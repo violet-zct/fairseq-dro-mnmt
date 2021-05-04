@@ -102,6 +102,12 @@ class PlainDROLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.register_buffer('sum_losses', torch.zeros(self.n_groups))  # historical loss sum over category
         self.register_buffer('count_cat', torch.ones(self.n_groups))
 
+    def set_p_train(self, data_ratios):
+        if self.p_train is not None:
+            return
+        logger.info("reloaded sum_losses = {}".format(self._print(self.sum_losses)))
+        self.p_train = torch.Tensor(data_ratios).to(self.device)
+
     def update_mw(self, epoch=-1):
         if epoch == 1 or self.p_train is None:
             return None
