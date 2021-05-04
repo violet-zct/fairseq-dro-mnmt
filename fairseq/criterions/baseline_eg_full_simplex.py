@@ -173,6 +173,8 @@ class GroupDROEGCriterion(FairseqCriterion):
             'ntokens': sample['ntokens'],
             'nsentences': nsentences,
             'sample_size': sample_size,
+            'n_groups': self.n_groups,
+            'gpu_count': 1,
         }
 
         if self.logging and not self.training:
