@@ -141,7 +141,7 @@ def project_to_cs_ball_old_and_incorrect(v, rho, p_train):
 @register_criterion('chi_square_primal_dual')
 class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def __init__(self, task, label_smoothing, group_level, step_size, rho,
-                 update_dro_freq, start_ft_steps, clip):
+                 update_dro_freq, start_ft_steps, clip, baselines):
         super().__init__(task)
 
         self.args = self.task.args
@@ -176,6 +176,17 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         # fixme: initialize with uniform?
         self.h_fun = np.ones(self.n_groups) / self.n_groups
         self.register_buffer('tensor_h_fun', torch.ones(self.n_groups) / self.n_groups)
+
+        if baselines is None:
+            self.loss_baselines = torch.Tensor([0. for _ in range(self.n_groups)]).to(self.device)
+        else:
+            fields = baselines.split(",")
+            tdict = {fd.split(":")[0]: float(fd.split(":")[-1]) for fd in fields}
+            baselines = [-1 for _ in range(self.n_groups)]
+            for lang, value in tdict.items():
+                lang_dict = self.task.data_manager.tgt_lang_dict if self.group_level == "target_lang" else self.task.data_manager.src_lang_dict
+                baselines[lang_dict.index(lang) - 1] = value
+            self.loss_baselines = np.array(baselines)
 
     @staticmethod
     def add_args(parser):
@@ -354,14 +365,14 @@ class ChiSquarePrimalDualLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
     def compute_robust_loss(self, reduce_group_losses):
         # h_fun is q
         # reduce_group_losses[i] = mean of group i's losses in a batch
-        np_group_losses = reduce_group_losses.cpu().numpy()
+        np_group_losses = reduce_group_losses.cpu().numpy() - self.loss_baselines
         coefs = self.step_size * self.h_fun / self.p_train
         q_update = coefs * np_group_losses
         if self.clip is not None:
             q_update = np.minimum(q_update, self.clip)
         q = self.h_fun + q_update
         self.h_fun = project_to_cs_ball(q, self.rho, self.p_train)
-        if self.update_steps % 100 == 0:
+        if self.update_steps % 500 == 0:
             logger.info("Group loss weights: {}".format(" ".join(["{:.6f}".format(xx.item()) for xx in self.h_fun])))
 
         # as Daniel suggested, we should use h_fun before update (297), but we use the new q for now
