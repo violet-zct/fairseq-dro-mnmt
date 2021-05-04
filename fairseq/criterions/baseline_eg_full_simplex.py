@@ -110,7 +110,7 @@ class GroupDROEGCriterion(FairseqCriterion):
         else:
             loss = F.nll_loss(lprobs, target, ignore_index=self.padding_idx, reduction='none')
             return loss, loss
-        
+
     def compute_loss(self, model, sample, reduce=True):
         net_output = model(**sample['net_input'])
         target_kw = 'target'
@@ -126,11 +126,10 @@ class GroupDROEGCriterion(FairseqCriterion):
         ind_loss = (token_loss.reshape_as(sample[target_kw]) * mask).sum(1)
         nll_loss = (nll_loss.reshape_as(sample[target_kw]) * mask).sum(1)
 
-        with torch.no_grad():
-            index = self.retrieve_group_labels(sample)
-            zero_vec = torch.zeros(self.n_groups, device='cuda')  # G
-            group_losses = zero_vec.scatter_add(0, index, ind_loss)
-            group_counts = zero_vec.scatter_add(0, index, mask.sum(1))
+        index = self.retrieve_group_labels(sample)
+        zero_vec = torch.zeros(self.n_groups, device='cuda')  # G
+        group_losses = zero_vec.scatter_add(0, index, ind_loss)
+        group_counts = zero_vec.scatter_add(0, index, mask.sum(1))
 
         return nll_loss, ind_loss, group_losses, group_counts
 
