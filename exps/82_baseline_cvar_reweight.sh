@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-1
+#SBATCH --array=0
 
 source activate mnmt
 
@@ -116,5 +116,5 @@ done
 
 scp ${SAVE}/log.txt tir:${send_dir}/
 
-scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.out tir:${send_dir}/
-scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.err tir:${send_dir}/
+scp slurm_logs/slurm-${SLURM_JOB_ID}-${SLURM_ARRAY_TASK_ID}.out tir:${send_dir}/
+scp slurm_logs/slurm-${SLURM_JOB_ID}-${SLURM_ARRAY_TASK_ID}.err tir:${send_dir}/

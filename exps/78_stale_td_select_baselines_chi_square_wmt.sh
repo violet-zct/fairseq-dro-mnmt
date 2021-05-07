@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-1
+#SBATCH --array=1
 
 source activate mnmt
 
@@ -137,9 +137,10 @@ for lang in ${langs//,/ }; do
     done
 done
 
+rm ${SAVE}/dynamics.tar.gz
 tar -cvzf ${SAVE}/dynamics.tar.gz ${SAVE}/*npy
 scp ${SAVE}/dynamics.tar.gz tir:${send_dir}/
-rm ${SAVE}/*npy
+#rm ${SAVE}/*npy
 
 scp ${SAVE}/log.txt tir:${send_dir}/
 scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.out tir:${send_dir}/

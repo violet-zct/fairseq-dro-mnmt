@@ -55,22 +55,22 @@ tirroot=/home/chuntinz/tir5/logs
 #scp -r tir:/home/chuntinz/tir5/data/mnmt_data/wmt4/enfr_bin ${datapath}/
 #
 
-rm -rf ${root}/78_least*
-# DRO baseline 1: cvar reweight
-sbatch exps/82_baseline_cvar_reweight.sh
-# DRO baseline 2: cvar resample
-sbatch exps/83_baseline_cvar_resample.sh
-# DRO baseline 3: full simplex, exponetiated GD
-sbatch exps/84_baseline_eg_reweight.sh
-# DRO baseline 4: chi-square primal dual
-sbatch exps/85_baseline_chi_square_primal_dual_reweight.sh
-# TED ERM to obtain models for DRO
-sbatch exps/6_analyze_erm.sh
-#
-# resume training from previous runs; a run that was disrupted previously
-sbatch exps/78_stale_td_select_baselines_chi_square_wmt.sh
-# bilingual experiments for step A
-sbatch exps/68_wmt14_ende_train_dynamics.sh
+#rm -rf ${root}/78_least*
+## DRO baseline 1: cvar reweight
+#sbatch exps/82_baseline_cvar_reweight.sh
+## DRO baseline 2: cvar resample
+#sbatch exps/83_baseline_cvar_resample.sh
+## DRO baseline 3: full simplex, exponetiated GD
+#sbatch exps/84_baseline_eg_reweight.sh
+## DRO baseline 4: chi-square primal dual
+#sbatch exps/85_baseline_chi_square_primal_dual_reweight.sh
+## TED ERM to obtain models for DRO
+#sbatch exps/6_analyze_erm.sh
+##
+## resume training from previous runs; a run that was disrupted previously
+#sbatch exps/78_stale_td_select_baselines_chi_square_wmt.sh
+## bilingual experiments for step A
+#sbatch exps/68_wmt14_ende_train_dynamics.sh
 #sbatch exps/79_enfr_train_dynamics.sh
 ## baseline experiments on the new created dataset: multilingual experiments for step B
 #sbatch exps/80_new_wmt_erm_baseline.sh
@@ -78,4 +78,15 @@ sbatch exps/68_wmt14_ende_train_dynamics.sh
 #sbatch exps/81_burnout20_td_select_wmt_new_oversample.sh
 
 
-
+# TED ERM to obtain models for DRO
+sbatch exps/6_analyze_erm.sh
+# resume training from previous runs; a run that was disrupted previously
+sbatch exps/78_stale_td_select_baselines_chi_square_wmt.sh
+# multilingual experiments with multilingual TD selection for step B
+sbatch exps/81_burnout20_td_select_wmt_new_oversample.sh
+# DRO baseline 1: cvar reweight
+sbatch exps/82_baseline_cvar_reweight.sh
+# DRO baseline 2: cvar resample
+sbatch exps/83_baseline_cvar_resample.sh
+# DRO baseline 3: full simplex, exponetiated GD
+sbatch exps/84_baseline_eg_reweight.sh
