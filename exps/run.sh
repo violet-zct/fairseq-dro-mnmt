@@ -83,6 +83,7 @@ rm -rf ${root}/78_*
 sbatch exps/6_analyze_erm.sh
 # resume training from previous runs; a run that was disrupted previously
 sbatch exps/78_stale_td_select_baselines_chi_square_wmt.sh
+sbatch exps/79_enfr_train_dynamics.sh
 # baseline experiments on the new created dataset: multilingual experiments for step B
 sbatch exps/80_new_wmt_erm_baseline.sh
 # multilingual experiments with multilingual TD selection for step B
