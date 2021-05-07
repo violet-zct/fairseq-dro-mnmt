@@ -77,6 +77,7 @@ tirroot=/home/chuntinz/tir5/logs
 ## multilingual experiments with multilingual TD selection for step B
 #sbatch exps/81_burnout20_td_select_wmt_new_oversample.sh
 
+rm -rf ${root}/78_least_mu_stale_td_select_warmup_20_baselines_ema_0.1_ch_0_rho_${rho}_min_0.2_chi_square_resample_wmt4_de_m2o
 
 # TED ERM to obtain models for DRO
 sbatch exps/6_analyze_erm.sh
