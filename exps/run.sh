@@ -87,10 +87,13 @@ sbatch exps/79_enfr_train_dynamics.sh
 # baseline experiments on the new created dataset: multilingual experiments for step B
 sbatch exps/80_new_wmt_erm_baseline.sh
 # multilingual experiments with multilingual TD selection for step B
-sbatch exps/81_burnout20_td_select_wmt_new_oversample.sh
+#sbatch exps/81_burnout20_td_select_wmt_new_oversample.sh
+
 # DRO baseline 1: cvar reweight
 sbatch exps/82_baseline_cvar_reweight.sh
 # DRO baseline 2: cvar resample
 sbatch exps/83_baseline_cvar_resample.sh
 # DRO baseline 3: full simplex, exponetiated GD
 sbatch exps/84_baseline_eg_reweight.sh
+## DRO baseline 4: chi-square primal dual
+sbatch exps/85_baseline_chi_square_primal_dual_reweight.sh
