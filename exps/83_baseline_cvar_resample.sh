@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-1
+#SBATCH --array=1
 #SBATCH --exclude=learnfair5107,learnfair5199,learnfair5138,learnfair5033,learnfair5037,learnfair5030,learnfair5038,learnfair5078,learnfair5212,learnfair5072,learnfair5119,learnfair5216
 
 source activate mnmt
@@ -25,8 +25,7 @@ DATA=${datadir}/wmt4/data-bin-v2
 langs="de,fr,ta,tr"
 log=1
 
-direction=$SLURM_ARRAY_TASK_ID
-temp=1
+direction=${SLURM_ARRAY_TASK_ID}
 
 if [ $direction = 0 ]; then
     lang_pairs="en-de,en-fr,en-ta,en-tr"
