@@ -77,7 +77,7 @@ tirroot=/home/chuntinz/tir5/logs
 ## multilingual experiments with multilingual TD selection for step B
 #sbatch exps/81_burnout20_td_select_wmt_new_oversample.sh
 
-rm -rf ${root}/78_*
+#rm -rf ${root}/78_*
 
 # TED ERM to obtain models for DRO
 #rm -rf ${root}/6_erm_ted8_t1_related_m2o
@@ -95,6 +95,6 @@ sbatch exps/6_analyze_erm.sh
 ## DRO baseline 2: cvar resample
 #sbatch exps/83_baseline_cvar_resample.sh
 ## DRO baseline 3: full simplex, exponetiated GD
-sbatch exps/84_baseline_eg_reweight.sh
+#sbatch exps/84_baseline_eg_reweight.sh
 ### DRO baseline 4: chi-square primal dual
 sbatch exps/85_baseline_chi_square_primal_dual_reweight.sh

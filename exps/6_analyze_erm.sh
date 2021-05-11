@@ -3,7 +3,7 @@
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 #SBATCH --partition=learnfair
 ##SBATCH --partition=priority
-##SBATCH --comment="TACL 1.10"
+##SBATCH --comment="TACL 4.20"
 #SBATCH --job-name=6
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -19,24 +19,6 @@
 
 source activate mnmt
 
-trap_handler () {
-   echo "Caught signal: " $1
-   # SIGTERM must be bypassed
-   if [ "$1" = "TERM" ]; then
-       echo "bypass sigterm"
-   else
-     # Submit a new job to the queue
-     echo "Requeuing " $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
-     # SLURM_JOB_ID is a unique representation of the job, equivalent
-     # to above
-     scontrol requeue $SLURM_JOB_ID
-   fi
-}
-
-
-# Install signal handler
-trap 'trap_handler USR1' USR1
-trap 'trap_handler TERM' TERM
 
 SAVE_ROOT=/checkpoint/xianl/space/dro_mnt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
