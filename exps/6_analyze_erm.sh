@@ -65,7 +65,6 @@ model=transformer_iwslt_de_en
 exp_name=6_erm_ted8_t1_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
-rm -rf ${SAVE}
 mkdir -p ${SAVE}
 
 cp $0 ${SAVE}/run.sh
