@@ -15,6 +15,7 @@
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
 #SBATCH --array=0-1
+#SBATCH --exclude=learnfair5107,learnfair5199,learnfair5138,learnfair5033,learnfair5037,learnfair5030,learnfair5038,learnfair5078,learnfair5212,learnfair5072,learnfair5119,learnfair5216
 
 source activate mnmt
 
@@ -137,9 +138,10 @@ for lang in ${langs//,/ }; do
     done
 done
 
+rm ${SAVE}/dynamics.tar.gz
 tar -cvzf ${SAVE}/dynamics.tar.gz ${SAVE}/*npy
 scp ${SAVE}/dynamics.tar.gz tir:${send_dir}/
-rm ${SAVE}/*npy
+#rm ${SAVE}/*npy
 
 scp ${SAVE}/log.txt tir:${send_dir}/
 scp slurm_logs/slurm-${SLURM_JOB_ID}-$SLURM_ARRAY_TASK_ID.out tir:${send_dir}/

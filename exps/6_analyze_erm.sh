@@ -3,7 +3,7 @@
 #SBATCH --error=slurm_logs/slurm-%A-%a.err
 #SBATCH --partition=learnfair
 ##SBATCH --partition=priority
-##SBATCH --comment="TACL 1.10"
+##SBATCH --comment="TACL 4.20"
 #SBATCH --job-name=6
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -14,28 +14,11 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-3
+#SBATCH --array=0-1
+#SBATCH --exclude=learnfair5107,learnfair5199,learnfair5138,learnfair5033,learnfair5037,learnfair5030,learnfair5038,learnfair5078,learnfair5212,learnfair5072,learnfair5119,learnfair5216
 
 source activate mnmt
 
-trap_handler () {
-   echo "Caught signal: " $1
-   # SIGTERM must be bypassed
-   if [ "$1" = "TERM" ]; then
-       echo "bypass sigterm"
-   else
-     # Submit a new job to the queue
-     echo "Requeuing " $SLURM_ARRAY_JOB_ID $SLURM_ARRAY_TASK_ID
-     # SLURM_JOB_ID is a unique representation of the job, equivalent
-     # to above
-     scontrol requeue $SLURM_JOB_ID
-   fi
-}
-
-
-# Install signal handler
-trap 'trap_handler USR1' USR1
-trap 'trap_handler TERM' TERM
 
 SAVE_ROOT=/checkpoint/xianl/space/dro_mnt
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
@@ -82,7 +65,6 @@ model=transformer_iwslt_de_en
 exp_name=6_erm_ted8_t1_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
-rm -rf ${SAVE}
 mkdir -p ${SAVE}
 
 cp $0 ${SAVE}/run.sh

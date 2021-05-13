@@ -14,7 +14,8 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=0-1
+#SBATCH --array=0
+#SBATCH --exclude=learnfair5107,learnfair5199,learnfair5138,learnfair5033,learnfair5037,learnfair5030,learnfair5038,learnfair5078,learnfair5212,learnfair5072,learnfair5119,learnfair5216
 
 source activate mnmt
 
@@ -63,7 +64,13 @@ model=transformer_wmt_en_de
 exp_name=81_select_by_multi_td_new_erm_baseline_wmt_${ename}
 
 SAVE=${SAVE_ROOT}/${exp_name}
-mkdir -p ${SAVE}
+
+if [ -f "${SAVE}/dynamics.tar.gz" ]; then
+  mkdir -p ${SAVE}/temp
+  tar -xvzf ${SAVE}/dynamics.tar.gz -C ${SAVE}/temp
+  mv ${SAVE}/temp/checkpoint/xianl/space/dro_mnt/${exp_name}/* ${SAVE}/
+  rm -rf ${SAVE}/temp
+fi
 
 cp $0 ${SAVE}/run.sh
 rm ${SAVE}/END
@@ -129,6 +136,7 @@ for lang in ${langs//,/ }; do
     done
 done
 
+rm ${SAVE}/dynamics.tar.gz
 tar -cvzf ${SAVE}/dynamics.tar.gz ${SAVE}/*npy
 scp ${SAVE}/dynamics.tar.gz tir:${send_dir}/
 rm ${SAVE}/*npy
