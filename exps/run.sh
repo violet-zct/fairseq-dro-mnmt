@@ -81,7 +81,7 @@ tirroot=/home/chuntinz/tir5/logs
 
 # TED ERM to obtain models for DRO
 #rm -rf ${root}/6_erm_ted8_t1_related_m2o
-sbatch exps/6_analyze_erm.sh
+#sbatch exps/6_analyze_erm.sh
 ## resume training from previous runs; a run that was disrupted previously
 #sbatch exps/78_stale_td_select_baselines_chi_square_wmt.sh
 #sbatch exps/79_enfr_train_dynamics.sh
@@ -97,4 +97,7 @@ sbatch exps/6_analyze_erm.sh
 ## DRO baseline 3: full simplex, exponetiated GD
 #sbatch exps/84_baseline_eg_reweight.sh
 ### DRO baseline 4: chi-square primal dual
-sbatch exps/85_baseline_chi_square_primal_dual_reweight.sh
+#sbatch exps/85_baseline_chi_square_primal_dual_reweight.sh
+
+sbatch exps/86_baseline_t1_chi_square_0.05_ted.sh
+sbatch exps/87_baseline_t1_chi_square_0.1_ted.sh
