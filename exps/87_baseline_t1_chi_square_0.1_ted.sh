@@ -75,7 +75,7 @@ rm ${SAVE}/END
 
 send_dir=/home/chuntinz/tir5/logs/${exp_name}
 if [ ${log} = 1 ]; then
-  bash v1_exps/send.sh ${exp_name} &
+  bash v1_exps/send2.sh ${exp_name} &
 fi
 
 python train.py ${DATA}\
