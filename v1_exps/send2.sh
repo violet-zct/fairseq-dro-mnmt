@@ -2,8 +2,8 @@
 
 dirname=$1 # exp name
 
-end=$((SECONDS+114400))
-saved_models=saved_models/${dirname}
+end=$((SECONDS+259200))
+saved_models=/private/home/ghazvini/chunting/fairseq-dro-mnmt/saved_models/${dirname}
 send_dir=/home/chuntinz/tir5/logs/${dirname}
 end_file=$saved_models/END
 ssh tir "mkdir ${send_dir}"
@@ -15,5 +15,5 @@ while [ $SECONDS -lt $end ]; do
     if [[ -f ${end_file} ]]; then
         break
     fi
-    sleep 60s
+    sleep 1800s
 done
