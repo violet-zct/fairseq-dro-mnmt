@@ -14,7 +14,7 @@
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=2-3
+#SBATCH --array=0-1
 #SBATCH --exclude=learnfair5107,learnfair5199,learnfair5138,learnfair5033,learnfair5037,learnfair5030,learnfair5038,learnfair5078,learnfair5212,learnfair5072,learnfair5119,learnfair5216
 
 source activate mnmt
@@ -31,7 +31,7 @@ if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
     gtgt="xx"
     etok="tgt"
     glevel="target_lang"
-    baselines="aze:,bel:,glg:,slk:,tur:,rus:,por:,ces:"
+    baselines="aze:3.457,bel:3.365,glg:2.805,slk:2.687,tur:2.976,rus:2.832,por:2.368,ces:2.771"
 elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
     langs="aze,bel,glg,slk,tur,rus,por,ces"
     lang_pairs="aze-en,bel-en,glg-en,slk-en,tur-en,rus-en,por-en,ces-en"
@@ -40,7 +40,7 @@ elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
     gtgt="en"
     etok="src"
     glevel="source_lang"
-    baselines="aze:,bel:,glg:,slk:,tur:,rus:,por:,ces:"
+    baselines="aze:2.111,bel:1.893,glg:2.006,slk:2.155,tur:2.392,rus:2.472,por:2.037,ces:2.23"
 elif [ $SLURM_ARRAY_TASK_ID = 2 ]; then
     langs="bos,mar,hin,mkd,ell,bul,fra,kor"
     lang_pairs="en-bos,en-mar,en-hin,en-mkd,en-ell,en-bul,en-fra,en-kor"

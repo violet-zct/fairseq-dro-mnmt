@@ -7,14 +7,14 @@
 #SBATCH --job-name=87
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:8
 #SBATCH --mem=50g
-#SBATCH -C volta32gb
+##SBATCH -C volta32gb
 #SBATCH --cpus-per-task=10
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
 #SBATCH --time=4320
-#SBATCH --array=2-3
+#SBATCH --array=0-3
 #SBATCH --exclude=learnfair5107,learnfair5199,learnfair5138,learnfair5033,learnfair5037,learnfair5030,learnfair5038,learnfair5078,learnfair5212,learnfair5072,learnfair5119,learnfair5216
 
 source activate mnmt
@@ -31,7 +31,7 @@ if [ $SLURM_ARRAY_TASK_ID = 0 ]; then
     gtgt="xx"
     etok="tgt"
     glevel="target_lang"
-    baselines="aze:,bel:,glg:,slk:,tur:,rus:,por:,ces:"
+    baselines="aze:3.457,bel:3.365,glg:2.805,slk:2.687,tur:2.976,rus:2.832,por:2.368,ces:2.771"
 elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
     langs="aze,bel,glg,slk,tur,rus,por,ces"
     lang_pairs="aze-en,bel-en,glg-en,slk-en,tur-en,rus-en,por-en,ces-en"
@@ -40,7 +40,7 @@ elif [ $SLURM_ARRAY_TASK_ID = 1 ]; then
     gtgt="en"
     etok="src"
     glevel="source_lang"
-    baselines="aze:,bel:,glg:,slk:,tur:,rus:,por:,ces:"
+    baselines="aze:2.111,bel:1.893,glg:2.006,slk:2.155,tur:2.392,rus:2.472,por:2.037,ces:2.23"
 elif [ $SLURM_ARRAY_TASK_ID = 2 ]; then
     langs="bos,mar,hin,mkd,ell,bul,fra,kor"
     lang_pairs="en-bos,en-mar,en-hin,en-mkd,en-ell,en-bul,en-fra,en-kor"
@@ -93,7 +93,7 @@ python train.py ${DATA}\
     --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 1e-4 \
     --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'step' \
     --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --lr-decay-rate 0.5 --lr-decay-steps 100000 \
-    --max-tokens 16384 \
+    --max-tokens 8192 \
     --update-freq 1 \
     --seed 222 \
     --max-source-positions 512 --max-target-positions 512 \
