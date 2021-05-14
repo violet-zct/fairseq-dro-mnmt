@@ -7,9 +7,9 @@
 #SBATCH --job-name=87
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:8
+#SBATCH --gres=gpu:4
 #SBATCH --mem=50g
-##SBATCH -C volta32gb
+#SBATCH -C volta32gb
 #SBATCH --cpus-per-task=10
 ##SBATCH --signal=B:USR1@60 #Signal is sent to batch script itself
 ##SBATCH --open-mode=append
@@ -17,9 +17,9 @@
 #SBATCH --array=0-3
 #SBATCH --exclude=learnfair5107,learnfair5199,learnfair5138,learnfair5033,learnfair5037,learnfair5030,learnfair5038,learnfair5078,learnfair5212,learnfair5072,learnfair5119,learnfair5216
 
-source activate mnmt
+source activate mnmt2
 
-SAVE_ROOT=/checkpoint/xianl/space/dro_mnt
+SAVE_ROOT=/private/home/ghazvini/chunting/fairseq-dro-mnmt/saved_models
 datadir=/private/home/ghazvini/chunting/data/mnmt_data
 log=1
 
@@ -93,7 +93,7 @@ python train.py ${DATA}\
     --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 1e-4 \
     --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'step' \
     --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --lr-decay-rate 0.5 --lr-decay-steps 100000 \
-    --max-tokens 8192 \
+    --max-tokens 16384 \
     --update-freq 1 \
     --seed 222 \
     --max-source-positions 512 --max-target-positions 512 \
