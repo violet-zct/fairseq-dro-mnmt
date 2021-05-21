@@ -122,7 +122,10 @@ def main(args):
 
     valid_subsets = args.train_subset.split(",")
     valid_losses = validate(args, trainer, task, epoch_itr, valid_subsets)
-    trainer.criterion.summarize()
+    # trainer.criterion.summarize()
+    if hasattr(args, 'valid_mode_sent_path') and args.valid_mode_sent_path is not None:
+        criterion.write_sent_scores()
+
     train_meter.stop()
     logger.info("done training in {:.1f} seconds".format(train_meter.sum))
 
