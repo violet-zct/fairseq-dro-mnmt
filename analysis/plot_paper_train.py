@@ -6,11 +6,12 @@ import os
 from collections import defaultdict
 
 log = sys.argv[1]
-root = "/Users/chuntinz/Documents/research/fairseq-dro-mnmt/outputs_analysis/"
+root = "/Users/chuntinz/Documents/documents/research/fairseq-dro-mnmt/figs/"
 opt_dir = os.path.join(root, log)
 if not os.path.exists(opt_dir):
     os.mkdir(opt_dir)
     os.system("scp tir:/home/chuntinz/tir5/logs/{}/log.txt {}/".format(log, opt_dir))
+    # os.system("scp tir:/home/chuntinz/tir5/fairseq-dro-mnmt/saved_models/{}/log.txt {}/".format(log, opt_dir))
     # os.system("scp psc:/jet/home/chuntinz/work/fairseq-dro-mnmt/saved_models/{}/*log.txt {}/".format(log, opt_dir))
 
 if "wmt" in log:
@@ -90,8 +91,8 @@ with open(os.path.join(opt_dir, "log.txt").format(root, log)) as fin:
             for idx, weight in enumerate(weights):
                 lang_ema_weights[idx2lang[idx]].append(float(weight.strip()))
 
-        if " EMA past losses: tensor" in line:
-            losses = line.strip().split("([")[-1].rstrip("],").split(",")
+        if " EMA past losses: " in line:
+            losses = line.strip().split(" EMA past losses: ")[-1].split()
             for idx, loss in enumerate(losses):
                 lang_ema_losses[idx2lang[idx]].append(float(loss.strip()))
 
@@ -105,10 +106,10 @@ with open(os.path.join(opt_dir, "log.txt").format(root, log)) as fin:
 
 print(lang_train_size)
 sum_train = sum(list(lang_train_size.values()))
-legends = ["{}={:.5f}".format(lang, lang_train_size[lang]/sum_train) for lang in langs]
+legends = ["{}={:.3f}".format(lang, lang_train_size[lang]/sum_train) for lang in langs]
 print(legends)
-labelsize = 14
-legendsize = 14
+labelsize = 16
+legendsize = 16
 mpl.rcParams['xtick.labelsize'] = labelsize
 mpl.rcParams['ytick.labelsize'] = labelsize
 mpl.rcParams['font.size'] = labelsize
@@ -119,8 +120,8 @@ def plot_ax_ema(ax, y, title):
     plt.gca().set_prop_cycle(plt.cycler('color', plt.cm.jet(np.linspace(0, 1, len(langs)))))
     for lang in langs:
         ax.plot(np.arange(len(y[lang])), y[lang], alpha=0.6)
-    ax.legend(legends, loc='best', fontsize=10)
-    ax.set(title=title, xlabel="steps", ylabel=title)
+    ax.legend(legends, loc='best', fontsize=16)
+    ax.set(xlabel="epochs", ylabel=title)
 
 
 def plot_ax(ax, y, title, ylabel, color, step=300):
@@ -128,7 +129,7 @@ def plot_ax(ax, y, title, ylabel, color, step=300):
         step = 10
     print(title, len(y))
     ax.plot(np.arange(len(y)), y, color=color)
-    ax.set(title=title, xlabel="steps", ylabel=ylabel)
+    ax.set(title=title, xlabel="epochs", ylabel=ylabel)
     ax.xaxis.set_ticks(np.arange(0, max(np.arange(len(y)), ), step))
 
 # plot train loss, (train_ppl and valid_ppl)
@@ -145,25 +146,36 @@ fig.savefig(os.path.join(opt_dir, "{}_loss_ppl.pdf".format(log)), bbox_inches='t
 
 ### plot ema losses, ema weights
 fig, ax = plt.subplots(1)
-fig.set_size_inches(20, 10)
-plot_ax_ema(ax, lang_ema_losses, "ema_loss")
-plot_ax_ema(ax, lang_ema_after_bl_losses, "ema_after_bl_loss")
+fig.set_size_inches(10, 5)
+if "ted" in log:
+    plot_ax_ema(ax, lang_ema_losses, "ema_loss") # comment this for wmt
+    plot_ax_ema(ax, lang_ema_after_bl_losses, "Historical Losses")
+else:
+    plot_ax_ema(ax, lang_ema_after_bl_losses, "Historical Losses")
 # plot_ax_ema(ax[1], lang_ema_weights, "ema_weights", True)
 fig.savefig(os.path.join(opt_dir, "{}_ema_loss.pdf".format(log)), bbox_inches='tight')
 
-labelsize = 10
-legendsize = 10
+labelsize = 16
+legendsize = 16
 mpl.rcParams['xtick.labelsize'] = labelsize
-mpl.rcParams['ytick.labelsize'] = labelsize
+mpl.rcParams['ytick.labelsize'] = labelsize-2
 mpl.rcParams['font.size'] = labelsize
-row = lang_num // 2
+if "ted" in log:
+    nrows = 2
+else:
+    nrows = 1
+row = lang_num // nrows
 fig, ax = plt.subplots(len(langs) // row, row)
-fig.set_size_inches(30, 10)
+if "ted" in log:
+    fig.set_size_inches(30, 8)
+else:
+    fig.set_size_inches(20, 3)  # wmt
+
 colors = plt.cm.jet(np.linspace(0, 1, len(langs)))
 max_value = []
 for lang in langs:
     max_value.extend(lang_ema_weights[lang])
-max_value = max(max_value) + 0.2
+max_value = np.log(max(max_value)) + 0.2
 
 normalizer = []
 for ii in range(len(lang_ema_weights[langs[0]])):
@@ -174,9 +186,49 @@ tau = 5
 ratios = [lang_train_size[lang]/sum_train for lang in langs]
 temp_norm = sum(r ** tau for r in ratios)
 
+# WMT plot
+# steps = 0
+# print(len(ax))
+# colors = ["purple", "darkblue", "peru", "crimson"]
+# for idx, lang in enumerate(langs):
+#     i, j = idx // row, idx % row
+#     print(i, j)
+#     data_ratio = float(legends[idx].split("=")[-1])
+#     # ax[i][j].plot(np.arange(len(lang_ema_weights[lang])),
+#     #               np.ones(len(lang_ema_weights[lang]))* (data_ratio**tau / temp_norm),
+#     #               linestyle='dotted', markersize=1, color=colors[idx], alpha=0.75)
+#     if steps > 0:
+#         ax[j].plot(np.arange(steps),
+#                       np.ones(steps) * (data_ratio),
+#                       linestyle='dashed', markersize=1, color=colors[idx], alpha=0.5)
+#
+#         ax[j].plot(np.arange(steps), np.array(lang_ema_weights[lang][:steps]) / normalizer[:steps], 'o',
+#                       markersize=1, color=colors[idx])
+#     else:
+#         ax[j].plot(np.arange(len(lang_ema_weights[lang])),
+#                       np.log(np.ones(len(lang_ema_weights[lang]))*(data_ratio)),
+#                       linestyle='dashed', markersize=1, color=colors[idx], alpha=0.5)
+#
+#         ax[j].plot(np.arange(len(lang_ema_weights[lang])), np.log(np.array(lang_ema_weights[lang])/normalizer), 'o', markersize=1, color=colors[idx])
+#     # print(legends[idx])
+#     # ax[i][j].legend(legends[idx], loc='best', fontsize=10)
+#     # ax[i][j].set_ylim([0, max_value])
+#     if i == 0 and j == 0:
+#         ax[j].set(title=legends[idx], xlabel="epochs", ylabel="best response")
+#     elif i == 0:
+#         ax[j].set(title=legends[idx], xlabel="epochs")
+#     else:
+#         ax[j].set(title=legends[idx])
+# plt.subplots_adjust(wspace=0.2,
+#                     hspace=0.3)
+# fig.savefig(os.path.join(opt_dir, "{}_ema_weights.pdf".format(log)), bbox_inches='tight')
+
+# TED plot
 steps = 0
+print(len(ax))
 for idx, lang in enumerate(langs):
     i, j = idx // row, idx % row
+    print(i, j)
     data_ratio = float(legends[idx].split("=")[-1])
     # ax[i][j].plot(np.arange(len(lang_ema_weights[lang])),
     #               np.ones(len(lang_ema_weights[lang]))* (data_ratio**tau / temp_norm),
@@ -190,15 +242,51 @@ for idx, lang in enumerate(langs):
                       markersize=1, color=colors[idx])
     else:
         ax[i][j].plot(np.arange(len(lang_ema_weights[lang])),
+                      np.log(np.ones(len(lang_ema_weights[lang]))*(data_ratio)),
+                      linestyle='dashed', markersize=1, color=colors[idx], alpha=0.5)
+
+        ax[i][j].plot(np.arange(len(lang_ema_weights[lang])), np.log(np.array(lang_ema_weights[lang])/normalizer), 'o', markersize=1, color=colors[idx])
+    # print(legends[idx])
+    # ax[i][j].legend(legends[idx], loc='best', fontsize=10)
+    # ax[i][j].set_ylim([0, max_value])
+    if i == 1 and j == 0:
+        ax[i][j].set(title=legends[idx], xlabel="epochs", ylabel="best response")
+    elif i == 0 and j == 0:
+        ax[i][j].set(title=legends[idx], ylabel="best response")
+    elif i == 1:
+        ax[i][j].set(title=legends[idx], xlabel="epochs")
+    else:
+        ax[i][j].set(title=legends[idx])
+plt.subplots_adjust(wspace=0.15,
+                    hspace=0.3)
+fig.savefig(os.path.join(opt_dir, "{}_ema_weights.pdf".format(log)), bbox_inches='tight')
+
+fig, ax = plt.subplots(1, 1)
+fig.set_size_inches(30, 5)
+for idx, lang in enumerate(langs):
+    i, j = idx // row, idx % row
+    data_ratio = float(legends[idx].split("=")[-1])
+    # ax[i][j].plot(np.arange(len(lang_ema_weights[lang])),
+    #               np.ones(len(lang_ema_weights[lang]))* (data_ratio**tau / temp_norm),
+    #               linestyle='dotted', markersize=1, color=colors[idx], alpha=0.75)
+    if steps > 0:
+        ax.plot(np.arange(steps),
+                      np.ones(steps) * (data_ratio),
+                      linestyle='dashed', markersize=1, color=colors[idx], alpha=0.5)
+
+        ax.plot(np.arange(steps), np.array(lang_ema_weights[lang][:steps]) / normalizer[:steps], 'o',
+                      markersize=1, color=colors[idx])
+    else:
+        ax.plot(np.arange(len(lang_ema_weights[lang])),
                       np.ones(len(lang_ema_weights[lang]))*(data_ratio),
                       linestyle='dashed', markersize=1, color=colors[idx], alpha=0.5)
 
-        ax[i][j].plot(np.arange(len(lang_ema_weights[lang])), np.array(lang_ema_weights[lang])/normalizer, 'o', markersize=1, color=colors[idx])
+        ax.plot(np.arange(len(lang_ema_weights[lang])), np.array(lang_ema_weights[lang])/normalizer, 'o', markersize=1, color=colors[idx])
     # print(legends[idx])
-    # ax[i][j].legend(legends[idx], loc='best', fontsize=10)
-    ax[i][j].set_ylim([0, max_value])
-    ax[i][j].set(title=legends[idx], xlabel="steps", ylabel="ema_weights")
-fig.savefig(os.path.join(opt_dir, "{}_ema_weights.pdf".format(log)), bbox_inches='tight')
+ax.legend(legends, loc='best', fontsize=10)
+ax.set_ylim([0, max_value])
+ax.set(title="best response", xlabel="steps", ylabel="ema_weights")
+fig.savefig(os.path.join(opt_dir, "{}_single_ema_weights.pdf".format(log)), bbox_inches='tight')
 
 exit(0)
 if not os.path.exists(os.path.join(opt_dir, "inner_log.txt")):
