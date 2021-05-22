@@ -132,8 +132,11 @@ class RobustLoss(nn.Module):
         if geometry == 'cvar' and self.size > 1:
             raise ValueError(f'alpha should be < 1 for cvar, is {self.size}')
 
-    def best_response(self, v):
-        size = self.size
+    def best_response(self, v, decayed_rho=None):
+        if decayed_rho is not None:
+            size = decayed_rho
+        else:
+            size = self.size
         reg = self.reg
         m = v.shape[0]
 
@@ -228,7 +231,7 @@ class RobustLoss(nn.Module):
             return p(eta_star), eta_star
         return p(eta_star)
 
-    def forward(self, v):
+    def forward(self, v, decayed_rho=None):
         """Value of the robust loss
         Note that the best response is computed without gradients
         Parameters
@@ -241,5 +244,5 @@ class RobustLoss(nn.Module):
             Value of the robust loss on the batch of examples
         """
         with torch.no_grad():
-            p = self.best_response(v)
+            p = self.best_response(v, decayed_rho)
         return p

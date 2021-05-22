@@ -28,7 +28,7 @@ from fairseq.data import (
 from fairseq.data.multilingual.sampled_multi_dataset import CollateFormat
 from fairseq.file_io import PathManager
 from fairseq.options import csv_str_list, eval_str_dict
-
+import torch
 
 logger = logging.getLogger(__name__)
 
@@ -112,29 +112,14 @@ class MultilingualDatasetManager(object):
             self.lang_dict = self.tgt_lang_dict if self.target_group == "target_lang" else self.src_lang_dict
             n_groups = len(self.tgt_langs) if self.target_group == "target_lang" else len(self.src_langs)
 
-        if args.outer_baseline_file is not None:
-            outer_baseline = np.zeros(n_groups)
-            with open(args.outer_baseline_file) as fin:
+        if self.args.sent_baseline_path is not None:
+            score_array = []
+            with open(self.args.sent_baseline_path) as fin:
                 for line in fin:
-                    fields = line.strip().split("=")
-                    lang = _lang_id(self.lang_dict, fields[0])
-                    outer_baseline[lang] = float(fields[1])
-            self.outer_baseline = outer_baseline
+                    score_array.append(float(line.strip()))
+            self.sent_scores = torch.FloatTensor(score_array)
         else:
-            self.outer_baseline = None
-
-        if args.inner_baseline_file is not None:
-            fmat = open(args.inner_baseline_file).readlines()
-            vocab_size = len(fmat[0].strip().split("=")[-1].split())
-            inner_baseline = np.zeros((n_groups, vocab_size))
-            for line in fmat:
-                fields = line.strip().split("=")
-                lang = _lang_id(self.lang_dict, fields[0])
-                bls = np.array(list(map(float, fields[1].split())))
-                inner_baseline[lang] = bls
-            self.inner_baseline = inner_baseline
-        else:
-            self.inner_baseline = None
+            self.sent_scores = None
 
     @classmethod
     def setup_data_manager(cls, args, lang_pairs, langs, dicts, sampling_method):
@@ -315,14 +300,8 @@ class MultilingualDatasetManager(object):
         parser.add_argument('--selection-method', type=str, choices=['cutoff', 'sample'], default='cutoff')
         parser.add_argument('--selection-criterion', type=str, choices=['var', 'avg'], default='var')
 
-        parser.add_argument(
-            '--inner-baseline-file',
-            default=None, type=str
-        )
-        parser.add_argument(
-            '--outer-baseline-file',
-            default=None, type=str
-        )
+        parser.add_argument('--sent-baseline-path', type=str, default=None)
+
     @classmethod
     def load_langs(cls, args, **kwargs):
         if args.lang_dict and args.langs:

@@ -36,8 +36,9 @@ def label_smoothed_nll_loss(lprobs, target, epsilon, ignore_index=None, reduce=T
 @register_criterion('chi_square_batch_dro')
 class ChiSquareBatchDROCriterion(FairseqCriterion):
 
-    def __init__(self, task, sentence_avg, label_smoothing, group_level, rho):
+    def __init__(self, task, sentence_avg, label_smoothing, group_level, rho, baselines):
         super().__init__(task)
+        self.args = task.args
         self.sentence_avg = sentence_avg
         self.eps = label_smoothing
         self.group_level = group_level
@@ -50,9 +51,29 @@ class ChiSquareBatchDROCriterion(FairseqCriterion):
         else:
             raise ValueError
 
+        self.device = torch.cuda.current_device()
         self.robust_loss = RobustLoss(rho, reg=0, geometry='chi-square')
         self.data_parallel_world_size = task.args.distributed_world_size
         self.rank = task.args.distributed_rank
+
+        self.group_baselines = None
+        if task.data_manager.sent_scores is not None:
+            self.sent_scores = task.data_manager.sent_scores.to(self.device)
+        else:
+            self.sent_scores = None
+            if baselines is not None:
+                fields = baselines.split(",")
+                tdict = {fd.split(":")[0]: float(fd.split(":")[-1]) for fd in fields}
+                baselines = [-1 for _ in range(self.n_groups)]
+                for lang, value in tdict.items():
+                    lang_dict = self.task.data_manager.tgt_lang_dict if self.group_level == "target_lang" else self.task.data_manager.src_lang_dict
+                    baselines[lang_dict.index(lang) - 1] = value
+                self.group_baselines = torch.Tensor(baselines).to(self.device)
+
+        self.register_buffer("update_steps", torch.zeros(1))
+        self.rho = rho
+        self.rho_decay_steps = self.args.rho_decay_steps
+        self.rho_decay_end = self.args.rho_decay_end
 
     @staticmethod
     def add_args(parser):
@@ -62,6 +83,9 @@ class ChiSquareBatchDROCriterion(FairseqCriterion):
                             help='epsilon for label smoothing, 0 means no label smoothing')
         parser.add_argument('--group-level', type=str, choices=['source_lang', 'target_lang'])
         parser.add_argument('--rho', type=float, default=0.1)
+        parser.add_argument('--baselines', default=None, type=str, help='baseline loss values.')
+        parser.add_argument('--rho-decay-steps', type=float, default=0)
+        parser.add_argument('--rho-decay-end', type=float, default=0.1)
         # fmt: on
 
     def retrieve_group_labels(self, sample):
@@ -73,6 +97,15 @@ class ChiSquareBatchDROCriterion(FairseqCriterion):
         else:
             index = sample['target'].view(-1)
         return index
+
+    def decayed_rho(self):
+        if self.rho_decay_steps == 0:
+            return self.rho
+        elif self.rho_decay_steps > self.update_steps:
+            return self.rho_decay_end
+        else:
+            steps = self.update_steps.item()
+            return self.rho + steps * ((self.rho_decay_end - self.rho) / self.rho_decay_steps)
 
     def forward(self, model, sample, reduce=True):
         """Compute the loss for the given sample.
@@ -92,18 +125,28 @@ class ChiSquareBatchDROCriterion(FairseqCriterion):
             data_labels = self.retrieve_group_labels(sample)
 
             ind_losses = token_losses.reshape_as(sample['target']).sum(1) / mask.sum(1)
+
+            if self.group_baselines is not None:
+                baselines = self.group_baselines[data_labels]
+                baselined_losses = ind_losses - baselines
+            elif self.sent_scores is not None:
+                ids = sample['concat_ds_id']
+                baselined_losses = ind_losses - self.sent_scores[ids]
+            else:
+                baselined_losses = ind_losses
+
             batch_size = sample['id'].new_tensor([len(ind_losses)])
             batch_list = [torch.zeros_like(batch_size) for _ in range(self.data_parallel_world_size)]
             torch.distributed.all_gather(batch_list, batch_size)
 
             # expand
-            expand_ind_losses = ind_losses
+            expand_ind_losses = baselined_losses
             batch_list = torch.cat(batch_list)
             max_batch = torch.max(batch_list)
             if batch_size < max_batch:
                 diff = max_batch - batch_size
                 data_labels = torch.cat([data_labels, data_labels.new_zeros(diff)])
-                expand_ind_losses = torch.cat([ind_losses, ind_losses.new_zeros(diff)])
+                expand_ind_losses = torch.cat([baselined_losses, ind_losses.new_zeros(diff)])
 
             gather_data_labels = [data_labels.new_zeros(max_batch) for bs in batch_list if bs != 0]
             gather_ind_losses = [ind_losses.new_zeros(max_batch) for bs in batch_list if bs != 0]
@@ -116,7 +159,7 @@ class ChiSquareBatchDROCriterion(FairseqCriterion):
             gather_ind_losses = torch.cat([gather_ind_losses[ii][:bs]
                                            for ii, bs in enumerate(batch_list) if bs != 0])
 
-            best_response = self.robust_loss(gather_ind_losses)
+            best_response = self.robust_loss(gather_ind_losses, self.decayed_rho())
 
             start_idx = 0 if self.rank == 0 else sum(batch_list[:self.rank])
             end_idx = sum(batch_list[:self.rank+1])
@@ -133,6 +176,8 @@ class ChiSquareBatchDROCriterion(FairseqCriterion):
                 # for each group: average group weight = \sum instance_q / #sample of G_i
                 avg_group_weight = fg_group_weights / (fg_group_count + 1e-8)
             sample_size = 1 / self.data_parallel_world_size
+
+            self.update_steps += 1
         else:
             loss, nll_loss = self.simple_loss(model, net_output, sample, reduce=False)
             loss = loss.sum()

@@ -82,6 +82,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         self.eps = label_smoothing
         self.group_level = group_level
         self.rho = rho
+        self.reg = self.args.reg
         self.baselines = baselines
         self.resample = resample
         self.tol = 1e-4
@@ -124,6 +125,7 @@ class ChiSquareResampleLabelSmoothedCrossEntropyCriterion(FairseqCriterion):
         parser.add_argument('--dro-K', default=-1, type=float)  # DELETE
         parser.add_argument('--min-prob', default=0.2, type=float)
         parser.add_argument('--clamp-q-to-min', default=0, type=int)
+        parser.add_argument('--reg', default=0, type=float)
 
         parser.add_argument('--clear-history', default=1, type=int)
         parser.add_argument('--resample', default=1, type=int, help="resample=0 is ERM")

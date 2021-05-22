@@ -161,13 +161,10 @@ class SampledMultiDataset(FairseqDataset):
             if not isinstance(sample_ratios, np.ndarray):
                 sample_ratios = np.array(sample_ratios)
             self.sample_ratios = sample_ratios
-            if self.cl_ratio > 0:
-                self.virtual_size = int(sum(sizes) * self.cl_ratio)
-            else:
-                virtual_size = default_virtual_size_func if virtual_size is None else virtual_size
-                self.virtual_size = (
-                    virtual_size(self.datasets, self.sample_ratios, self.args.max_scale_up) if callable(virtual_size)
-                    else virtual_size)
+            virtual_size = default_virtual_size_func if virtual_size is None else virtual_size
+            self.virtual_size = (
+                virtual_size(self.datasets, self.sample_ratios, self.args.max_scale_up) if callable(virtual_size)
+                else virtual_size)
 
     def adjust_sampling(self, epoch, sampling_ratios, virtual_size):
         if sampling_ratios is not None:
@@ -288,21 +285,11 @@ class SampledMultiDataset(FairseqDataset):
                                                                                      len(in_dataset_indices[-1])))
             elif self.args.selection_method == 'sample':
                 for ii, (count, ds) in enumerate(zip(counts, sizes)):
-                    if self.cl_ratio > 0:
-                        select_from = len(self.data_values[ii])
-                        selected_index = rng.choice(self.data_values[ii], count, replace=(count > select_from))
-                        logger.info(
-                            "id = {}, lang = {}, ds = {}, count = {}, select = {}, select_from = {}".format(ii,
-                                                                                                            self.keys[ii],
-                                                                                                            ds, count,
-                                                                                                            len(selected_index),
-                                                                                                            select_from))
-                    else:
-                        sample_probs = self.data_values[ii]
-                        assert ds == len(sample_probs)
-                        selected_index = rng.choice(ds, count, replace=(count > ds), p=sample_probs)
-                        logger.info(
-                            "id = {}, lang = {}, ds = {}, count = {}, select = {}".format(ii, self.keys[ii], ds, count,
+                    sample_probs = np.array(self.data_values[ii])
+                    assert ds == len(sample_probs)
+                    selected_index = rng.choice(ds, count, replace=(count > ds), p=sample_probs)
+                    logger.info(
+                        "id = {}, lang = {}, ds = {}, count = {}, select = {}".format(ii, self.keys[ii], ds, count,
                                                                                           len(selected_index)))
                     in_dataset_indices.append(selected_index)
 
