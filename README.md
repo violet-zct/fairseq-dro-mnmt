@@ -7,7 +7,7 @@ EMNLP 2021
 ```
 <br>
 
-<img src="figs/intro.png" alt="illustration" width="200"/>
+<img src="figs/intro.png" alt="illustration" class="center" width="250"/>
 <br>
 
 ## Setup
