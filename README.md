@@ -5,10 +5,8 @@ Distributionally Robust Multilingual Machine Translation
 Chunting Zhou*, Daniel Levy*, Xian Li, Marjan Ghazvininejad, Graham Neubig
 EMNLP 2021
 ```
-<br>
 
-<center><img src="figs/intro.png" alt="illustration" width="250"/></center>
-<br>
+<div style="text-align:center"><img src="figs/intro.png" alt="illustration" width="250"/></div>
 
 ## Setup
 - This repo is based on [fairseq](https://github.com/pytorch/fairseq) (tag [v0.10.0](https://github.com/pytorch/fairseq/releases/tag/v0.10.0))
