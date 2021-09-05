@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# following Cindy, spm separately and combine
 
 root="/checkpoint/chuntinz/data/mnmt_data/ted/raw"
 option=$1
