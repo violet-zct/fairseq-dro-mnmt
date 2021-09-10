@@ -41,21 +41,21 @@ fi
 arch=transformer_iwslt_de_en
 
 python -u fairseq_cli/compute_baseline_loss.py ${DATA}\
-	  --task translation_multi_simple_epoch --restore-file ${SAVE}/checkpoint_best.pt \
-	  --arch ${arch} --valid-subset train --skip-invalid-size-inputs-valid-test \
-	  --encoder-langtok ${etok} --group-level ${glevel} \
-	  --max-update 100 --layernorm-embedding \
+    --task translation_multi_simple_epoch --restore-file ${SAVE}/checkpoint_best.pt \
+    --arch ${arch} --valid-subset train --skip-invalid-size-inputs-valid-test \
+    --encoder-langtok ${etok} --group-level ${glevel} \
+    --max-update 100 --layernorm-embedding \
     --lang-pairs ${lang_pairs} \
     --lang-dict ${DATA}/langs.list \
-	  --no-epoch-checkpoints \
-	  --share-decoder-input-output-embed \
-	  --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 0.0 \
-	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'inverse_sqrt' \
-	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --min-lr -1 \
-	  --criterion 'logged_label_smoothed_cross_entropy' --label-smoothing 0.1 \
-	  --max-tokens 11192 \
-	  --seed 222 \
-  	--max-source-positions 512 --max-target-positions 512 \
-  	--save-dir ${SAVE} \
+    --no-epoch-checkpoints \
+    --share-decoder-input-output-embed \
+    --dropout 0.3 --attention-dropout 0.3 --activation-dropout 0.3 --weight-decay 0.0 \
+    --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'inverse_sqrt' \
+    --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --min-lr -1 \
+    --criterion 'logged_label_smoothed_cross_entropy' --label-smoothing 0.1 \
+    --max-tokens 11192 \
+    --seed 222 \
+    --max-source-positions 512 --max-target-positions 512 \
+    --save-dir ${SAVE} \
     --encoder-normalize-before --decoder-normalize-before \
-	  --log-interval 100 --log-format simple | tee ${SAVE}/valid_log.txt
+    --log-interval 100 --log-format simple | tee ${SAVE}/valid_log.txt
